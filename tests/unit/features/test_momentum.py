@@ -11,9 +11,9 @@ from trader_off.features.momentum import compute_momentum_features
 class TestComputeMomentumFeatures:
     """Unit tests for compute_momentum_features."""
 
-    # AC-FR0100-1: Columns and dtype check
+    # AC-FR0100-01: Columns and dtype check
     def test_ac_fr0100_01_columns_and_dtype(self, five_assets_60_days):
-        """AC-FR0100-1: Output must contain ret_5, ret_10, ret_20, ret_60 with Float64 dtype."""
+        """AC-FR0100-01: Output must contain ret_5, ret_10, ret_20, ret_60 with Float64 dtype."""
         result = compute_momentum_features(five_assets_60_days)
 
         expected_cols = {"ret_5", "ret_10", "ret_20", "ret_60"}
@@ -31,9 +31,9 @@ class TestComputeMomentumFeatures:
         # Row count preserved
         assert len(result) == len(five_assets_60_days)
 
-    # AC-FR0100-2: ret_5 value correctness
+    # AC-FR0100-02: ret_5 value correctness
     def test_ac_fr0100_02_ret5_value(self):
-        """AC-FR0100-2: close=[10,11,9,12,14] with 6 rows -> ret_5[-1] == 14/10 - 1 == 0.4.
+        """AC-FR0100-02: close=[10,11,9,12,14] with 6 rows -> ret_5[-1] == 14/10 - 1 == 0.4.
 
         Note: 6 rows (not 5) are needed because ret_5 = close[t]/close[t-5]-1
         requires at least 6 price points for the last ret_5 to be non-NaN.
@@ -75,9 +75,9 @@ class TestComputeMomentumFeatures:
             f"ret_5[-1]={ret5_values[-1]}, expected={expected}"
         )
 
-    # AC-FR0100-3: Short history → NaN for long lookback
+    # AC-FR0100-03: Short history → NaN for long lookback
     def test_ac_fr0100_03_short_history_nan(self):
-        """AC-FR0100-3: Asset B only 30 days → ret_60 all NaN, no exception."""
+        """AC-FR0100-03: Asset B only 30 days → ret_60 all NaN, no exception."""
         assets = ["A", "B"]
         start_date = date(2024, 1, 1)
         data = []

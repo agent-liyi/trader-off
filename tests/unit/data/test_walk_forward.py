@@ -69,9 +69,9 @@ def make_full_data(
 class TestWalkForwardSplits:
     """Unit tests for prepare_walk_forward_splits."""
 
-    # AC-FR0600-1: 7-period split (2018-2024)
+    # AC-FR0600-01: 7-period split (2018-2024)
     def test_ac_fr0600_01_seven_splits(self, tmp_path):
-        """AC-FR0600-1: 7 periods from 2018-2024, each with train/valid/test parquet.
+        """AC-FR0600-01: 7 periods from 2018-2024, each with train/valid/test parquet.
 
         train: year-3 to year-1, valid: year H1, test: year H2.
         """
@@ -124,9 +124,9 @@ class TestWalkForwardSplits:
                 f"Year {split.year}: valid_max={valid_max} > test_min={test_min}"
             )
 
-    # AC-FR0600-2: Partial year (data ends mid-year)
+    # AC-FR0600-02: Partial year (data ends mid-year)
     def test_ac_fr0600_02_partial_year(self, tmp_path):
-        """AC-FR0600-2: Data ends mid-2020 → test empty + WARNING, no crash."""
+        """AC-FR0600-02: Data ends mid-2020 → test empty + WARNING, no crash."""
         data = make_full_data(
             start_date=date(2015, 1, 1),
             end_date=date(2020, 6, 30),

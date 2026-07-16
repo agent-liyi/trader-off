@@ -10,9 +10,9 @@ from trader_off.features.volatility import compute_volatility_features
 class TestComputeVolatilityFeatures:
     """Unit tests for compute_volatility_features."""
 
-    # AC-FR0200-1: Columns and dtype check
+    # AC-FR0200-01: Columns and dtype check
     def test_ac_fr0200_01_columns_dtype(self, five_assets_60_days):
-        """AC-FR0200-1: Output must contain vol_10, vol_20, vol_60 with Float64 dtype."""
+        """AC-FR0200-01: Output must contain vol_10, vol_20, vol_60 with Float64 dtype."""
         result = compute_volatility_features(five_assets_60_days)
 
         expected_cols = {"vol_10", "vol_20", "vol_60"}
@@ -25,9 +25,9 @@ class TestComputeVolatilityFeatures:
 
         assert len(result) == len(five_assets_60_days)
 
-    # AC-FR0200-2: Zero std for constant returns
+    # AC-FR0200-02: Zero std for constant returns
     def test_ac_fr0200_02_zero_std(self):
-        """AC-FR0200-2: Geometric close series → constant 1% returns → vol_10[-1] == 0.0.
+        """AC-FR0200-02: Geometric close series → constant 1% returns → vol_10[-1] == 0.0.
 
         Note: Uses geometric progression (not arithmetic) to produce truly
         constant daily returns of exactly 0.01 each.
@@ -69,9 +69,9 @@ class TestComputeVolatilityFeatures:
             f"vol_10[-1]={vol10_values[-1]}, expected ~0.0"
         )
 
-    # AC-FR0200-3: min_samples behavior
+    # AC-FR0200-03: min_samples behavior
     def test_ac_fr0200_03_min_periods(self):
-        """AC-FR0200-3: 11 close values → 10 daily returns.
+        """AC-FR0200-03: 11 close values → 10 daily returns.
 
         vol_10 with min_samples=10: first 10 values (indices 0-9) should be NaN,
         index 10 should have a value.

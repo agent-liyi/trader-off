@@ -97,10 +97,10 @@ def mock_loader():
 class TestPredict:
     """Unit tests for predict."""
 
-    # AC-FR0900-1: returns DataFrame with expected columns and rows
+    # AC-FR0900-01: returns DataFrame with expected columns and rows
     @pytest.mark.asyncio
     async def test_ac_fr0900_01_returns_dataframe(self, scaler, mock_booster, mock_loader):
-        """AC-FR0900-1: predict returns pl.DataFrame with asset, score, rank."""
+        """AC-FR0900-01: predict returns pl.DataFrame with asset, score, rank."""
         watchlist = ["000001.SZ", "000002.SZ"]
         asof = date(2024, 12, 31)
 
@@ -123,10 +123,10 @@ class TestPredict:
         assert len(result) == 2
         assert set(result["asset"].to_list()) == set(watchlist)
 
-    # AC-FR0900-2: sorted descending, rank from 1
+    # AC-FR0900-02: sorted descending, rank from 1
     @pytest.mark.asyncio
     async def test_ac_fr0900_02_sorted_desc(self, scaler, mock_booster, mock_loader):
-        """AC-FR0900-2: result sorted by score descending, rank from 1."""
+        """AC-FR0900-02: result sorted by score descending, rank from 1."""
         watchlist = ["000001.SZ", "000002.SZ"]
         asof = date(2024, 12, 31)
 
@@ -151,12 +151,12 @@ class TestPredict:
         assert scores == sorted(scores, reverse=True), f"Scores not sorted descending: {scores}"
         assert ranks == [1, 2], f"Expected ranks [1,2], got {ranks}"
 
-    # AC-FR0900-3: insufficient history → skip + WARNING + predict_skipped.json
+    # AC-FR0900-03: insufficient history → skip + WARNING + predict_skipped.json
     @pytest.mark.asyncio
     async def test_ac_fr0900_03_skip_insufficient(
         self, scaler, mock_booster, tmp_path,
     ):
-        """AC-FR0900-3: assets with <120 days history are skipped."""
+        """AC-FR0900-03: assets with <120 days history are skipped."""
         watchlist = ["000001.SZ", "000003.SZ"]
         asof = date(2024, 12, 31)
 
@@ -197,10 +197,10 @@ class TestPredict:
         assert any(r["asset"] == "000003.SZ" for r in skipped)
         assert any("insufficient_history" in r["reason"] for r in skipped)
 
-    # AC-FR0900-4: mock DataLoader call_count == len(watchlist), count=120
+    # AC-FR0900-04: mock DataLoader call_count == len(watchlist), count=120
     @pytest.mark.asyncio
     async def test_ac_fr0900_04_lookback_120(self, scaler, mock_booster):
-        """AC-FR0900-4: DataLoader.get_history called once per asset with count=120."""
+        """AC-FR0900-04: DataLoader.get_history called once per asset with count=120."""
         watchlist = ["000001.SZ", "000002.SZ"]
         asof = date(2024, 12, 31)
 

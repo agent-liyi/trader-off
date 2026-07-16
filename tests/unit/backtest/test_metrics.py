@@ -21,9 +21,9 @@ def _make_nav_df(values: list[float]) -> pl.DataFrame:
 class TestComputePerformanceMetrics:
     """Unit tests for compute_performance_metrics."""
 
-    # AC-FR1200-1: returns dict with all 6 required keys
+    # AC-FR1200-01: returns dict with all 6 required keys
     def test_ac_fr1200_01_keys(self):
-        """AC-FR1200-1: result dict has all 6 required keys with correct types."""
+        """AC-FR1200-01: result dict has all 6 required keys with correct types."""
         # Generate 252 trading days of nav
         rng = __import__("numpy").random.RandomState(42)
         n = 252
@@ -47,9 +47,9 @@ class TestComputePerformanceMetrics:
         assert isinstance(result["total_trades"], int)
         assert isinstance(result["avg_turnover"], float)
 
-    # AC-FR1200-2: max_drawdown for [100, 110, 105, 120, 115]
+    # AC-FR1200-02: max_drawdown for [100, 110, 105, 120, 115]
     def test_ac_fr1200_02_max_drawdown(self):
-        """AC-FR1200-2: max_drawdown = (105-110)/110 ≈ -0.0455.
+        """AC-FR1200-02: max_drawdown = (105-110)/110 ≈ -0.0455.
 
         Uses 35 values (30 + 5) to satisfy the 30-day minimum while
         preserving the peak=110 → trough=105 drawdown pattern.
@@ -65,9 +65,9 @@ class TestComputePerformanceMetrics:
             f"max_drawdown={result['max_drawdown']}, expected≈{expected_dd}"
         )
 
-    # AC-FR1200-3: <30 days → InsufficientDataError
+    # AC-FR1200-03: <30 days → InsufficientDataError
     def test_ac_fr1200_03_insufficient_data(self):
-        """AC-FR1200-3: 10 rows of nav → InsufficientDataError."""
+        """AC-FR1200-03: 10 rows of nav → InsufficientDataError."""
         nav_values = [100.0 + i for i in range(10)]
         nav_df = _make_nav_df(nav_values)
 

@@ -32,19 +32,19 @@ def sample_config() -> dict:
 class TestLGBMTop20Strategy:
     """Unit tests for LGBMTop20Strategy."""
 
-    # AC-FR1000-1: Inheritance
+    # AC-FR1000-01: Inheritance
     def test_ac_fr1000_01_inheritance(self):
-        """AC-FR1000-1: LGBMTop20Strategy is a subclass of BaseStrategy."""
+        """AC-FR1000-01: LGBMTop20Strategy is a subclass of BaseStrategy."""
         assert issubclass(LGBMTop20Strategy, BaseStrategy), (
             "LGBMTop20Strategy must inherit from BaseStrategy"
         )
 
-    # AC-FR1000-2: init loads model
+    # AC-FR1000-02: init loads model
     @pytest.mark.asyncio
     async def test_ac_fr1000_02_init_loads_model(
         self, fake_broker, sample_config,
     ):
-        """AC-FR1000-2: await init() loads model, sets top_k=20."""
+        """AC-FR1000-02: await init() loads model, sets top_k=20."""
         strategy = LGBMTop20Strategy(fake_broker, sample_config)
 
         with patch(
@@ -62,12 +62,12 @@ class TestLGBMTop20Strategy:
         assert strategy.top_k == 20
         assert strategy.model is not None
 
-    # AC-FR1000-3: on_day_open trades
+    # AC-FR1000-03: on_day_open trades
     @pytest.mark.asyncio
     async def test_ac_fr1000_03_on_day_open_trades(
         self, fake_broker, sample_config,
     ):
-        """AC-FR1000-3: on_day_open calls predict, trades target weight."""
+        """AC-FR1000-03: on_day_open calls predict, trades target weight."""
         strategy = LGBMTop20Strategy(fake_broker, sample_config)
         strategy.model = MagicMock()  # mock-overuse: Booster requires C++ lib
         strategy.model_version = "v1"
@@ -97,12 +97,12 @@ class TestLGBMTop20Strategy:
         assert "000001.SZ" in assets_called
         assert "000002.SZ" in assets_called
 
-    # AC-FR1000-4: extra dict in orders
+    # AC-FR1000-04: extra dict in orders
     @pytest.mark.asyncio
     async def test_ac_fr1000_04_extra_snapshot(
         self, fake_broker, sample_config,
     ):
-        """AC-FR1000-4: extra dict contains reason/score/rank/model_version."""
+        """AC-FR1000-04: extra dict contains reason/score/rank/model_version."""
         strategy = LGBMTop20Strategy(fake_broker, sample_config)
         strategy.model = MagicMock()  # mock-overuse: Booster requires C++ lib
         strategy.model_version = "v1"
@@ -133,9 +133,9 @@ class TestLGBMTop20Strategy:
         assert extra.get("rank") == 1
         assert extra.get("model_version") == "v1"
 
-    # AC-FR1000-5: config loaded from YAML
+    # AC-FR1000-05: config loaded from YAML
     def test_ac_fr1000_05_config_loading(self, fake_broker, tmp_path):
-        """AC-FR1000-5: YAML config correctly loaded into strategy attributes."""
+        """AC-FR1000-05: YAML config correctly loaded into strategy attributes."""
         config_path = tmp_path / "lgbm_top20.yaml"
         config_data = {
             "model_version": "v1",

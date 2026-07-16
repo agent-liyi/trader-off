@@ -33,7 +33,7 @@ class TestLGBMPipeline:
     """End-to-end test: train → predict → backtest."""
 
     def test_ac_fr1500_01_full_pipeline(self, fixture_data, watchlist, tmp_path):
-        """AC-FR1500-1: Full pipeline runs and produces expected outputs."""
+        """AC-FR1500-01: Full pipeline runs and produces expected outputs."""
         t0 = time.perf_counter()
 
         # ---- Step 1: Train model ----
@@ -188,12 +188,12 @@ class TestLGBMPipeline:
                          "win_rate", "total_trades", "avg_turnover"}
         assert required_keys.issubset(set(summary.keys()))
 
-        # ---- Timing assertion (AC-FR1500-2) ----
+        # ---- Timing assertion (AC-FR1500-02) ----
         elapsed = time.perf_counter() - t0
         assert elapsed < 60, f"E2E test took {elapsed:.1f}s, must be <60s"
 
     def test_ac_fr1500_03_fixtures_exist(self):
-        """AC-FR1500-3: Fixture files exist offline."""
+        """AC-FR1500-03: Fixture files exist offline."""
         assert (FIXTURES / "ohlcv_10x60.parquet").exists()
         assert (FIXTURES / "watchlist.csv").exists()
         assert (FIXTURES / "baseline_nav.parquet").exists()

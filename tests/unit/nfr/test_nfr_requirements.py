@@ -19,9 +19,9 @@ import pytest
 class TestICThresholds:
     """NFR-0200: prediction capability thresholds in metadata."""
 
-    # AC-NFR0200-1: test_ic_mean / test_rank_ic_mean exist and are float
+    # AC-NFR0200-01: test_ic_mean / test_rank_ic_mean exist and are float
     def test_metadata_includes_ic_fields(self):
-        """AC-NFR0200-1: Metadata dict must support test_ic_mean and test_rank_ic_mean."""
+        """AC-NFR0200-01: Metadata dict must support test_ic_mean and test_rank_ic_mean."""
         metadata = {
             "test_ic_mean": 0.025,
             "test_rank_ic_mean": 0.035,
@@ -29,17 +29,17 @@ class TestICThresholds:
         assert isinstance(metadata["test_ic_mean"], float)
         assert isinstance(metadata["test_rank_ic_mean"], float)
 
-    # AC-NFR0200-3: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True
+    # AC-NFR0200-03: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True
     def test_ic_pass_soft_target_true(self):
-        """AC-NFR0200-3: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True."""
+        """AC-NFR0200-03: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True."""
         test_ic = 0.025
         test_rank_ic = 0.035
         ic_pass = test_ic > 0.02 and test_rank_ic > 0.03
         assert ic_pass is True
 
-    # AC-NFR0200-3: IC below threshold → ic_pass_soft_target=False
+    # AC-NFR0200-03: IC below threshold → ic_pass_soft_target=False
     def test_ic_pass_soft_target_false(self):
-        """AC-NFR0200-3: IC below threshold → ic_pass_soft_target=False."""
+        """AC-NFR0200-03: IC below threshold → ic_pass_soft_target=False."""
         test_ic = 0.01
         test_rank_ic = 0.02
         ic_pass = test_ic > 0.02 and test_rank_ic > 0.03
@@ -54,9 +54,9 @@ class TestICThresholds:
 class TestAsyncSignatures:
     """NFR-0400 AC-2: strategy methods must be async def."""
 
-    # AC-NFR0400-2: all lifecycle methods are async def
+    # AC-NFR0400-02: all lifecycle methods are async def
     def test_strategy_methods_are_async(self):
-        """AC-NFR0400-2: All LGBMTop20Strategy lifecycle methods should be async def."""
+        """AC-NFR0400-02: All LGBMTop20Strategy lifecycle methods should be async def."""
         from trader_off.strategies.lgbm_top20 import LGBMTop20Strategy
 
         async_methods = ["init", "on_day_open", "on_bar", "on_day_close", "on_stop"]
@@ -75,9 +75,9 @@ class TestAsyncSignatures:
 class TestLoggingNFR:
     """NFR-0500: log format, levels, file output."""
 
-    # AC-NFR0500-2: log format matches {time} | {level} | {name}:{function}:{line} | {message}
+    # AC-NFR0500-02: log format matches {time} | {level} | {name}:{function}:{line} | {message}
     def test_setup_logger_format_regex(self):
-        """AC-NFR0500-2: Log format matches expected pattern."""
+        """AC-NFR0500-02: Log format matches expected pattern."""
         import re
 
         from trader_off.utils.logging import setup_logger
@@ -99,9 +99,9 @@ class TestLoggingNFR:
         )
         assert re.search(pattern, content), f"Format mismatch in: {content}"
 
-    # AC-NFR0500-3: INFO, WARNING, ERROR levels all produced
+    # AC-NFR0500-03: INFO, WARNING, ERROR levels all produced
     def test_three_log_levels_produced(self):
-        """AC-NFR0500-3: All three log levels (INFO, WARNING, ERROR) are available."""
+        """AC-NFR0500-03: All three log levels (INFO, WARNING, ERROR) are available."""
         from loguru import logger
 
         messages = []
@@ -129,9 +129,9 @@ class TestLoggingNFR:
 class TestSecurity:
     """NFR-0600: path traversal, no credentials, joblib usage."""
 
-    # AC-NFR0600-1: no hard-coded credentials in source
+    # AC-NFR0600-01: no hard-coded credentials in source
     def test_no_hard_coded_credentials(self):
-        """AC-NFR0600-1: No hard-coded api_key/password/token/secret in source."""
+        """AC-NFR0600-01: No hard-coded api_key/password/token/secret in source."""
         import subprocess
 
         result = subprocess.run(
@@ -144,18 +144,18 @@ class TestSecurity:
             f"Hard-coded credentials found:\n{result.stdout}"
         )
 
-    # AC-NFR0600-3: model loading uses joblib, not pickle
+    # AC-NFR0600-03: model loading uses joblib, not pickle
     def test_model_serialization_uses_joblib(self):
-        """AC-NFR0600-3: Model loading must use joblib, not raw pickle.load."""
+        """AC-NFR0600-03: Model loading must use joblib, not raw pickle.load."""
         from trader_off.training.serialize import load_model
 
         source = inspect.getsource(load_model)
         assert "joblib.load" in source, "load_model must use joblib.load"
         assert "pickle.load" not in source, "load_model must NOT use pickle.load"
 
-    # AC-NFR0600-2: path traversal prevented
+    # AC-NFR0600-02: path traversal prevented
     def test_path_traversal_prevented(self):
-        """AC-NFR0600-2: Path traversal should raise PathTraversalError or FileNotFoundError."""
+        """AC-NFR0600-02: Path traversal should raise PathTraversalError or FileNotFoundError."""
         from trader_off.utils.exceptions import PathTraversalError
 
         with pytest.raises((FileNotFoundError, PathTraversalError)):
@@ -171,18 +171,18 @@ class TestSecurity:
 class TestReproducibility:
     """NFR-0700: random seeds, config loading, metadata fields."""
 
-    # AC-NFR0700-1: random_state, feature_fraction_seed, bagging_seed all == 42
+    # AC-NFR0700-01: random_state, feature_fraction_seed, bagging_seed all == 42
     def test_default_params_have_random_state_42(self):
-        """AC-NFR0700-1: DEFAULT_PARAMS must include random_state=42 and seed params."""
+        """AC-NFR0700-01: DEFAULT_PARAMS must include random_state=42 and seed params."""
         from trader_off.training.trainer import DEFAULT_PARAMS
 
         assert DEFAULT_PARAMS["random_state"] == 42
         assert DEFAULT_PARAMS["feature_fraction_seed"] == 42
         assert DEFAULT_PARAMS["bagging_seed"] == 42
 
-    # AC-NFR0700-3: metadata includes git_commit_sha, python_version, package_versions
+    # AC-NFR0700-03: metadata includes git_commit_sha, python_version, package_versions
     def test_metadata_includes_repro_fields(self):
-        """AC-NFR0700-3: metadata includes git_commit_sha, python_version, package_versions."""
+        """AC-NFR0700-03: metadata includes git_commit_sha, python_version, package_versions."""
         import sys
 
         metadata = {
@@ -197,9 +197,9 @@ class TestReproducibility:
         assert "." in metadata["python_version"]
         assert isinstance(metadata["package_versions"], dict)
 
-    # AC-NFR0700-2: YAML config loading works for strategy config
+    # AC-NFR0700-02: YAML config loading works for strategy config
     def test_config_yaml_loading(self):
-        """AC-NFR0700-2: Strategy config can be loaded from YAML."""
+        """AC-NFR0700-02: Strategy config can be loaded from YAML."""
         import yaml
 
         config_data = {
@@ -211,9 +211,9 @@ class TestReproducibility:
         loaded = yaml.safe_load(yaml_str)
         assert loaded["top_k"] == 20
 
-    # AC-NFR0700-3: save_model writes correct metadata.json content
+    # AC-NFR0700-03: save_model writes correct metadata.json content
     def test_save_model_metadata_json_content(self):
-        """AC-NFR0700-3: save_model writes correct metadata.json with train_start."""
+        """AC-NFR0700-03: save_model writes correct metadata.json with train_start."""
         import tempfile
 
         import lightgbm as lgb
@@ -250,9 +250,9 @@ class TestReproducibility:
 class TestDataScale:
     """NFR-0100 AC-1: 4500 assets mock test."""
 
-    # AC-NFR0100-1: mock 4500 assets → prepare_walk_forward_splits works
+    # AC-NFR0100-01: mock 4500 assets → prepare_walk_forward_splits works
     def test_mock_4500_assets_walk_forward(self, tmp_path):
-        """AC-NFR0100-1: prepare_walk_forward_splits handles 4500 mock assets."""
+        """AC-NFR0100-01: prepare_walk_forward_splits handles 4500 mock assets."""
         from datetime import date, timedelta
 
         from trader_off.data.walk_forward import prepare_walk_forward_splits

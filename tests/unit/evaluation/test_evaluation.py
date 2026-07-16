@@ -95,9 +95,9 @@ class TestLayeredReturns:
 class TestEvaluatePredictions:
     """Unit tests for evaluate_predictions."""
 
-    # AC-FR1300-1: returns PredictionQualityReport
+    # AC-FR1300-01: returns PredictionQualityReport
     def test_ac_fr1300_01_report_fields(self):
-        """AC-FR1300-1: evaluate_predictions returns PredictionQualityReport."""
+        """AC-FR1300-01: evaluate_predictions returns PredictionQualityReport."""
         preds, labels = _make_aligned_data(n_dates=20, n_assets=50)
         report = evaluate_predictions(preds, labels)
 
@@ -116,9 +116,9 @@ class TestEvaluatePredictions:
         assert "date" in report.rank_ic_ts.columns
         assert "rank_ic" in report.rank_ic_ts.columns
 
-    # AC-FR1300-2: ic_ts row count = unique dates, ic in [-1,1]
+    # AC-FR1300-02: ic_ts row count = unique dates, ic in [-1,1]
     def test_ac_fr1300_02_ic_range(self):
-        """AC-FR1300-2: ic_ts rows = n_unique_dates, ic values in [-1,1]."""
+        """AC-FR1300-02: ic_ts rows = n_unique_dates, ic values in [-1,1]."""
         preds, labels = _make_aligned_data(n_dates=10, n_assets=100)
         report = evaluate_predictions(preds, labels)
 
@@ -129,18 +129,18 @@ class TestEvaluatePredictions:
         for v in ic_vals:
             assert -1.0 <= v <= 1.0, f"ic={v} out of range"
 
-    # AC-FR1300-3: __all__ exports
+    # AC-FR1300-03: __all__ exports
     def test_ac_fr1300_03_imports(self):
-        """AC-FR1300-3: __all__ contains ic_pearson, ic_spearman, compute_layered_returns."""
+        """AC-FR1300-03: __all__ contains ic_pearson, ic_spearman, compute_layered_returns."""
         from trader_off import evaluation as ev
 
         assert "ic_pearson" in ev.__all__
         assert "ic_spearman" in ev.__all__
         assert "compute_layered_returns" in ev.__all__
 
-    # AC-FR1300-4: output files written
+    # AC-FR1300-04: output files written
     def test_ac_fr1300_04_csv_output(self, tmp_path):
-        """AC-FR1300-4: prediction_quality.csv and layered_returns.csv written."""
+        """AC-FR1300-04: prediction_quality.csv and layered_returns.csv written."""
         preds, labels = _make_aligned_data(n_dates=10, n_assets=100)
         report = evaluate_predictions(preds, labels)
 

@@ -32,9 +32,9 @@ class TestBuildLabels:
             "close": pl.Float64,
         })
 
-    # AC-FR0500-1: Label formula correctness
+    # AC-FR0500-01: Label formula correctness
     def test_ac_fr0500_01_label_formula(self, ten_close_asset_a):
-        """AC-FR0500-1: label[t] = close[t+5]/close[t] - 1.
+        """AC-FR0500-01: label[t] = close[t+5]/close[t] - 1.
 
         close=[10..19]: label[0]=15/10-1=0.5, label[4]=19/14-1≈0.3571.
         """
@@ -47,9 +47,9 @@ class TestBuildLabels:
         )
         assert result.columns == ["asset", "date", "label"]
 
-    # AC-FR0500-2: Last 5 labels are NaN
+    # AC-FR0500-02: Last 5 labels are NaN
     def test_ac_fr0500_02_tail_nan(self, ten_close_asset_a):
-        """AC-FR0500-2: Last 5 labels (indices 5..9) are NaN (no t+5 data)."""
+        """AC-FR0500-02: Last 5 labels (indices 5..9) are NaN (no t+5 data)."""
         result = build_labels(ten_close_asset_a, horizon=5)
 
         labels = result["label"].to_list()
@@ -58,9 +58,9 @@ class TestBuildLabels:
             f"Expected last 5 NaN, got {tail}"
         )
 
-    # AC-FR0500-3: NaN close causes NaN label
+    # AC-FR0500-03: NaN close causes NaN label
     def test_ac_fr0500_03_halt_nan(self):
-        """AC-FR0500-3: close[7] is NaN → label[2] is NaN."""
+        """AC-FR0500-03: close[7] is NaN → label[2] is NaN."""
         close_values = [10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0, None, 18.0, 19.0]
         start_date = date(2024, 1, 1)
         data = []
@@ -82,9 +82,9 @@ class TestBuildLabels:
         labels = result["label"].to_list()
         assert labels[2] is None, f"label[2]={labels[2]}, expected None (halt)"
 
-    # AC-FR0500-4: limit_up filter
+    # AC-FR0500-04: limit_up filter
     def test_ac_fr0500_04_limit_up_filter(self, tmp_path):
-        """AC-FR0500-4: limit_up=True at t=3 → label[3] NaN + file record."""
+        """AC-FR0500-04: limit_up=True at t=3 → label[3] NaN + file record."""
         close_values = [10.0 + i for i in range(10)]
         limit_up_values = [False] * 10
         limit_up_values[3] = True  # 4th day has limit_up
@@ -124,9 +124,9 @@ class TestBuildLabels:
         assert records[0]["asset"] == "A"
         assert records[0]["reason"] == "limit_up"
 
-    # AC-FR0500-5: Label statistics
+    # AC-FR0500-05: Label statistics
     def test_ac_fr0500_05_label_stats(self, tmp_path):
-        """AC-FR0500-5: compute_label_stats returns {mean, std, min, p1, p99, max}."""
+        """AC-FR0500-05: compute_label_stats returns {mean, std, min, p1, p99, max}."""
         # Simple labels with known stats
         label_values = [0.01, 0.02, -0.01, 0.03, 0.0, -0.02, 0.015, 0.025, -0.005, 0.01]
         start_date = date(2024, 1, 1)

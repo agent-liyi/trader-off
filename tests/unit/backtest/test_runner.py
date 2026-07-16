@@ -14,9 +14,9 @@ from trader_off.backtest.runner import BacktestResult, run_backtest
 class TestRunBacktest:
     """Unit tests for run_backtest."""
 
-    # AC-FR1100-1: CLI exit 0 + "Backtest finished"
+    # AC-FR1100-01: CLI exit 0 + "Backtest finished"
     def test_ac_fr1100_01_cli_exit_zero(self, tmp_path, capsys):
-        """AC-FR1100-1: CLI backtest exits 0, prints 'Backtest finished'."""
+        """AC-FR1100-01: CLI backtest exits 0, prints 'Backtest finished'."""
         from trader_off.cli.backtest import main as backtest_main
 
         test_args = [
@@ -37,9 +37,9 @@ class TestRunBacktest:
 
         assert exit_code == 0
 
-    # AC-FR1100-2: output files exist (summary.json, parquet files)
+    # AC-FR1100-02: output files exist (summary.json, parquet files)
     def test_ac_fr1100_02_output_files(self):
-        """AC-FR1100-2: run_backtest creates summary.json and parquet files."""
+        """AC-FR1100-02: run_backtest creates summary.json and parquet files."""
         result = run_backtest(
             model_version="v1",
             strategy_name="lgbm_top20",
@@ -68,9 +68,9 @@ class TestRunBacktest:
                      "win_rate", "total_trades", "avg_turnover"}
         assert required.issubset(set(summary.keys()))
 
-    # AC-FR1100-3: missing --capital → error
+    # AC-FR1100-03: missing --capital → error
     def test_ac_fr1100_03_missing_capital(self):
-        """AC-FR1100-3: missing --capital exits non-zero."""
+        """AC-FR1100-03: missing --capital exits non-zero."""
         from trader_off.cli.backtest import main as backtest_main
 
         test_args = [

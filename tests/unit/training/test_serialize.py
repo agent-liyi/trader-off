@@ -59,11 +59,11 @@ def dummy_metadata() -> dict:
 class TestSaveModel:
     """Unit tests for save_model."""
 
-    # AC-FR0800-1: All files created
+    # AC-FR0800-01: All files created
     def test_ac_fr0800_01_save_files(
         self, dummy_booster, dummy_scaler, dummy_metadata, tmp_path
     ):
-        """AC-FR0800-1: save_model creates all 5 required files."""
+        """AC-FR0800-01: save_model creates all 5 required files."""
         version = "20260101_120000"
         models_dir = tmp_path / "models"
 
@@ -109,11 +109,11 @@ class TestSaveModel:
         metadata = json.loads((expected_dir / "metadata.json").read_text())
         assert metadata["best_iteration"] == 120
 
-    # AC-FR0800-2: Default version format
+    # AC-FR0800-02: Default version format
     def test_ac_fr0800_02_default_version_format(
         self, dummy_booster, dummy_scaler, dummy_metadata, tmp_path
     ):
-        """AC-FR0800-2: Default version is YYYYMMDD_HHMMSS (15 chars)."""
+        """AC-FR0800-02: Default version is YYYYMMDD_HHMMSS (15 chars)."""
         models_dir = tmp_path / "models"
 
         # save_model without explicit version → auto-generate
@@ -136,11 +136,11 @@ class TestSaveModel:
         assert version[8] == "_", f"Missing underscore at position 8: {version}"
         assert re.match(r"^\d{8}_\d{6}$", version), f"Invalid format: {version}"
 
-    # AC-FR0800-3: Duplicate version error
+    # AC-FR0800-03: Duplicate version error
     def test_ac_fr0800_03_version_exists_error(
         self, dummy_booster, dummy_scaler, dummy_metadata, tmp_path
     ):
-        """AC-FR0800-3: Saving to existing version raises ModelVersionExistsError."""
+        """AC-FR0800-03: Saving to existing version raises ModelVersionExistsError."""
         version = "20260101_120000"
         models_dir = tmp_path / "models"
 
@@ -167,11 +167,11 @@ class TestSaveModel:
                 feature_names=["f1"],
             )
 
-    # AC-FR0800-4: Load model returns ModelArtifact
+    # AC-FR0800-04: Load model returns ModelArtifact
     def test_ac_fr0800_04_load_artifact(
         self, dummy_booster, dummy_scaler, dummy_metadata, tmp_path
     ):
-        """AC-FR0800-4: load_model returns ModelArtifact with all fields non-empty."""
+        """AC-FR0800-04: load_model returns ModelArtifact with all fields non-empty."""
         version = "20260101_120000"
         models_dir = tmp_path / "models"
         feature_names = ["f1", "f2"]

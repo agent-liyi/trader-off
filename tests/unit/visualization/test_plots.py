@@ -68,9 +68,9 @@ def importance_df() -> pl.DataFrame:
 class TestRenderNavCurve:
     """Unit tests for render_nav_curve."""
 
-    # AC-FR1600-1: PNG generated, size > 1024, dimensions 1200×720
+    # AC-FR1600-01: PNG generated, size > 1024, dimensions 1200×720
     def test_ac_fr1600_01_nav_curve_png(self, nav_df, baseline_df, tmp_path):
-        """AC-FR1600-1: render_nav_curve creates valid PNG."""
+        """AC-FR1600-01: render_nav_curve creates valid PNG."""
         output = tmp_path / "figures" / "nav_curve.png"
         result = render_nav_curve(nav_df, baseline_df, output_path=output)
 
@@ -82,9 +82,9 @@ class TestRenderNavCurve:
 class TestRenderICTimeseries:
     """Unit tests for render_ic_timeseries."""
 
-    # AC-FR1600-2: PNG generated with IC + Rank IC
+    # AC-FR1600-02: PNG generated with IC + Rank IC
     def test_ac_fr1600_02_ic_timeseries_png(self, ic_df, tmp_path):
-        """AC-FR1600-2: render_ic_timeseries creates valid PNG."""
+        """AC-FR1600-02: render_ic_timeseries creates valid PNG."""
         output = tmp_path / "figures" / "ic_timeseries.png"
         result = render_ic_timeseries(ic_df, output_path=output)
 
@@ -95,11 +95,11 @@ class TestRenderICTimeseries:
 class TestRenderFeatureImportance:
     """Unit tests for render_feature_importance."""
 
-    # AC-FR1600-3: Top 20 barh PNG
+    # AC-FR1600-03: Top 20 barh PNG
     def test_ac_fr1600_03_feature_importance_png(
         self, importance_df, tmp_path,
     ):
-        """AC-FR1600-3: render_feature_importance creates barh PNG with top 20."""
+        """AC-FR1600-03: render_feature_importance creates barh PNG with top 20."""
         output = tmp_path / "figures" / "feature_importance_top20.png"
         result = render_feature_importance(
             importance_df, top_k=20, output_path=output,
@@ -109,9 +109,9 @@ class TestRenderFeatureImportance:
         assert output.stat().st_size > 1024
 
 
-# AC-FR1600-4: VisualizationDependencyError when matplotlib missing
+# AC-FR1600-04: VisualizationDependencyError when matplotlib missing
 def test_ac_fr1600_04_missing_dep_error(monkeypatch):
-    """AC-FR1600-4: ImportError for matplotlib raises VisualizationDependencyError."""
+    """AC-FR1600-04: ImportError for matplotlib raises VisualizationDependencyError."""
     import builtins
 
     original_import = builtins.__import__

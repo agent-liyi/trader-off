@@ -17,9 +17,9 @@ def make_feature_df(rows: list[dict]) -> pl.DataFrame:
 class TestFitScalerAndImpute:
     """Unit tests for fit_scaler_and_impute."""
 
-    # AC-FR0400-1: Forward fill by asset group
+    # AC-FR0400-01: Forward fill by asset group
     def test_ac_fr0400_01_forward_fill_by_asset(self):
-        """AC-FR0400-1: f2 NaN at row 3 for asset A → forward filled from row 2 of same asset.
+        """AC-FR0400-01: f2 NaN at row 3 for asset A → forward filled from row 2 of same asset.
 
         Two assets A, B. Each has 4 rows. Asset A row 2 (index) has f2=NaN,
         should be forward-filled from row 1 of asset A.
@@ -70,9 +70,9 @@ class TestFitScalerAndImpute:
         asset_b_nulls = transformed.filter(pl.col("asset") == "B")["f2"].null_count()
         assert asset_b_nulls == 0
 
-    # AC-FR0400-2: transform reuses scaler
+    # AC-FR0400-02: transform reuses scaler
     def test_ac_fr0400_02_transform_reuses_scaler(self):
-        """AC-FR0400-2: transform uses training scaler params, does not re-fit."""
+        """AC-FR0400-02: transform uses training scaler params, does not re-fit."""
         start_date = date(2024, 1, 1)
         data = []
         for asset in ["A", "B"]:
@@ -121,9 +121,9 @@ class TestFitScalerAndImpute:
         assert scaler.mean_ == mean_before, "scaler.mean_ changed after transform"
         assert scaler.std_ == std_before, "scaler.std_ changed after transform"
 
-    # AC-FR0400-3: All-NaN column dropped
+    # AC-FR0400-03: All-NaN column dropped
     def test_ac_fr0400_03_dropped_features(self, tmp_path):
-        """AC-FR0400-3: All-NaN feature column → dropped, recorded."""
+        """AC-FR0400-03: All-NaN feature column → dropped, recorded."""
         start_date = date(2024, 1, 1)
         data = []
         for asset in ["A"]:

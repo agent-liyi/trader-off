@@ -37,9 +37,9 @@ def synthetic_regression_data():
 class TestTrainModel:
     """Unit tests for train_model."""
 
-    # AC-FR0700-1: Returns a trained Booster
+    # AC-FR0700-01: Returns a trained Booster
     def test_ac_fr0700_01_returns_booster(self, synthetic_regression_data):
-        """AC-FR0700-1: train_model returns lightgbm.Booster with num_trees() > 0."""
+        """AC-FR0700-01: train_model returns lightgbm.Booster with num_trees() > 0."""
         X_train, y_train, X_valid, y_valid = synthetic_regression_data
 
         booster = train_model(
@@ -52,9 +52,9 @@ class TestTrainModel:
         assert isinstance(booster, lgb.Booster)
         assert booster.num_trees() > 0, "Booster should have at least 1 tree"
 
-    # AC-FR0700-2: Default objective is regression
+    # AC-FR0700-02: Default objective is regression
     def test_ac_fr0700_02_objective(self, synthetic_regression_data):
-        """AC-FR0700-2: Default objective is 'regression' or 'regression_l2'."""
+        """AC-FR0700-02: Default objective is 'regression' or 'regression_l2'."""
         X_train, y_train, X_valid, y_valid = synthetic_regression_data
 
         booster = train_model(
@@ -69,9 +69,9 @@ class TestTrainModel:
             f"Unexpected objective: {objective}"
         )
 
-    # AC-FR0700-3: Early stopping
+    # AC-FR0700-03: Early stopping
     def test_ac_fr0700_03_early_stopping(self):
-        """AC-FR0700-3: Early stopping triggers before n_estimators runs out."""
+        """AC-FR0700-03: Early stopping triggers before n_estimators runs out."""
         # Generate training data with clear signal and validation with different
         # distribution to trigger early stopping
         rng = np.random.RandomState(42)
@@ -111,9 +111,9 @@ class TestTrainModel:
             f"Expected early stopping (best_iter < 300), got {best_iter}"
         )
 
-    # AC-FR0700-4: train.log contains best_iteration and final_train_loss
+    # AC-FR0700-04: train.log contains best_iteration and final_train_loss
     def test_ac_fr0700_04_train_log(self, synthetic_regression_data, tmp_path):
-        """AC-FR0700-4: train.log has best_iteration and final_train_loss."""
+        """AC-FR0700-04: train.log has best_iteration and final_train_loss."""
         X_train, y_train, X_valid, y_valid = synthetic_regression_data
 
         log_path = tmp_path / "train.log"
@@ -140,9 +140,9 @@ class TestTrainModel:
             f"train.log missing 'final_train_loss': {log_content[:200]}"
         )
 
-    # AC-FR0700-5: Params verification (mock LGBMRegressor)
+    # AC-FR0700-05: Params verification (mock LGBMRegressor)
     def test_ac_fr0700_05_params_passed_correctly(self, synthetic_regression_data):
-        """AC-FR0700-5: Custom params are passed to LGBMRegressor."""
+        """AC-FR0700-05: Custom params are passed to LGBMRegressor."""
         X_train, y_train, X_valid, y_valid = synthetic_regression_data
 
         custom_params = {

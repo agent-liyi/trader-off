@@ -28,11 +28,11 @@ def twenty_feature_names() -> list[str]:
 class TestExtractFeatureImportance:
     """Unit tests for extract_feature_importance."""
 
-    # AC-FR1400-1: returns sorted DataFrame with feature, importance, rank
+    # AC-FR1400-01: returns sorted DataFrame with feature, importance, rank
     def test_ac_fr1400_01_extract_sorted(
         self, trained_booster_20f, twenty_feature_names,
     ):
-        """AC-FR1400-1: returns 20 rows sorted by importance descending."""
+        """AC-FR1400-01: returns 20 rows sorted by importance descending."""
         result = extract_feature_importance(
             trained_booster_20f, twenty_feature_names,
         )
@@ -47,9 +47,9 @@ class TestExtractFeatureImportance:
         # Check rank starts from 1
         assert result["rank"][0] == 1
 
-    # AC-FR1400-3: empty booster → empty DataFrame + INFO log (no error)
+    # AC-FR1400-03: empty booster → empty DataFrame + INFO log (no error)
     def test_ac_fr1400_03_empty_booster(self, trained_booster_20f):
-        """AC-FR1400-3: empty booster returns empty DF, does not raise.
+        """AC-FR1400-03: empty booster returns empty DF, does not raise.
 
         Simulates an untrained booster by using num_trees() edge case.
         """

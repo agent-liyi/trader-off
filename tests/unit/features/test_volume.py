@@ -21,9 +21,9 @@ def _capture_sink(message):
 class TestComputeVolumeFeatures:
     """Unit tests for compute_volume_features."""
 
-    # AC-FR0300-1: Column presence check
+    # AC-FR0300-01: Column presence check
     def test_ac_fr0300_01_columns(self, five_assets_60_days):
-        """AC-FR0300-1: Output must contain turnover_5/10/20 and vp_corr_5/10/20."""
+        """AC-FR0300-01: Output must contain turnover_5/10/20 and vp_corr_5/10/20."""
         result = compute_volume_features(five_assets_60_days)
 
         expected_cols = {
@@ -41,9 +41,9 @@ class TestComputeVolumeFeatures:
 
         assert len(result) == len(five_assets_60_days)
 
-    # AC-FR0300-2: Turnover missing → NaN + WARNING
+    # AC-FR0300-02: Turnover missing → NaN + WARNING
     def test_ac_fr0300_02_turnover_missing_warn(self):
-        """AC-FR0300-2: Turnover all NaN for asset A → all vol cols NaN + WARNING."""
+        """AC-FR0300-02: Turnover all NaN for asset A → all vol cols NaN + WARNING."""
         # Add a capture sink for this test
         _log_messages.clear()
         sink_id = logger.add(_capture_sink, level="WARNING")
