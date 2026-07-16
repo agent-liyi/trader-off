@@ -38,9 +38,9 @@ def _to_numpy(data: pl.DataFrame | pl.Series | np.ndarray) -> np.ndarray:
 
 
 def train_model(
-    X_train: pl.DataFrame,
+    X_train: pl.DataFrame,  # noqa: N803
     y_train: pl.DataFrame | pl.Series,
-    X_valid: pl.DataFrame,
+    X_valid: pl.DataFrame,  # noqa: N803
     y_valid: pl.DataFrame | pl.Series,
     params: dict | None = None,
     log_path: Path | str | None = None,
@@ -68,9 +68,9 @@ def train_model(
     n_estimators = merged_params.pop("n_estimators", 500)
 
     # Convert data to numpy arrays
-    X_train_np = _to_numpy(X_train)
+    x_train_np = _to_numpy(X_train)  # noqa: N806
     y_train_np = _to_numpy(y_train).ravel()
-    X_valid_np = _to_numpy(X_valid)
+    x_valid_np = _to_numpy(X_valid)  # noqa: N806
     y_valid_np = _to_numpy(y_valid).ravel()
 
     # Create and train model
@@ -80,9 +80,9 @@ def train_model(
     )
 
     model.fit(
-        X_train_np,
+        x_train_np,
         y_train_np,
-        eval_set=[(X_valid_np, y_valid_np)],
+        eval_set=[(x_valid_np, y_valid_np)],
         eval_metric="l2",
         callbacks=[lgb.early_stopping(early_stopping_rounds)],
     )
@@ -91,7 +91,7 @@ def train_model(
     best_iteration = model.best_iteration_
 
     # Log training results
-    train_pred = booster.predict(X_train_np, num_iteration=best_iteration)
+    train_pred = booster.predict(x_train_np, num_iteration=best_iteration)
     train_loss = float(np.mean((train_pred - y_train_np) ** 2))
 
     logger.info(f"Training complete: best_iteration={best_iteration}, "

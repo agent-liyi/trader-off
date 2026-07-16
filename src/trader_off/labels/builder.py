@@ -129,7 +129,6 @@ def compute_label_stats(
         }
     else:
         sorted_vals = label_col.sort()
-        n = len(sorted_vals)
         stats = {
             "mean": mean_val,
             "std": std_val,
