@@ -1,46 +1,20 @@
 {
-  "verdict": "pass",
+  "schema_version": 1,
   "spec_id": "v0.1.0-001-lgbm-asset-pricing",
-  "e2e_tests_written": [
-    "tests/e2e/test_lgbm_pipeline.py"
+  "stage": "M-E2E",
+  "kind": "author-result",
+  "role": "Shield",
+  "verdict": "pass",
+  "reviewed_targets": [
+    "tests/e2e"
   ],
-  "e2e_test_count": 3,
-  "integration_tests_written": [
-    "tests/integration/test_train_pipeline.py",
-    "tests/integration/test_predict_service.py",
-    "tests/integration/test_backtest_cli.py",
-    "tests/integration/test_eval_output.py",
-    "tests/integration/test_feature_importance_cli.py",
-    "tests/integration/test_cli_override.py",
-    "tests/integration/test_real_fetcher.py"
-  ],
-  "integration_test_count": 17,
-  "ac_coverage": {
-    "e2e": ["AC-FR1500-01", "AC-FR1500-02", "AC-FR1500-03"],
-    "integration": [
-      "AC-FR0700-05",
-      "AC-FR0800-03",
-      "AC-FR0900-01",
-      "AC-FR0900-02",
-      "AC-FR0900-03",
-      "AC-FR1100-01",
-      "AC-FR1100-02",
-      "AC-FR1100-03",
-      "AC-FR1200-01",
-      "AC-FR1300-01",
-      "AC-FR1300-04",
-      "AC-FR1400-01",
-      "AC-FR1400-02",
-      "AC-NFR0100-02",
-      "AC-NFR0700-01",
-      "AC-NFR0700-02"
-    ]
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T12:22:49Z",
+  "contract_bundle_hash": "2587bafedd4cae5ebb195c0c915513f8256b95a5223bbbebfb3f358facb95a74",
+  "metadata": {
+    "run_command": "uv run pytest tests/e2e -m e2e -v --timeout=90",
+    "cwd": "/Users/liyi/Workspace/trader-off"
   },
-  "runtime": {
-    "e2e": "0.90s (3 tests)",
-    "integration": "1.83s (16 tests + 1 skipped)",
-    "unit": "3.15s (109 tests)",
-    "total": "5.88s (128 tests + 1 skipped)"
-  },
-  "notes": "Augmented existing e2e test with: full report file assertions (prediction_quality.csv, layered_returns.csv, feature_importance.csv, 3 PNG figures), removed pytest.skip anti-patterns, added AC-FR1500-02 standalone test. Wrote 7 integration test files covering all test-plan §8.2 cross-module contracts. All 128 tests pass, e2e runtime 0.90s << 60s bound."
+  "output_hash": "cf4f5f55e211e3bd1ffab52a63bdd975b51b0e5df01c0b2aa47ac5619965abb0"
 }

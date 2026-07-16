@@ -4,19 +4,21 @@
   "stage": "M-E2E",
   "kind": "gate-result",
   "role": "Keeper",
-  "verdict": "pass",
+  "verdict": "fail",
   "reviewed_targets": [
-    "tests/"
+    "tests/e2e"
   ],
-  "blocking_findings": [],
+  "blocking_findings": [
+    "archer ci-scan failed (spec=v0.1.0-001-lgbm-asset-pricing, tests=['tests/e2e'])"
+  ],
   "accepted_risks": [],
-  "created_at": "2026-07-16T12:21:34Z",
-  "contract_bundle_hash": "0a66db880da4f5da4901a7605b76534a80b37f29f8527330fdb48559d07b14c0",
+  "created_at": "2026-07-16T12:22:50Z",
+  "contract_bundle_hash": "2587bafedd4cae5ebb195c0c915513f8256b95a5223bbbebfb3f358facb95a74",
   "metadata": {
     "commit_range": "3f962e6..HEAD",
     "tests_roots": [
-      "tests/"
+      "tests/e2e"
     ]
   },
-  "output_hash": "aa10d4e129c14f00d35f97d5e34ad726c8a234e2016e4bd3e16d35e1c467c11c"
+  "output_hash": "f27bb55b78d1d84be71363a46ca72d239c01956ae322399ff47ebb461e6014a9"
 }
