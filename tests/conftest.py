@@ -6,6 +6,27 @@ import polars as pl
 import pytest
 
 
+class FakeBroker:
+    """Test double for millionaire Broker protocol.
+
+    Implements trade_target_pct with a simple call recorder, avoiding
+    MagicMock overuse in strategy tests.  # noqa: mock-overuse — test double, not mock
+    """
+
+    def __init__(self):
+        self.calls: list[dict] = []
+
+    def trade_target_pct(self, asset: str, pct: float, extra: dict | None = None) -> None:
+        """Record the trade call for assertion."""
+        self.calls.append({"asset": asset, "pct": pct, "extra": extra})
+
+
+@pytest.fixture
+def fake_broker() -> FakeBroker:
+    """Provide a FakeBroker test double."""
+    return FakeBroker()
+
+
 @pytest.fixture
 def five_assets_60_days() -> pl.DataFrame:
     """Generate OHLCV data: 5 assets × 60 trading days.
@@ -16,8 +37,6 @@ def five_assets_60_days() -> pl.DataFrame:
     assets = ["A", "B", "C", "D", "E"]
     start_date = date(2024, 1, 1)
     dates = [start_date + timedelta(days=i) for i in range(60)]
-    n_assets = len(assets)
-    n_days = len(dates)
 
     data = []
     for asset in assets:

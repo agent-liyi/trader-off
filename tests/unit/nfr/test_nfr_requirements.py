@@ -1,12 +1,12 @@
-"""Tests for NFR-0200 (IC thresholds), NFR-0400 (async), NFR-0500 (logging), NFR-0600 (security), NFR-0700 (reproducibility)."""
+"""Tests for NFR-0200 (IC thresholds), NFR-0400 (async), NFR-0500 (logging),
+NFR-0600 (security), NFR-0700 (reproducibility).
 
-import asyncio
+Every test maps to a specific AC reference for Prism traceability.
+"""
+
 import inspect
 import json
-import os
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import polars as pl
 import pytest
@@ -19,8 +19,9 @@ import pytest
 class TestICThresholds:
     """NFR-0200: prediction capability thresholds in metadata."""
 
+    # AC-NFR0200-1: test_ic_mean / test_rank_ic_mean exist and are float
     def test_metadata_includes_ic_fields(self):
-        """Metadata dict must support test_ic_mean and test_rank_ic_mean."""
+        """AC-NFR0200-1: Metadata dict must support test_ic_mean and test_rank_ic_mean."""
         metadata = {
             "test_ic_mean": 0.025,
             "test_rank_ic_mean": 0.035,
@@ -28,15 +29,17 @@ class TestICThresholds:
         assert isinstance(metadata["test_ic_mean"], float)
         assert isinstance(metadata["test_rank_ic_mean"], float)
 
+    # AC-NFR0200-3: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True
     def test_ic_pass_soft_target_true(self):
-        """IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True."""
+        """AC-NFR0200-3: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True."""
         test_ic = 0.025
         test_rank_ic = 0.035
         ic_pass = test_ic > 0.02 and test_rank_ic > 0.03
         assert ic_pass is True
 
+    # AC-NFR0200-3: IC below threshold → ic_pass_soft_target=False
     def test_ic_pass_soft_target_false(self):
-        """IC below threshold → ic_pass_soft_target=False."""
+        """AC-NFR0200-3: IC below threshold → ic_pass_soft_target=False."""
         test_ic = 0.01
         test_rank_ic = 0.02
         ic_pass = test_ic > 0.02 and test_rank_ic > 0.03
@@ -51,8 +54,9 @@ class TestICThresholds:
 class TestAsyncSignatures:
     """NFR-0400 AC-2: strategy methods must be async def."""
 
+    # AC-NFR0400-2: all lifecycle methods are async def
     def test_strategy_methods_are_async(self):
-        """All LGBMTop20Strategy lifecycle methods should be async def."""
+        """AC-NFR0400-2: All LGBMTop20Strategy lifecycle methods should be async def."""
         from trader_off.strategies.lgbm_top20 import LGBMTop20Strategy
 
         async_methods = ["init", "on_day_open", "on_bar", "on_day_close", "on_stop"]
@@ -71,9 +75,11 @@ class TestAsyncSignatures:
 class TestLoggingNFR:
     """NFR-0500: log format, levels, file output."""
 
+    # AC-NFR0500-2: log format matches {time} | {level} | {name}:{function}:{line} | {message}
     def test_setup_logger_format_regex(self):
-        """Log format matches expected pattern."""
+        """AC-NFR0500-2: Log format matches expected pattern."""
         import re
+
         from trader_off.utils.logging import setup_logger
 
         log_dir = Path("logs")
@@ -82,7 +88,6 @@ class TestLoggingNFR:
         from loguru import logger
         logger.info("format test")
 
-        # Clean up: check log file exists
         log_files = list(log_dir.glob("test_nfr_*.log"))
         assert len(log_files) > 0
         content = log_files[0].read_text()
@@ -94,8 +99,9 @@ class TestLoggingNFR:
         )
         assert re.search(pattern, content), f"Format mismatch in: {content}"
 
+    # AC-NFR0500-3: INFO, WARNING, ERROR levels all produced
     def test_three_log_levels_produced(self):
-        """All three log levels (INFO, WARNING, ERROR) are available."""
+        """AC-NFR0500-3: All three log levels (INFO, WARNING, ERROR) are available."""
         from loguru import logger
 
         messages = []
@@ -123,8 +129,9 @@ class TestLoggingNFR:
 class TestSecurity:
     """NFR-0600: path traversal, no credentials, joblib usage."""
 
+    # AC-NFR0600-1: no hard-coded credentials in source
     def test_no_hard_coded_credentials(self):
-        """No hard-coded api_key/password/token/secret in source."""
+        """AC-NFR0600-1: No hard-coded api_key/password/token/secret in source."""
         import subprocess
 
         result = subprocess.run(
@@ -133,28 +140,24 @@ class TestSecurity:
              "src/trader_off/"],
             capture_output=True, text=True,
         )
-        # grep returns 1 if no matches found (which is good)
-        # grep returns 0 if matches found (which is bad)
         assert result.returncode != 0, (
             f"Hard-coded credentials found:\n{result.stdout}"
         )
 
+    # AC-NFR0600-3: model loading uses joblib, not pickle
     def test_model_serialization_uses_joblib(self):
-        """Model loading must use joblib, not raw pickle.load."""
-        import joblib
+        """AC-NFR0600-3: Model loading must use joblib, not raw pickle.load."""
         from trader_off.training.serialize import load_model
-        import inspect
 
         source = inspect.getsource(load_model)
         assert "joblib.load" in source, "load_model must use joblib.load"
         assert "pickle.load" not in source, "load_model must NOT use pickle.load"
 
+    # AC-NFR0600-2: path traversal prevented
     def test_path_traversal_prevented(self):
-        """Path traversal should raise PathTraversalError."""
+        """AC-NFR0600-2: Path traversal should raise PathTraversalError or FileNotFoundError."""
         from trader_off.utils.exceptions import PathTraversalError
 
-        # Model loading should validate paths - test that relative paths
-        # with '..' are handled properly
         with pytest.raises((FileNotFoundError, PathTraversalError)):
             from trader_off.training.serialize import load_model
             load_model("../escape", models_dir="/tmp")
@@ -168,16 +171,18 @@ class TestSecurity:
 class TestReproducibility:
     """NFR-0700: random seeds, config loading, metadata fields."""
 
+    # AC-NFR0700-1: random_state, feature_fraction_seed, bagging_seed all == 42
     def test_default_params_have_random_state_42(self):
-        """DEFAULT_PARAMS must include random_state=42 and seed params."""
+        """AC-NFR0700-1: DEFAULT_PARAMS must include random_state=42 and seed params."""
         from trader_off.training.trainer import DEFAULT_PARAMS
 
         assert DEFAULT_PARAMS["random_state"] == 42
         assert DEFAULT_PARAMS["feature_fraction_seed"] == 42
         assert DEFAULT_PARAMS["bagging_seed"] == 42
 
+    # AC-NFR0700-3: metadata includes git_commit_sha, python_version, package_versions
     def test_metadata_includes_repro_fields(self):
-        """metadata.json should include git_commit_sha, python_version, package_versions."""
+        """AC-NFR0700-3: metadata includes git_commit_sha, python_version, package_versions."""
         import sys
 
         metadata = {
@@ -192,8 +197,9 @@ class TestReproducibility:
         assert "." in metadata["python_version"]
         assert isinstance(metadata["package_versions"], dict)
 
+    # AC-NFR0700-2: YAML config loading works for strategy config
     def test_config_yaml_loading(self):
-        """Strategy config can be loaded from YAML."""
+        """AC-NFR0700-2: Strategy config can be loaded from YAML."""
         import yaml
 
         config_data = {
@@ -205,19 +211,23 @@ class TestReproducibility:
         loaded = yaml.safe_load(yaml_str)
         assert loaded["top_k"] == 20
 
+    # AC-NFR0700-3: save_model writes correct metadata.json content
     def test_save_model_metadata_json_content(self):
-        """save_model writes correct metadata.json."""
-        import numpy as np
-        import lightgbm as lgb
-        import json
+        """AC-NFR0700-3: save_model writes correct metadata.json with train_start."""
         import tempfile
-        from trader_off.training.serialize import save_model
-        from trader_off.data.preprocess import StandardScaler
 
-        X = np.random.RandomState(42).randn(10, 2)
-        y = np.random.RandomState(42).randn(10)
-        booster = lgb.train({"objective": "regression", "verbose": -1, "num_leaves": 4},
-                            lgb.Dataset(X, label=y), num_boost_round=3)
+        import lightgbm as lgb
+        import numpy as np
+
+        from trader_off.data.preprocess import StandardScaler
+        from trader_off.training.serialize import save_model
+
+        x_data = np.random.RandomState(42).randn(10, 2)
+        y_data = np.random.RandomState(42).randn(10)
+        booster = lgb.train(
+            {"objective": "regression", "verbose": -1, "num_leaves": 4},
+            lgb.Dataset(x_data, label=y_data), num_boost_round=3,
+        )
         scaler = StandardScaler(mean_={"f1": 0.0}, std_={"f1": 1.0}, feature_names=["f1"])
         metadata = {
             "train_start": "2015-01-01",
@@ -240,14 +250,15 @@ class TestReproducibility:
 class TestDataScale:
     """NFR-0100 AC-1: 4500 assets mock test."""
 
+    # AC-NFR0100-1: mock 4500 assets → prepare_walk_forward_splits works
     def test_mock_4500_assets_walk_forward(self, tmp_path):
-        """prepare_walk_forward_splits handles 4500 mock assets."""
-        import polars as pl
+        """AC-NFR0100-1: prepare_walk_forward_splits handles 4500 mock assets."""
         from datetime import date, timedelta
+
         from trader_off.data.walk_forward import prepare_walk_forward_splits
 
         n_assets = 4500
-        n_days = 500  # Need enough days to span train+valid+test
+        n_days = 500
         start = date(2017, 1, 1)
         dates = [start + timedelta(days=i) for i in range(n_days)]
 

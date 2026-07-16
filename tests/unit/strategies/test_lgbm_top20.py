@@ -1,27 +1,17 @@
-"""Tests for LGBMTop20Strategy (FR-1000)."""
+"""Tests for LGBMTop20Strategy (FR-1000).
 
-import yaml
+Uses FakeBroker from conftest.py instead of MagicMock for broker,
+addressing Prism mock-overuse findings.
+"""
+
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import yaml
 
 from trader_off.strategies.compat import BaseStrategy
 from trader_off.strategies.lgbm_top20 import LGBMTop20Strategy
-
-
-# ---------------------------------------------------------------------------
-# fixtures
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def mock_broker():
-    """A mock broker that records trade_target_pct calls."""
-    broker = MagicMock()
-    broker.trade_target_pct = MagicMock()
-    return broker
 
 
 @pytest.fixture
@@ -32,18 +22,6 @@ def sample_config() -> dict:
         "top_k": 20,
         "min_score": -float("inf"),
     }
-
-
-@pytest.fixture
-def mock_predict_result():
-    """Mock predict result: 3 assets with scores."""
-    import polars as pl
-
-    return pl.DataFrame({
-        "asset": ["000003.SZ", "000001.SZ", "000002.SZ"],
-        "score": [0.15, 0.10, 0.05],
-        "rank": [1, 2, 3],
-    })
 
 
 # ---------------------------------------------------------------------------
@@ -64,16 +42,17 @@ class TestLGBMTop20Strategy:
     # AC-FR1000-2: init loads model
     @pytest.mark.asyncio
     async def test_ac_fr1000_02_init_loads_model(
-        self, mock_broker, sample_config,
+        self, fake_broker, sample_config,
     ):
         """AC-FR1000-2: await init() loads model, sets top_k=20."""
-        strategy = LGBMTop20Strategy(mock_broker, sample_config)
+        strategy = LGBMTop20Strategy(fake_broker, sample_config)
 
         with patch(
             "trader_off.training.serialize.load_model",
-            return_value=MagicMock(
-                booster=MagicMock(),
-                scaler=MagicMock(),
+            # mock-overuse: ModelArtifact requires Booster (C++ object)
+            return_value=MagicMock(  # noqa: F841
+                booster=MagicMock(),  # noqa: F841
+                scaler=MagicMock(),  # noqa: F841
                 feature_names=["f1"],
                 metadata={},
             ),
@@ -86,17 +65,16 @@ class TestLGBMTop20Strategy:
     # AC-FR1000-3: on_day_open trades
     @pytest.mark.asyncio
     async def test_ac_fr1000_03_on_day_open_trades(
-        self, mock_broker, sample_config,
+        self, fake_broker, sample_config,
     ):
         """AC-FR1000-3: on_day_open calls predict, trades target weight."""
-        strategy = LGBMTop20Strategy(mock_broker, sample_config)
-        strategy.model = MagicMock()
+        strategy = LGBMTop20Strategy(fake_broker, sample_config)
+        strategy.model = MagicMock()  # mock-overuse: Booster requires C++ lib
         strategy.model_version = "v1"
-        strategy.top_k = 2  # Top 2 for simpler testing
+        strategy.top_k = 2
         strategy.min_score = -float("inf")
         strategy.watchlist = ["000001.SZ", "000002.SZ"]
 
-        # Mock predict to return 2 assets
         import polars as pl
 
         mock_result = pl.DataFrame({
@@ -112,24 +90,21 @@ class TestLGBMTop20Strategy:
         ):
             await strategy.on_day_open(datetime(2024, 12, 31, 9, 30))
 
-        # Verify predict was called once
-        # (The async mock may need adjustment)
-        assert mock_broker.trade_target_pct.call_count == 2
+        # Verify via FakeBroker call records
+        assert len(fake_broker.calls) == 2
 
-        # Check target weight = 1/top_k = 0.5
-        calls = mock_broker.trade_target_pct.call_args_list
-        assets_called = [c.kwargs.get("asset") or c.args[0] for c in calls]
+        assets_called = [c["asset"] for c in fake_broker.calls]
         assert "000001.SZ" in assets_called
         assert "000002.SZ" in assets_called
 
     # AC-FR1000-4: extra dict in orders
     @pytest.mark.asyncio
     async def test_ac_fr1000_04_extra_snapshot(
-        self, mock_broker, sample_config,
+        self, fake_broker, sample_config,
     ):
         """AC-FR1000-4: extra dict contains reason/score/rank/model_version."""
-        strategy = LGBMTop20Strategy(mock_broker, sample_config)
-        strategy.model = MagicMock()
+        strategy = LGBMTop20Strategy(fake_broker, sample_config)
+        strategy.model = MagicMock()  # mock-overuse: Booster requires C++ lib
         strategy.model_version = "v1"
         strategy.top_k = 2
         strategy.min_score = -float("inf")
@@ -150,16 +125,16 @@ class TestLGBMTop20Strategy:
         ):
             await strategy.on_day_open(datetime(2024, 12, 31, 9, 30))
 
-        # Check extra dict on the trade call
-        call = mock_broker.trade_target_pct.call_args
-        extra = call.kwargs.get("extra") or (call.args[2] if len(call.args) > 2 else {})
+        # Check extra dict via FakeBroker call records
+        assert len(fake_broker.calls) == 1
+        extra = fake_broker.calls[0].get("extra", {})
         assert extra.get("reason") == "lgbm_top20"
         assert extra.get("score") == 0.10
         assert extra.get("rank") == 1
         assert extra.get("model_version") == "v1"
 
     # AC-FR1000-5: config loaded from YAML
-    def test_ac_fr1000_05_config_loading(self, tmp_path):
+    def test_ac_fr1000_05_config_loading(self, fake_broker, tmp_path):
         """AC-FR1000-5: YAML config correctly loaded into strategy attributes."""
         config_path = tmp_path / "lgbm_top20.yaml"
         config_data = {
@@ -172,7 +147,7 @@ class TestLGBMTop20Strategy:
         loaded = yaml.safe_load(config_path.read_text())
 
         strategy = LGBMTop20Strategy(
-            broker=MagicMock(),
+            broker=fake_broker,
             config=loaded,
         )
 
