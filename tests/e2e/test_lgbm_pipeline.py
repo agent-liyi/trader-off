@@ -5,11 +5,9 @@ Tests the full train → predict → backtest pipeline using fixture data.
 
 import json
 import time
-from datetime import date, timedelta
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-import numpy as np
 import polars as pl
 import pytest
 
@@ -37,13 +35,13 @@ class TestLGBMPipeline:
         t0 = time.perf_counter()
 
         # ---- Step 1: Train model ----
+        from trader_off.data.preprocess import fit_scaler_and_impute
         from trader_off.features.momentum import compute_momentum_features
         from trader_off.features.volatility import compute_volatility_features
         from trader_off.features.volume import compute_volume_features
-        from trader_off.data.preprocess import fit_scaler_and_impute
         from trader_off.labels.builder import build_labels
-        from trader_off.training.trainer import train_model
         from trader_off.training.serialize import save_model
+        from trader_off.training.trainer import train_model
 
         data = fixture_data.sort(["asset", "date"])
 
@@ -82,7 +80,7 @@ class TestLGBMPipeline:
         y_valid = y.filter(pl.col("date").is_in(valid_dates))
 
         if len(X_train) < 10 or len(X_valid) < 10:
-            pytest.skip("Not enough data for train/valid split")
+            pytest.skip("Not enough data for train/valid split (see #20)")
 
         X_scaled, scaler, dropped = fit_scaler_and_impute(X_train)
         X_valid_feat = X_valid.select(feature_cols)
@@ -94,7 +92,7 @@ class TestLGBMPipeline:
         common_valid = min(len(X_valid_feat), len(y_valid_vals))
 
         if common_train < 10 or common_valid < 5:
-            pytest.skip("Not enough aligned data")
+            pytest.skip("Not enough aligned data (see #20)")
 
         params = {
             "num_leaves": 8,
@@ -163,7 +161,6 @@ class TestLGBMPipeline:
 
         asyncio.run(run_predict())
 
-        assert predictions is not None
         assert isinstance(predictions, pl.DataFrame)
         assert "asset" in predictions.columns
         assert "score" in predictions.columns
