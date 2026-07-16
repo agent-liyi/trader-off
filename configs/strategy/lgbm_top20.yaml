@@ -1,0 +1,4 @@
+# LGBMTop20 Strategy Configuration (FR-1000)
+model_version: "v1"
+top_k: 20
+min_score: -inf
