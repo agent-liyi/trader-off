@@ -42,7 +42,6 @@ async def predict(
             If None, a default DataLoader is created.
         models_dir: Root directory for model storage.
         skipped_path: Path to write predict_skipped.json.
-            Defaults to predictions_skipped_<date>.json.
 
     Returns:
         DataFrame with columns: asset, score, rank, sorted by score descending.
@@ -75,8 +74,10 @@ async def predict(
             continue
 
         if hist is None or len(hist) < lookback:
-            logger.warning(f"Skipping {asset}: insufficient history "
-                           f"({len(hist) if hist is not None else 0} < {lookback})")
+            logger.warning(
+                f"Skipping {asset}: insufficient history "
+                f"({len(hist) if hist is not None else 0} < {lookback})"
+            )
             skipped.append({
                 "asset": asset,
                 "reason": "insufficient_history",
@@ -84,45 +85,32 @@ async def predict(
             })
             continue
 
-        # Compute features
-        feats_mom = compute_momentum_features(hist)
-        feats_vol = compute_volatility_features(hist)
-        feats_vol = feats_vol.drop([c for c in hist.columns if c in feats_vol.columns
-                                    and c not in ("asset", "date")])
-        # Merge features — take the latest row (asof_date)
-        # All feature functions return the same DataFrame with added columns
-        combined = (
-            feats_mom
-            .join(feats_vol.select(["asset", "date"] + [
-                c for c in feats_vol.columns
-                if c not in feats_mom.columns
-            ]), on=["asset", "date"], how="left")
-        )
+        # Compute features (chain all three feature functions)
+        hist = compute_momentum_features(hist)
+        hist = compute_volatility_features(hist)
+        hist = compute_volume_features(hist)
 
-        # Get volume features
-        feats_vol2 = compute_volume_features(hist)
-        combined = combined.join(
-            feats_vol2.select(["asset", "date"] + [
-                c for c in feats_vol2.columns
-                if c not in combined.columns
-            ]), on=["asset", "date"], how="left")
+        # Take the latest row
+        latest = hist.sort("date").tail(1)
 
-        # Take the last row (most recent date)
-        latest = combined.sort("date").tail(1)
+        # Extract features and apply scaler: z = (x - mean) / std
+        feat_values = []
+        for fname in feature_names:
+            if fname in latest.columns:
+                raw = latest[fname][0]
+                if raw is None or np.isnan(raw):
+                    raw = 0.0
+                mean = scaler.mean_.get(fname, 0.0)
+                std = scaler.std_.get(fname, 1.0)
+                if std == 0.0:
+                    std = 1.0
+                z = (raw - mean) / std
+                feat_values.append(z)
+            else:
+                logger.warning(f"Feature '{fname}' missing for {asset}")
+                feat_values.append(0.0)
 
-        # Extract feature values in the correct order
-        feature_cols = [c for c in feature_names if c in latest.columns]
-        if len(feature_cols) != len(feature_names):
-            logger.warning(f"Feature mismatch for {asset}: "
-                           f"expected {feature_names}, got {feature_cols}")
-            # Filter to common columns
-            feature_cols = [c for c in feature_names if c in feature_cols]
-
-        # Get feature row as numpy
-        feat_row = latest.select(feature_cols).to_numpy().astype(np.float64)
-
-        # Handle NaN → fill with 0 (should have been handled by scaler, but safety)
-        feat_row = np.nan_to_num(feat_row, nan=0.0)
+        feat_row = np.array(feat_values, dtype=np.float64).reshape(1, -1)
 
         # Predict
         score = float(booster.predict(feat_row)[0])
