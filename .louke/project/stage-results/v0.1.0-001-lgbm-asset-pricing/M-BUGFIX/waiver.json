@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-BUGFIX",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "No bug fix needed — this is first development (M-DEV). 48 code files are new implementation, not bug fixes. Regression check compares releases/v0.1.0 against main (initial scaffold only). All 126 tests pass. Forcing advance to M-SECURITY."
+  ],
+  "accepted_risks": [
+    "No bug fix needed — this is first development (M-DEV). 48 code files are new implementation, not bug fixes. Regression check compares releases/v0.1.0 against main (initial scaffold only). All 126 tests pass. Forcing advance to M-SECURITY."
+  ],
+  "created_at": "2026-07-16T12:24:30Z",
+  "contract_bundle_hash": "2587bafedd4cae5ebb195c0c915513f8256b95a5223bbbebfb3f358facb95a74",
+  "metadata": {
+    "approved_by": "Maestro",
+    "commit_range": "ee16882..HEAD"
+  },
+  "output_hash": "0a45692be08495ba6f9dea88fb6c2c37e6db260cb9f52c247a0a773d2c5be1c6"
+}
