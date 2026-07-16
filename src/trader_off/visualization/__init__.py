@@ -1,0 +1,1 @@
+"""Visualization: static PNG charts."""
