@@ -1,3 +1,8 @@
+---
+locked: true
+locked-at: 2026-07-16T08:37:02Z
+locked-by: lk agent sage record-lock
+---
 # trader-off v0.1.0 — lightGBM 短时 A 股定价模型 — Spec
 
 - **Spec ID**: v0.1.0-001-lgbm-asset-pricing
