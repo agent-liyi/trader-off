@@ -1,4 +1,4 @@
-# lightGBM 短时 A 股定价模型 — Interface Contracts
+# Interfaces — lightGBM 短时 A 股定价模型 契约文档
 
 - **Spec ID**: v0.1.0-001-lgbm-asset-pricing
 - **Created**: 2026-07-16
