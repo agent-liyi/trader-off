@@ -26,7 +26,7 @@ class StandardScaler:
 
 
 def fit_scaler_and_impute(
-    X_train: pl.DataFrame,
+    X_train: pl.DataFrame,  # noqa: N803
 ) -> tuple[pl.DataFrame, StandardScaler, list[str]]:
     """Fit a z-score scaler on training data with forward-fill imputation.
 
@@ -93,7 +93,7 @@ def fit_scaler_and_impute(
     return df, scaler, dropped_features
 
 
-def transform(X: pl.DataFrame, scaler: StandardScaler) -> pl.DataFrame:
+def transform(X: pl.DataFrame, scaler: StandardScaler) -> pl.DataFrame:  # noqa: N803
     """Apply a fitted scaler to transform data.
 
     Uses the saved mean and std from training. Features not in the scaler

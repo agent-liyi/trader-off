@@ -154,3 +154,33 @@ class TestFitScalerAndImpute:
 
         # f2 should not be in scaler
         assert "f2" not in scaler.mean_, "f2 should not be in scaler.mean_"
+
+    def test_constant_column_zero_std(self):
+        """Scaler should handle constant columns (std=0) by setting std=1."""
+        start_date = date(2024, 1, 1)
+        data = []
+        for asset in ["A"]:
+            for i in range(10):
+                d = start_date + timedelta(days=i)
+                data.append({
+                    "asset": asset,
+                    "date": d,
+                    "f1": 5.0,  # Constant column → std=0
+                    "f2": float(i + 1),
+                })
+        df = pl.DataFrame(data, schema={
+            "asset": pl.Utf8,
+            "date": pl.Date,
+            "f1": pl.Float64,
+            "f2": pl.Float64,
+        })
+
+        transformed, scaler, dropped = fit_scaler_and_impute(df)
+
+        assert scaler.mean_["f1"] == 5.0
+        assert scaler.std_["f1"] == 1.0, (
+            f"Expected std=1 for constant column, got {scaler.std_['f1']}"
+        )
+        # All values should be 0 after z-score (since mean=5.0, std=1.0)
+        f1_values = transformed["f1"].to_list()
+        assert all(abs(v) < 1e-9 for v in f1_values if v is not None)
