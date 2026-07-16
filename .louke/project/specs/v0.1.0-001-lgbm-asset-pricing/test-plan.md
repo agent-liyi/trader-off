@@ -488,6 +488,12 @@ lk agent archer ci-scan \
 | AC-NFR0200-02   | `test_ac_nfr0200_02_negative_ic_warning`  | IC<0 → WARNING 关键词                              |
 | AC-NFR0200-03   | `test_ac_nfr0200_03_soft_target_pass`     | IC>0.02 & Rank IC>0.03 → `ic_pass_soft_target==True` |
 
+#### NFR-0300 单元测试覆盖率
+
+| AC              | 测试函数 / 门禁                           | 层     | 断言要点                                       |
+| --------------- | ----------------------------------------- | ------ | ---------------------------------------------- |
+| AC-NFR0300-01   | CI gate: `pytest --cov=trader_off --cov-report=term-missing` | CI     | `TOTAL` 行覆盖率 ≥95%（解析正则 `TOTAL\s+(\d+)%` ≥ 95） |
+
 #### NFR-0400 代码风格与异步约定
 
 | AC              | 测试函数 / 门禁                           | 层     | 断言要点                                       |
@@ -528,9 +534,9 @@ lk agent archer ci-scan \
 
 | 集成测试文件                       | 跨模块链路                                  | 覆盖 AC                                   |
 | ---------------------------------- | ------------------------------------------- | ----------------------------------------- |
-| `tests/integration/test_train_pipeline.py` | 特征→标准化→标签→walk-forward→训练→序列化 | AC-FR0700-05, AC-FR0800-01~04（端到端训练落盘）|
-| `tests/integration/test_predict_service.py`| 序列化→加载→预测→落盘                      | AC-FR0900-01~04（真实模型加载 + DataLoader 替身）|
-| `tests/integration/test_backtest_cli.py`   | 策略→broker→BacktestRunner→报告            | AC-FR1100-01~03（CLI 退出码/输出文件/参数校验）|
+| `tests/integration/test_train_pipeline.py` | 特征→标准化→标签→walk-forward→训练→序列化 | AC-FR0700-05, AC-FR0800-01, AC-FR0800-02, AC-FR0800-03, AC-FR0800-04（端到端训练落盘）|
+| `tests/integration/test_predict_service.py`| 序列化→加载→预测→落盘                      | AC-FR0900-01, AC-FR0900-02, AC-FR0900-03, AC-FR0900-04（真实模型加载 + DataLoader 替身）|
+| `tests/integration/test_backtest_cli.py`   | 策略→broker→BacktestRunner→报告            | AC-FR1100-01, AC-FR1100-02, AC-FR1100-03（CLI 退出码/输出文件/参数校验）|
 | `tests/integration/test_eval_output.py`   | 回测→IC 评估→CSV 落盘                      | AC-FR1300-04                              |
 | `tests/integration/test_feature_importance_cli.py` | 训练→特征重要性→CLI 打印          | AC-FR1400-02                              |
 | `tests/integration/test_cli_override.py`  | CLI→config→训练参数                        | AC-NFR0700-02                             |
@@ -568,7 +574,7 @@ lk agent archer ci-scan \
 | FR-1600   | 5     | unit                | `test_ac_fr1600_0[1-5]_*`         |
 | NFR-0100  | 4     | unit(3) + integration/L3(1) | `test_ac_nfr0100_0[1-4]_*`  |
 | NFR-0200  | 3     | unit                | `test_ac_nfr0200_0[1-3]_*`        |
-| NFR-0300  | 1     | CI gate             | `pytest --cov` TOTAL≥95%          |
+| NFR-0300  | 1     | CI gate             | AC-NFR0300-01: `pytest --cov` TOTAL≥95% |
 | NFR-0400  | 3     | unit(1) + CI gate(2)| `test_ac_nfr0400_02_*` + ruff/uv  |
 | NFR-0500  | 4     | unit(3) + CI gate(1)| `test_ac_nfr0500_0[2-4]_*` + ruff |
 | NFR-0600  | 4     | unit(2) + CI gate(2)| `test_ac_nfr0600_0[2-3]_*` + grep/bandit |
