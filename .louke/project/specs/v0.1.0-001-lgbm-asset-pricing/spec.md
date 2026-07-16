@@ -39,6 +39,7 @@ priority: P0
 
 ---
 
+<a id="fr-0100"></a>
 ### FR-0100 特征工程 — 动量类指标
 
 > **Lex** [RESOLVED]: PRD 覆盖缺口：story.md line 19 明确「支持扩展自定义特征」，但 spec FR-0100/0200/0300 仅定义固定的 15 个指标，无任何可扩展性 FR（如特征注册表、插件接口）。建议补充可扩展性 FR 或在排除项中明确 v0.1.0 不支持自定义特征扩展。
@@ -55,6 +56,7 @@ priority: P0
 
 ---
 
+<a id="fr-0200"></a>
 ### FR-0200 特征工程 — 波动率类指标
 
 > **Lex** [RESOLVED]: AC-FR0200-3 数值不一致：给定 close 序列仅 10 个交易日，则 daily_returns 最多 9 个非空值。vol_10 使用 min_periods=10 (FR-0200 规定 min_periods=N)，在 9 个非空值上无法产出非空结果，故 vol_10[9] 应为 NaN 而非「有值」。建议将 fixture 改为 11 个交易日（10 个收益），或调整期望。
@@ -72,6 +74,7 @@ priority: P0
 
 ---
 
+<a id="fr-0300"></a>
 ### FR-0300 特征工程 — 成交量类指标
 
 | Valid | Testable | Decided |
@@ -85,6 +88,7 @@ priority: P0
 
 ---
 
+<a id="fr-0400"></a>
 ### FR-0400 特征标准化与缺失值处理
 
 > **Lex** [RESOLVED]: AC-FR0400-1 逻辑问题：AC 称「第 2 行 asset 列有 NaN」并测试前向填充，但 FR-0400 规定前向填充「按 asset 分组」。若 asset 列本身为 NaN，则分组键未定义，fill_null(forward) 行为不可预期。应改为某个特征列为 NaN（而非 asset 列）来测试前向填充。
@@ -102,6 +106,7 @@ priority: P0
 
 ---
 
+<a id="fr-0500"></a>
 ### FR-0500 标签构建 — 未来 5 日收益率
 
 > **Lex** [RESOLVED]: 涨跌停阈值 0.095 域正确性问题：A 股涨跌停规则因板块而异——主板 10%、创业板/科创板 20%、ST 股 5%。固定阈值 0.095 会误过滤创业板/科创板的正常波动（9.5% < 20% 限价），且无法捕获 ST 股 5% 涨跌停。建议按 asset 元数据（板块/ST 标记）动态判定限价，或在 Constraints 中明确 v0.1.0 仅处理主板 10% 限价并记录假设。
@@ -119,6 +124,7 @@ priority: P0
 
 ---
 
+<a id="fr-0600"></a>
 ### FR-0600 训练数据准备 — 滚动 walk-forward
 
 | Valid | Testable | Decided |
@@ -135,6 +141,7 @@ priority: P0
 
 ---
 
+<a id="fr-0700"></a>
 ### FR-0700 模型训练 — lightGBM 回归
 
 | Valid | Testable | Decided |
@@ -157,6 +164,7 @@ priority: P0
 
 ---
 
+<a id="fr-0800"></a>
 ### FR-0800 模型序列化与版本管理
 
 > **Lex** [RESOLVED]: AC-FR0800-2 事实错误：version 默认格式 YYYYMMDD_HHMMSS（如 20260101_120000）共 15 个字符（8 位日期 + 1 个下划线 + 6 位时间），AC 写「13 位字符串」不正确，应改为 15 位。
@@ -182,6 +190,7 @@ priority: P0
 
 ---
 
+<a id="fr-0900"></a>
 ### FR-0900 预测服务
 
 > **Lex** [RESOLVED]: AC-FR0900-4 一致性问题：predict 服务是独立函数 (FR-0900 签名 predict(model_version, watchlist, asof_date))，数据来源为 quantide.data.fetchers (见 NFR-0100 AC-1、FR-1100)，并不经过 broker。AC 中 mock broker.get_history 与设计不符，应改为 mock fetcher / data loader。
@@ -204,6 +213,7 @@ priority: P0
 
 ---
 
+<a id="fr-1000"></a>
 ### FR-1000 策略集成 — LGBMTop20Strategy
 
 > **Lex** [RESOLVED]: 内部一致性问题：Decision Log (line 406) 称选 on_day_open 后「需要在 init 中预计算特征」，但 FR-1000 init() 描述仅为「加载模型、读取预测配置、初始化持仓缓存」，未提及特征预计算；且 on_day_open 调用 predict 服务 (FR-0900) 时由 predict 内部计算特征。建议澄清：删除 Decision Log 中「预计算特征」表述，或在 FR-1000 init 中补充特征预计算需求。
@@ -225,6 +235,7 @@ priority: P0
 
 ---
 
+<a id="fr-1100"></a>
 ### FR-1100 millionaire 回测接入
 
 | Valid | Testable | Decided |
@@ -244,6 +255,7 @@ priority: P0
 
 ---
 
+<a id="fr-1200"></a>
 ### FR-1200 回测报告 — 绩效指标
 
 > **Lex** [RESOLVED]: AC-FR1200-2 计算错误：净值序列 [100,110,105,120,115] 中 105 出现在 120 之前，不构成从 120 到 105 的回撤。正确最大回撤应为 (105-110)/110 = -0.0455（从 110 到 105），而非 AC 所写的 -0.125。建议修正期望值与断言。
@@ -266,6 +278,7 @@ priority: P0
 
 ---
 
+<a id="fr-1300"></a>
 ### FR-1300 预测能力评估
 
 | Valid | Testable | Decided |
@@ -282,6 +295,7 @@ priority: P0
 
 ---
 
+<a id="fr-1400"></a>
 ### FR-1400 特征重要性分析
 
 | Valid | Testable | Decided |
@@ -295,6 +309,7 @@ priority: P0
 
 ---
 
+<a id="fr-1500"></a>
 ### FR-1500 e2e 端到端流程
 
 | Valid | Testable | Decided |
@@ -312,6 +327,7 @@ priority: P0
 
 ---
 
+<a id="fr-1600"></a>
 ### FR-1600 可视化输出
 
 | Valid | Testable | Decided |
@@ -332,6 +348,7 @@ priority: P0
 
 ## Non-Functional Requirements
 
+<a id="nfr-0100"></a>
 ### NFR-0100 数据规模与时间范围
 
 > **Lex** [RESOLVED]: AC-NFR0100-1 可测试性冲突：该 AC 要求从真实 fetcher 加载并断言资产数 >= 4000，但 Constraints 明确「测试环境使用 fixture 数据」，FR-1500 e2e 仅用 10 只股票。此 AC 无法在 CI（无外部依赖）中验证。建议明确该 AC 为集成环境专用，或改为 mock fetcher 返回 >=4000 资产的单元测试。
@@ -350,6 +367,7 @@ priority: P0
 
 ---
 
+<a id="nfr-0200"></a>
 ### NFR-0200 预测能力阈值（学术参考线）
 
 | Valid | Testable | Decided |
@@ -363,6 +381,7 @@ priority: P0
 
 ---
 
+<a id="nfr-0300"></a>
 ### NFR-0300 单元测试覆盖率
 
 | Valid | Testable | Decided |
@@ -375,6 +394,7 @@ priority: P0
 
 ---
 
+<a id="nfr-0400"></a>
 ### NFR-0400 代码风格与异步约定
 
 | Valid | Testable | Decided |
@@ -388,6 +408,7 @@ priority: P0
 
 ---
 
+<a id="nfr-0500"></a>
 ### NFR-0500 日志规范
 
 | Valid | Testable | Decided |
@@ -403,6 +424,7 @@ priority: P0
 
 ---
 
+<a id="nfr-0600"></a>
 ### NFR-0600 安全审查
 
 | Valid | Testable | Decided |
@@ -419,6 +441,7 @@ priority: P0
 
 ---
 
+<a id="nfr-0700"></a>
 ### NFR-0700 数据可重现性
 
 | Valid | Testable | Decided |
