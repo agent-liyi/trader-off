@@ -10,7 +10,7 @@
   ],
   "blocking_findings": [],
   "accepted_risks": [],
-  "created_at": "2026-07-16T12:09:55Z",
+  "created_at": "2026-07-16T12:10:15Z",
   "contract_bundle_hash": "0a66db880da4f5da4901a7605b76534a80b37f29f8527330fdb48559d07b14c0",
   "metadata": {
     "commit_range": "48c0290..HEAD",
@@ -18,5 +18,5 @@
       "tests/"
     ]
   },
-  "output_hash": "543ec2a8b0da964b54bc3e7996c905960ffdacd2abcaa21aa0a490cb543ff4e8"
+  "output_hash": "ff06a7d193b07388cc9f2c30e369e6a592cd1cb65a8c4421de849de20c0d941f"
 }
