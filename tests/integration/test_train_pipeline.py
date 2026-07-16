@@ -109,8 +109,12 @@ class TestTrainPipeline:
         y_valid = y.filter(pl.col("date").is_in(valid_dates))
 
         # ---- Scaling ----
+        from trader_off.data.preprocess import StandardScaler
+
         X_scaled, scaler, dropped = fit_scaler_and_impute(X_train)
-        assert scaler is not None, "Scaler not created"
+        assert isinstance(scaler, StandardScaler), (
+            f"Expected StandardScaler, got {type(scaler)}"
+        )
         assert len(scaler.feature_names) > 0, "No feature names in scaler"
         # ret_60 and vol_60 may be dropped if data is insufficient
         assert isinstance(dropped, list)
@@ -168,9 +172,16 @@ class TestTrainPipeline:
             assert (model_dir / fname).exists(), f"Missing {fname}"
 
         # Verify round-trip load
+        import lightgbm as lgb
+        from trader_off.data.preprocess import StandardScaler
+
         artifact = load_model(version=version, models_dir=models_dir)
-        assert artifact.booster is not None
-        assert artifact.scaler is not None
+        assert isinstance(artifact.booster, lgb.Booster), (
+            f"Expected Booster, got {type(artifact.booster)}"
+        )
+        assert isinstance(artifact.scaler, StandardScaler), (
+            f"Expected StandardScaler, got {type(artifact.scaler)}"
+        )
         assert len(artifact.feature_names) > 0
         assert isinstance(artifact.metadata, dict)
 

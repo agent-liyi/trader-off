@@ -45,7 +45,8 @@ class TestRealFetcher:
                 assets = fetchers.list_assets()
             except AttributeError:
                 pytest.skip(
-                    "Real fetcher API not compatible (see #issue/l3-fetcher-api)"
+                    "L3 real fetcher test requires millionaire installed "
+                    "with fetcher API support (see #22)"
                 )
 
         # Must have at least 4000 A-share stocks

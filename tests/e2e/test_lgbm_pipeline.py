@@ -180,10 +180,19 @@ class TestLGBMPipeline:
             assert (model_dir / fname).exists(), f"Missing {fname}"
 
         # Verify artifact can be loaded back
+        import lightgbm as lgb
+        from trader_off.data.preprocess import StandardScaler
+
         artifact = load_model(version=version, models_dir=models_dir)
-        assert artifact.booster is not None
-        assert artifact.scaler is not None
-        assert len(artifact.feature_names) > 0
+        assert isinstance(artifact.booster, lgb.Booster), (
+            f"Expected Booster, got {type(artifact.booster)}"
+        )
+        assert isinstance(artifact.scaler, StandardScaler), (
+            f"Expected StandardScaler, got {type(artifact.scaler)}"
+        )
+        assert len(artifact.feature_names) > 0, (
+            "feature_names should not be empty"
+        )
 
         # ----------------------------------------------------------------
         # Step 2: Predict
@@ -266,9 +275,36 @@ class TestLGBMPipeline:
             f"Missing keys in summary: {required_keys - set(summary.keys())}"
         )
         for key in required_keys:
-            assert summary[key] is not None, (
-                f"summary['{key}'] should not be None"
-            )
+            val = summary[key]
+            # total_trades must be a non-negative integer
+            if key == "total_trades":
+                assert isinstance(val, int), (
+                    f"summary['{key}'] must be int, got {type(val)}"
+                )
+                assert val >= 0, (
+                    f"summary['{key}'] must be >= 0, got {val}"
+                )
+            # win_rate is in [0, 1]
+            elif key == "win_rate":
+                assert isinstance(val, (float, int)), (
+                    f"summary['{key}'] must be numeric, got {type(val)}"
+                )
+                assert 0.0 <= float(val) <= 1.0, (
+                    f"summary['{key}'] out of [0,1]: {val}"
+                )
+            # max_drawdown is non-positive
+            elif key == "max_drawdown":
+                assert isinstance(val, (float, int)), (
+                    f"summary['{key}'] must be numeric, got {type(val)}"
+                )
+                assert float(val) <= 0.0, (
+                    f"summary['{key}'] should be <=0, got {val}"
+                )
+            # all other float fields: just check numeric type
+            else:
+                assert isinstance(val, (float, int)), (
+                    f"summary['{key}'] must be numeric, got {type(val)}: {val}"
+                )
 
         # ----------------------------------------------------------------
         # Step 4: Feature importance extraction
