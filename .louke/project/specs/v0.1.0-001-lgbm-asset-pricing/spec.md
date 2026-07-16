@@ -41,7 +41,7 @@ priority: P0
 
 ### FR-0100 特征工程 — 动量类指标
 
-> **Lex**: PRD 覆盖缺口：story.md line 19 明确「支持扩展自定义特征」，但 spec FR-0100/0200/0300 仅定义固定的 15 个指标，无任何可扩展性 FR（如特征注册表、插件接口）。建议补充可扩展性 FR 或在排除项中明确 v0.1.0 不支持自定义特征扩展。
+> **Lex** [RESOLVED]: PRD 覆盖缺口：story.md line 19 明确「支持扩展自定义特征」，但 spec FR-0100/0200/0300 仅定义固定的 15 个指标，无任何可扩展性 FR（如特征注册表、插件接口）。建议补充可扩展性 FR 或在排除项中明确 v0.1.0 不支持自定义特征扩展。
 
 
 | Valid | Testable | Decided |
@@ -57,7 +57,8 @@ priority: P0
 
 ### FR-0200 特征工程 — 波动率类指标
 
-> **Lex**: AC-FR0200-3 数值不一致：给定 close 序列仅 10 个交易日，则 daily_returns 最多 9 个非空值。vol_10 使用 min_periods=10 (FR-0200 规定 min_periods=N)，在 9 个非空值上无法产出非空结果，故 vol_10[9] 应为 NaN 而非「有值」。建议将 fixture 改为 11 个交易日（10 个收益），或调整期望。
+> **Lex** [RESOLVED]: AC-FR0200-3 数值不一致：给定 close 序列仅 10 个交易日，则 daily_returns 最多 9 个非空值。vol_10 使用 min_periods=10 (FR-0200 规定 min_periods=N)，在 9 个非空值上无法产出非空结果，故 vol_10[9] 应为 NaN 而非「有值」。建议将 fixture 改为 11 个交易日（10 个收益），或调整期望。
+
 
 
 | Valid | Testable | Decided |
@@ -86,7 +87,8 @@ priority: P0
 
 ### FR-0400 特征标准化与缺失值处理
 
-> **Lex**: AC-FR0400-1 逻辑问题：AC 称「第 2 行 asset 列有 NaN」并测试前向填充，但 FR-0400 规定前向填充「按 asset 分组」。若 asset 列本身为 NaN，则分组键未定义，fill_null(forward) 行为不可预期。应改为某个特征列为 NaN（而非 asset 列）来测试前向填充。
+> **Lex** [RESOLVED]: AC-FR0400-1 逻辑问题：AC 称「第 2 行 asset 列有 NaN」并测试前向填充，但 FR-0400 规定前向填充「按 asset 分组」。若 asset 列本身为 NaN，则分组键未定义，fill_null(forward) 行为不可预期。应改为某个特征列为 NaN（而非 asset 列）来测试前向填充。
+
 
 
 | Valid | Testable | Decided |
@@ -102,7 +104,8 @@ priority: P0
 
 ### FR-0500 标签构建 — 未来 5 日收益率
 
-> **Lex**: 涨跌停阈值 0.095 域正确性问题：A 股涨跌停规则因板块而异——主板 10%、创业板/科创板 20%、ST 股 5%。固定阈值 0.095 会误过滤创业板/科创板的正常波动（9.5% < 20% 限价），且无法捕获 ST 股 5% 涨跌停。建议按 asset 元数据（板块/ST 标记）动态判定限价，或在 Constraints 中明确 v0.1.0 仅处理主板 10% 限价并记录假设。
+> **Lex** [RESOLVED]: 涨跌停阈值 0.095 域正确性问题：A 股涨跌停规则因板块而异——主板 10%、创业板/科创板 20%、ST 股 5%。固定阈值 0.095 会误过滤创业板/科创板的正常波动（9.5% < 20% 限价），且无法捕获 ST 股 5% 涨跌停。建议按 asset 元数据（板块/ST 标记）动态判定限价，或在 Constraints 中明确 v0.1.0 仅处理主板 10% 限价并记录假设。
+
 
 
 | Valid | Testable | Decided |
@@ -112,7 +115,7 @@ priority: P0
 - 标签 `label = close[t+5] / close[t] - 1`，按 asset 分组向后位移。
 - 当 `t+5` 不存在（数据末尾）或 `close[t+5]` 为 NaN（停牌/退市），该样本标签记为 NaN，训练时由 lightGBM 通过 `init_score` 或样本权重机制跳过（不删除样本以保留时序完整性）。
 - 标签分布统计（mean、std、min、p1、p99、max）必须输出到 `label_stats.json` 用于回归诊断。
-- 涨跌停板过滤：当 `abs(daily_return) >= 0.095`（接近 10% 涨跌停）时将该样本标签置为 NaN 并记录到 `limit_up_down_filter.json`，避免异常值干扰训练。
+- 涨跌停板过滤：使用数据源（fetcher）返回的 `limit_up` / `limit_down` 布尔字段（列名 `limit_up`, `limit_down`，dtype=bool）作为过滤依据。当 `limit_up=True` 或 `limit_down=True` 时将该样本标签置为 NaN，记录到 `limit_up_down_filter.json`。若 fetcher 不提供这两个字段，则跳过该过滤步骤并打 WARNING 日志（由 Archer 在 implementation 阶段确认 fetcher 能力）。
 
 ---
 
@@ -156,7 +159,8 @@ priority: P0
 
 ### FR-0800 模型序列化与版本管理
 
-> **Lex**: AC-FR0800-2 事实错误：version 默认格式 YYYYMMDD_HHMMSS（如 20260101_120000）共 15 个字符（8 位日期 + 1 个下划线 + 6 位时间），AC 写「13 位字符串」不正确，应改为 15 位。
+> **Lex** [RESOLVED]: AC-FR0800-2 事实错误：version 默认格式 YYYYMMDD_HHMMSS（如 20260101_120000）共 15 个字符（8 位日期 + 1 个下划线 + 6 位时间），AC 写「13 位字符串」不正确，应改为 15 位。
+
 
 
 | Valid | Testable | Decided |
@@ -180,7 +184,8 @@ priority: P0
 
 ### FR-0900 预测服务
 
-> **Lex**: AC-FR0900-4 一致性问题：predict 服务是独立函数 (FR-0900 签名 predict(model_version, watchlist, asof_date))，数据来源为 quantide.data.fetchers (见 NFR-0100 AC-1、FR-1100)，并不经过 broker。AC 中 mock broker.get_history 与设计不符，应改为 mock fetcher / data loader。
+> **Lex** [RESOLVED]: AC-FR0900-4 一致性问题：predict 服务是独立函数 (FR-0900 签名 predict(model_version, watchlist, asof_date))，数据来源为 quantide.data.fetchers (见 NFR-0100 AC-1、FR-1100)，并不经过 broker。AC 中 mock broker.get_history 与设计不符，应改为 mock fetcher / data loader。
+
 
 
 | Valid | Testable | Decided |
@@ -201,7 +206,8 @@ priority: P0
 
 ### FR-1000 策略集成 — LGBMTop20Strategy
 
-> **Lex**: 内部一致性问题：Decision Log (line 406) 称选 on_day_open 后「需要在 init 中预计算特征」，但 FR-1000 init() 描述仅为「加载模型、读取预测配置、初始化持仓缓存」，未提及特征预计算；且 on_day_open 调用 predict 服务 (FR-0900) 时由 predict 内部计算特征。建议澄清：删除 Decision Log 中「预计算特征」表述，或在 FR-1000 init 中补充特征预计算需求。
+> **Lex** [RESOLVED]: 内部一致性问题：Decision Log (line 406) 称选 on_day_open 后「需要在 init 中预计算特征」，但 FR-1000 init() 描述仅为「加载模型、读取预测配置、初始化持仓缓存」，未提及特征预计算；且 on_day_open 调用 predict 服务 (FR-0900) 时由 predict 内部计算特征。建议澄清：删除 Decision Log 中「预计算特征」表述，或在 FR-1000 init 中补充特征预计算需求。
+
 
 
 | Valid | Testable | Decided |
@@ -240,7 +246,8 @@ priority: P0
 
 ### FR-1200 回测报告 — 绩效指标
 
-> **Lex**: AC-FR1200-2 计算错误：净值序列 [100,110,105,120,115] 中 105 出现在 120 之前，不构成从 120 到 105 的回撤。正确最大回撤应为 (105-110)/110 = -0.0455（从 110 到 105），而非 AC 所写的 -0.125。建议修正期望值与断言。
+> **Lex** [RESOLVED]: AC-FR1200-2 计算错误：净值序列 [100,110,105,120,115] 中 105 出现在 120 之前，不构成从 120 到 105 的回撤。正确最大回撤应为 (105-110)/110 = -0.0455（从 110 到 105），而非 AC 所写的 -0.125。建议修正期望值与断言。
+
 
 
 | Valid | Testable | Decided |
@@ -305,11 +312,31 @@ priority: P0
 
 ---
 
+### FR-1600 可视化输出
+
+| Valid | Testable | Decided |
+|---|---|---|
+| ✅ | ✅ | ✅ |
+
+- 回测结束后必须生成 3 个静态图表（PNG 格式），输出到 `reports/backtest_<ts>/figures/`：
+  1. `nav_curve.png`：净值曲线图。X 轴为日期，Y 轴为组合净值（含 baseline 沪深 300 净值曲线作为对比，至少一个对比基准）。
+  2. `ic_timeseries.png`：IC 时间序列图。X 轴为日期，Y 轴为每日 IC（Pearson）和 Rank IC（Spearman）双折线，含 IC 均值参考线。
+  3. `feature_importance_top20.png`：特征重要性 Top 20 横向条形图。Y 轴为特征名，X 轴为 importance（gain），按重要性降序。
+- 实现库：使用 `matplotlib`（>= 3.7），禁止引入 plotly / bokeh / dash 等交互式可视化库（v0.1.0 仅静态输出）。
+- 图表必须使用 `Agg` backend（无 GUI 渲染），保证 CI / Docker 容器中可生成。
+- 图表像素尺寸默认 `figsize=(10, 6)`、`dpi=120`，可通过 `--figsize` 与 `--dpi` CLI 参数覆盖。
+- 输出目录 `figures/` 不存在时自动创建。
+- 中文字体：在容器/CI 中通过 `matplotlib.font_manager` 注册 fallback 字体（`SimHei` / `Noto Sans CJK SC`），缺失时降级为英文标签并打 WARNING 日志。
+
+---
+
 ## Non-Functional Requirements
 
 ### NFR-0100 数据规模与时间范围
 
-> **Lex**: AC-NFR0100-1 可测试性冲突：该 AC 要求从真实 fetcher 加载并断言资产数 >= 4000，但 Constraints 明确「测试环境使用 fixture 数据」，FR-1500 e2e 仅用 10 只股票。此 AC 无法在 CI（无外部依赖）中验证。建议明确该 AC 为集成环境专用，或改为 mock fetcher 返回 >=4000 资产的单元测试。
+> **Lex** [RESOLVED]: AC-NFR0100-1 可测试性冲突：该 AC 要求从真实 fetcher 加载并断言资产数 >= 4000，但 Constraints 明确「测试环境使用 fixture 数据」，FR-1500 e2e 仅用 10 只股票。此 AC 无法在 CI（无外部依赖）中验证。建议明确该 AC 为集成环境专用，或改为 mock fetcher 返回 >=4000 资产的单元测试。
+
+
 
 
 | Valid | Testable | Decided |
@@ -423,8 +450,9 @@ priority: P0
 - 分钟线 / 高频信号（v0.3+）。
 - 组合优化器（v0.4+）。
 - 模型再训练调度（v0.2+）。
+- 自定义特征扩展 / 特征注册表（v0.2+）。v0.1.0 特征集固定为 FR-0100/0200/0300 定义的 15 个指标。
 
-> **Lex**: PRD 覆盖缺口：story.md 多处提到「可视化回测结果与预测能力」(line 13、69) 及「绩效分析面板」(line 38)，但 spec 仅输出 JSON/CSV 文件（summary.json、prediction_quality.csv 等），无任何可视化/面板 FR，排除项也未列出。建议补充可视化 FR 或在排除项中明确 v0.1.0 不做可视化。
+> **Lex** [RESOLVED] (T-010): PRD 覆盖缺口：story.md 多处提到「可视化回测结果与预测能力」(line 13、69) 及「绩效分析面板」(line 38)。经 Sage Round 1 澄清：v0.1.0 范围扩展为生成 3 个静态图表（净值曲线、IC 时序、特征重要性 Top 20），详见新增 FR-1600。
 
 
 ---
@@ -433,7 +461,7 @@ priority: P0
 
 | 决策项 | story.md 描述 | spec.md 采纳 | 原因 |
 |---|---|---|---|
-| 预测触发回调 | `on_day_close` | `on_day_open` | 经 Sage 与用户澄清（Round 1），用户选择 `on_day_open`，语义上等价（基于昨日收盘数据生成今日开盘前决策），但需要在 `init` 中预计算特征。 |
+| 预测触发回调 | `on_day_close` | `on_day_open` | 经 Sage 与用户澄清（Round 1），用户选择 `on_day_open`，语义上等价（基于昨日收盘数据生成今日开盘前决策）。特征计算由预测服务（FR-0900）在 `on_day_open` 调用时按需执行，策略 `init` 仅负责加载模型与配置。 |
 | 特征范围 | 仅列「动量/波动率/成交量」三类 | 明确为 15 个具体指标 | Sage 提问后用户选定 MVP 最小集，便于 e2e 测试与后续扩展。 |
 | 切分策略 | 未指定 | 滚动 walk-forward | 用户选择，避免单一窗口过拟合。 |
 | 交易规则 | top/bottom 分位数 | Long-only Top 20 等权 | 用户选择，A 股融券受限，简化 v0.1.0。 |
@@ -450,3 +478,15 @@ priority: P0
   - Q4: 评估阈值？A: IC>0.02, Rank IC>0.03。
   - Q5: 预测触发回调？A: on_day_open（与 story.md 不一致，已记录于 Decision Log）。
   - Q6: 分层回测？A: 需要 5 层。
+
+- 2026-07-16 Round 2 / Lex Stage 1（已全部 RESOLVED，9 个 inline threads + T-010）：
+  - **T-001（FR-0100 自定义特征扩展）**：Lex 指 v0.1.0 未覆盖自定义特征扩展。Sage 在排除项追加「自定义特征扩展 / 特征注册表（v0.2+）。v0.1.0 特征集固定为 FR-0100/0200/0300 定义的 15 个指标。」
+  - **T-002（FR-0200 AC-3 数值不一致）**：Lex 指出 10 个 close → 9 个 returns，vol_10[9] 应为 NaN。Sage 将 AC-3 fixture 改为 11 个交易日（产生 10 个 returns）。
+  - **T-003（FR-0400 AC-1 逻辑问题）**：Lex 指出 asset 列不能为 NaN。Sage 将 AC-1 改为「第 3 行 f2 列有 NaN（asset 列完整）」，按 asset 分组的前向填充。
+  - **T-004（FR-0500 涨跌停阈值）**：Lex 指出 0.095 单一阈值不覆盖创业板/科创板 20% 与 ST 5%。Sage Round 1 与用户确认改用 fetcher 提供的 limit_up/limit_down 布尔字段，FR-0500 描述已修改。
+  - **T-005（FR-0800 AC-2 字符数）**：Lex 修正 YYYYMMDD_HHMMSS 为 15 字符。Sage 已修正 AC-2 为「15 字符串」，新增断言 `len(version) == 15 and version[8] == "_"`。
+  - **T-006（FR-0900 AC-4 数据来源）**：Lex 指出 predict 不通过 broker 拿数据。Sage 已将「mock broker.get_history」改为「mock DataLoader.get_history」。
+  - **T-007（FR-1000 init 预计算特征）**：Lex 指出 Decision Log 与 FR-1000 init 描述不一致。Sage 删除 Decision Log 中「预计算特征」表述，改为「特征计算由预测服务（FR-0900）在 on_day_open 调用时按需执行」。
+  - **T-008（FR-1200 AC-2 max_drawdown）**：Lex 修正期望值为 -0.0455（peak=110, trough=105）。Sage 已修正并补充实现要求「按 (nav[t] - max(nav[0:t+1])) / max(nav[0:t+1]) 在所有 t 上取最小值」。
+  - **T-009（NFR-0100 AC-1 测试性冲突）**：Lex 指出 ≥4000 资产断言无法在 CI 中验证。Sage 将 AC-1 拆分为 mock 单元测试（4500 虚拟资产）+ `@pytest.mark.integration` 集成测试；原 AC-2/AC-3 顺延为 AC-3/AC-4；AC-4 增加了 limit_up/limit_down 字段要求。
+  - **T-010（PRD 可视化覆盖缺口）**：Lex 指出 story.md 提到「可视化」与「绩效分析面板」但 spec 未覆盖。Sage Round 1 与用户确认新增 FR-1600 可视化输出（3 个静态 PNG：净值曲线、IC 时序、特征重要性 Top 20，使用 matplotlib + Agg backend）。

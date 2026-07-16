@@ -47,10 +47,10 @@
 - 断言：`abs(df["vol_10"].to_list()[-1]) < 1e-9`。
 
 ### AC-3
-- 给定：资产 A 的 close 序列只有 10 个交易日。
+- 给定：资产 A 的 close 序列只有 11 个交易日（[100, 101, 102, ..., 110]），可产生 10 个日收益。
 - 当：调用 `compute_volatility_features`。
-- 那么：`vol_10[0:9]` 全部为 NaN（min_periods=10），`vol_10[9]` 有值。
-- 断言：前 9 个值为 None，第 10 个值非空。
+- 那么：`vol_10[0:9]` 全部为 NaN（min_periods=10 需要 10 个 return），`vol_10[10]` 有值。
+- 断言：前 10 个值为 None，第 11 个值非空。
 
 ---
 
@@ -73,11 +73,12 @@
 ## FR-0400 特征标准化与缺失值处理
 
 ### AC-1
-- 给定：训练特征 DataFrame `X_train`（100 行 × 5 列），其中第 2 行 asset 列有 NaN。
+- 给定：训练特征 DataFrame `X_train`（100 行 × 5 列，列名 `asset, f1, f2, f3, f4`），其中第 3 行 `f2` 列有 NaN（资产 A 在 t=2 时 f2 缺失，但 `asset` 列完整）。
 - 当：调用 `fit_scaler_and_impute(X_train)`。
 - 那么：返回的 transformed DataFrame 中：
-  - 第 2 行原 NaN 被前向填充（取第 1 行值）；若仍为 NaN 则填 0。
+  - 第 3 行的 `f2` 被前向填充（取同一 asset 第 2 行的 f2 值，按 asset 分组的 forward fill）；若仍为 NaN 则填 0。
   - 整列若全 NaN，则该列被剔除（不出现在结果中）。
+- 断言：`df.filter(pl.col("asset") == "A").filter(pl.col("date") == t2)["f2"]` 等于 `df.filter(pl.col("asset") == "A").filter(pl.col("date") == t1)["f2"]`（按 asset 分组的前向填充）。
 
 ### AC-2
 - 给定：上一步训练得到的 scaler。
@@ -114,9 +115,10 @@
 - 那么：`label[2]` 为 NaN（因 close[7] 不可用）。
 
 ### AC-4
-- 给定：资产 A 第 3 个交易日涨幅 9.6%（接近涨停）。
+- 给定：资产 A 第 3 个交易日的原始数据含 `limit_up=True`（涨停）。
 - 当：调用 `build_labels(..., filter_limit_up_down=True)`。
-- 那么：`label[3]`（如可计算）变为 NaN，且 `limit_up_down_filter.json` 含记录 `{"asset": "A", "date": "...", "abs_return": 0.096}`。
+- 那么：`label[3]`（如可计算）变为 NaN，且 `limit_up_down_filter.json` 含记录 `{"asset": "A", "date": "...", "reason": "limit_up"}`。
+- 断言：`df.filter(pl.col("asset") == "A").filter(pl.col("date") == t3)["label"].is_null()` 且 JSON 文件含对应记录。
 
 ### AC-5
 - 给定：1000 只资产 × 500 个交易日的标签。
@@ -184,7 +186,8 @@
 ### AC-2
 - 给定：未指定 `--version` 参数。
 - 当：执行训练。
-- 那么：`version` 默认值为 `YYYYMMDD_HHMMSS` 格式（13 位字符串），可通过 `datetime.now().strftime("%Y%m%d_%H%M%S")` 验证格式。
+- 那么：`version` 默认值为 `YYYYMMDD_HHMMSS` 格式（15 字符串：8 位日期 + 1 位下划线 + 6 位时间），可通过 `datetime.now().strftime("%Y%m%d_%H%M%S")` 验证格式。
+- 断言：`len(version) == 15 and version[8] == "_"`。
 
 ### AC-3
 - 给定：目录 `models/20260101_120000/` 已存在。
@@ -220,7 +223,8 @@
 ### AC-4
 - 给定：训练时最大 lookback = 120。
 - 当：调用 `predict(...)`。
-- 那么：内部读取每个资产 120 个交易日的行情（默认参数），可通过 mock broker.get_history 验证调用次数。
+- 那么：内部通过 `quantide.data.fetchers`（或本项目注入的 DataLoader 抽象层）读取每个资产 120 个交易日的行情，可通过 mock DataLoader.get_history 验证调用次数。
+- 断言：`mock_loader.get_history.call_count == len(watchlist)` 且每次调用的 `count` 参数等于 120。
 
 ---
 
@@ -290,8 +294,9 @@
 ### AC-2
 - 给定：净值序列 [100, 110, 105, 120, 115]。
 - 当：调用 `compute_performance_metrics`。
-- 那么：`max_drawdown == (105-120)/120 ≈ -0.125`（实际最大回撤从 120 到 105）。
-- 断言：`abs(result["max_drawdown"] - (-0.125)) < 1e-6`。
+- 那么：最大回撤路径为 110 → 105（peak=110, trough=105），`max_drawdown = (105 - 110) / 110 ≈ -0.0455`。
+- 断言：`abs(result["max_drawdown"] - (-0.0454545...)) < 1e-6`。
+- 实现要求：`max_drawdown` 按 (nav[t] - max(nav[0:t+1])) / max(nav[0:t+1]) 在所有 t 上取最小值。
 
 ### AC-3
 - 给定：净值 DataFrame 仅 10 行。
@@ -370,23 +375,65 @@
 
 ---
 
+## FR-1600 可视化输出
+
+### AC-1
+- 给定：回测完成，净值数据 `nav.parquet` 存在。
+- 当：调用 `render_nav_curve(nav_df, baseline_df, output_path="reports/.../figures/nav_curve.png")`。
+- 那么：生成 PNG 文件，文件存在且 `matplotlib.image.imread` 可读取，宽高匹配 `figsize=(10, 6)` × `dpi=120`（1200×720 像素）。
+- 断言：`Path(output_path).exists() and Path(output_path).stat().st_size > 1024`（非空 PNG）。
+
+### AC-2
+- 给定：回测完成，`prediction_quality.csv` 含 IC 与 Rank IC 时序。
+- 当：调用 `render_ic_timeseries(ic_df, output_path="reports/.../figures/ic_timeseries.png")`。
+- 那么：生成 PNG 文件，含 IC 与 Rank IC 双折线 + 均值参考线（matplotlib axhline）。
+- 断言：`"ic_timeseries.png" in os.listdir(figures_dir)` 且 loguru 记录 "render_ic_timeseries done"。
+
+### AC-3
+- 给定：训练完成，`feature_importance.csv` 存在。
+- 当：调用 `render_feature_importance(importance_df, top_k=20, output_path="reports/.../figures/feature_importance_top20.png")`。
+- 那么：生成 PNG 文件，为横向条形图（matplotlib `barh`），含 Top 20 特征。
+- 断言：`len(plot_data) == 20`，且输出文件大小 > 1024 bytes。
+
+### AC-4
+- 给定：未安装 matplotlib 的环境（`import matplotlib` 抛 `ImportError`）。
+- 当：调用任意 render_* 函数。
+- 那么：抛 `VisualizationDependencyError`，message 含 "matplotlib is required for visualization, install via `uv add matplotlib`"。
+- 标注：本 AC 用于保证缺依赖时给出可操作的错误提示，不静默失败。
+
+### AC-5
+- 给定：CI / Docker 容器中无 X server。
+- 当：执行可视化生成。
+- 那么：使用 `matplotlib.use("Agg")` 在导入 pyplot 之前设置 backend，stdout 不出现 "Matplotlib is currently using agg" 警告。
+- 断言：`import matplotlib; matplotlib.get_backend().lower() == "agg"`。
+
+---
+
 ## NFR-0100 数据规模与时间范围
 
 ### AC-1
-- 给定：从 `quantide.data.fetchers` 加载 A 股全市场日线。
-- 当：检查返回的资产列表。
-- 那么：资产数量 ≥ 4000。
-- 断言：`len(assets) >= 4000`。
+- 给定：单元测试场景（CI 默认运行，无外部依赖）。
+- 当：通过 mock DataLoader 返回 4500 个虚拟资产（任意可配置数字 ≥ 4000）。
+- 那么：`predict(...)` 与 `prepare_walk_forward_splits(...)` 能在 mock 数据上正常完成（不抛异常且产出 parquet 文件）。
+- 断言：`mock_loader.assets == [f"{i:06d}.SZ" for i in range(4500)]`，且 parquet 文件行数符合预期。
 
 ### AC-2
+- 给定：集成测试场景（手动运行，需要真实 fetcher 与数据库接入）。
+- 当：从 `quantide.data.fetchers` 加载 A 股全市场日线。
+- 那么：资产数量 ≥ 4000。
+- 断言：`len(assets) >= 4000`。
+- 标注：本 AC 标记为 `@pytest.mark.integration`，默认 CI 跳过（`pytest -m "not integration"`），仅在带 `--integration` 参数或本地开发时手动运行。
+
+### AC-3
 - 给定：训练数据时间范围。
 - 当：检查 `metadata.json["train_start"]` 与 `train_end`。
 - 那么：`train_start >= "2015-01-01"` 且 `train_end` 等于训练当日。
 
-### AC-3
+### AC-4
 - 给定：原始行情 DataFrame 的 schema。
 - 当：调用 schema 校验。
 - 那么：列集合 ⊇ `{asset, date, open, high, low, close, volume, turnover, adj_factor}`，且 dtype 符合预期（asset=str, date=date, 数值列=float）。
+- 当 fetcher 提供涨跌停字段时，列集合还必须 ⊇ `{limit_up, limit_down}`，dtype=bool（参考 FR-0500）。
 
 ---
 
@@ -435,7 +482,8 @@
 ### AC-3
 - 给定：`pyproject.toml`。
 - 当：执行 `uv sync`。
-- 那么：依赖成功安装，包含 `lightgbm, polars, loguru, pytest, millionaire` 等。
+- 那么：依赖成功安装，包含 `lightgbm, polars, loguru, pytest, millionaire, matplotlib` 等。其中 `matplotlib` 因 FR-1600 可视化输出新增；`lightgbm, polars, loguru, pytest, millionaire` 为原有依赖。
+- 断言：`uv pip list | grep -E "^(lightgbm|polars|loguru|pytest|millionaire|matplotlib)\s"` 全部存在且非空版本号。
 
 ---
 
