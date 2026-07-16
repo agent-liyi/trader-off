@@ -57,14 +57,16 @@ class TestFitScalerAndImpute:
         # Before z-score: f2 = 11.0
         # After z-score: (11.0 - mean(f2)) / std(f2)
         asset_a_row2_f2 = asset_a_row2["f2"].item()
-        # Check it's not NaN
-        assert asset_a_row2_f2 is not None, "f2 should be forward-filled, not NaN"
+        assert isinstance(asset_a_row2_f2, float), (
+            f"f2 should be forward-filled float, got {type(asset_a_row2_f2)}"
+        )
 
         # Asset A row 3 (last row): f2 should have its original value 13.0
         asset_a_row3 = transformed.filter(
             (pl.col("asset") == "A") & (pl.col("date") == start_date + timedelta(days=3))
         )
-        assert asset_a_row3["f2"].item() is not None
+        f2_val = asset_a_row3["f2"].item()
+        assert isinstance(f2_val, float), f"f2 should be float, got {type(f2_val)}"
 
         # Asset B should have no NaN in f2 (all values were present)
         asset_b_nulls = transformed.filter(pl.col("asset") == "B")["f2"].null_count()
@@ -183,4 +185,4 @@ class TestFitScalerAndImpute:
         )
         # All values should be 0 after z-score (since mean=5.0, std=1.0)
         f1_values = transformed["f1"].to_list()
-        assert all(abs(v) < 1e-9 for v in f1_values if v is not None)
+        assert all(isinstance(v, float) and abs(v) < 1e-9 for v in f1_values)

@@ -111,5 +111,7 @@ class TestComputeVolatilityFeatures:
         # First 10 values (indices 0-9) should be NaN
         for i in range(10):
             assert vol10[i] is None, f"vol_10[{i}]={vol10[i]}, expected None"
-        # Index 10 should have a value
-        assert vol10[10] is not None, f"vol_10[10] is None, expected non-null"
+        # Index 10 should have a float value (std of constant returns ≈ 0)
+        assert isinstance(vol10[10], float), (
+            f"vol_10[10]={vol10[10]}, expected float"
+        )
