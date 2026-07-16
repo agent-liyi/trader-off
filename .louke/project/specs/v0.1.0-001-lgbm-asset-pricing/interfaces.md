@@ -9,7 +9,7 @@
 >
 > **`modules` 列约定**：每条接口标注实现/消费模块。标注 ≥2 个模块的为**跨模块接口**，Shield 必须为其编写集成测试（test-plan §5.2）。
 
-> **Prism**: M-ARCH 审查：interfaces.md 缺少显式的 '## Scope' 章节。当前 scope 仅在 preamble 中以叙述方式隐含（'仅定义外部可观察契约…不含内部实现细节'）。请新增 In scope / Out of scope 章节。
+> **Prism** [RESOLVED]: M-ARCH 审查：interfaces.md 缺少显式的 '## Scope' 章节。当前 scope 仅在 preamble 中以叙述方式隐含（'仅定义外部可观察契约…不含内部实现细节'）。请新增 In scope / Out of scope 章节。
 >> **Archer**: 已采纳。在下方新增 `## Scope` 章节，明确 In scope（Data Schema / 持久化文件 Schema / 公共 API 签名 / CLI / 框架契约 / 异常）与 Out of scope（内部实现细节 / 框架状态机）。请复核。
 
 ## Scope
