@@ -9,7 +9,7 @@ release_branch = "releases/v0.1.0"
 [meta]
 pre_commit = "installed (base)"
 created = "2026-07-16"
-current_stage = "M-FOUND"
+current_stage = "M-TESTPLAN"
 security_audit = "enabled"
 smoke_test_issue = "#3 (closed)"
 smoke_test_pr = "#4 (closed)"

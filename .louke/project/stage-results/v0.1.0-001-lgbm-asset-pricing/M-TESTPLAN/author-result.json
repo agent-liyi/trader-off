@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-TESTPLAN",
+  "kind": "author-result",
+  "role": "Archer",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/test-plan.md"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T09:06:33Z",
+  "contract_bundle_hash": "cf6960f5549a777faf8089a746de1f369bc7c7dee894fd8b574db20f91cb5c71",
+  "metadata": {},
+  "output_hash": "a56274d8c02215d71b5ab9c54193ff999cd0d583e4d7407e9d4184cb425a7a1b"
+}
