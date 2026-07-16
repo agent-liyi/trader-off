@@ -9,10 +9,24 @@ release_branch = "releases/v0.1.0"
 [meta]
 pre_commit = "installed (base)"
 created = "2026-07-16"
-current_stage = "M-TESTPLAN"
+current_stage = "M-ARCH"
 security_audit = "enabled"
 smoke_test_issue = "#3 (closed)"
 smoke_test_pr = "#4 (closed)"
 dod = "All e2e tests pass; Unit test coverage >=95%; Security review (M-SECURITY)"
 test_framework = "pytest"
 backlog_project = "https://github.com/users/agent-liyi/projects/4"
+
+[e2e]
+# Host-project paths that Shield writes / Prism reviews / commit-e2e stages
+paths = ["tests/e2e"]
+# Run the host project's own e2e command
+run = "pytest tests/e2e -m e2e -v --timeout=90"
+# e2e runs from repo root (cwd omitted = repo root)
+
+[integration]
+# Host-project paths that Shield writes / Prism reviews
+paths = ["tests/integration"]
+# Run the host project's own integration test command
+run = "pytest tests/integration -m integration -v"
+# Integration tests verify module wiring; no service orchestration needed

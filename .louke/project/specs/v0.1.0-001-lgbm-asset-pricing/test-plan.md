@@ -599,6 +599,6 @@ lk agent archer ci-scan \
 - [x] tests/ 布局已文档化（§2.1）
 - [x] §3 Ground Truth 方法已文档化（金融计算需独立参考实现）
 - [x] §6 外部依赖分层测试已文档化（millionaire fetcher/broker 边界判定）
-- [ ] interfaces.md 与 test-plan 闭环（Stage 2 产出后补勾：每个外部出口有测试覆盖）
-- [ ] interfaces.md 跨模块接口标注 `modules` 列并纳入集成覆盖（Stage 2）
+- [x] interfaces.md 与 test-plan 闭环（interfaces.md §8 三方闭环表：每个外部出口有测试覆盖，79/79 AC）
+- [x] interfaces.md 跨模块接口标注 `modules` 列并纳入集成覆盖（interfaces.md §6 跨模块清单 24 条，Shield 集成测试依据）
 - [x] e2e 范围限于 happy path（边界/错误/异常路由到集成测试）
