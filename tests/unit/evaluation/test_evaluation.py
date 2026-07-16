@@ -52,7 +52,7 @@ class TestICFunctions:
     """Unit tests for ic_pearson and ic_spearman."""
 
     def test_ic_pearson_range(self):
-        """ic_pearson should return a value in [-1, 1]."""
+        """AC-FR1300-01: IC Pearson values must be in [-1, 1] range."""
         pred = pl.Series("pred", [1.0, 2.0, 3.0, 4.0, 5.0])
         label = pl.Series("label", [2.0, 4.0, 6.0, 8.0, 10.0])
         result = ic_pearson(pred, label)
@@ -61,7 +61,7 @@ class TestICFunctions:
         assert result > 0.99
 
     def test_ic_spearman_range(self):
-        """ic_spearman should return a value in [-1, 1]."""
+        """AC-FR1300-01: IC Spearman values must be in [-1, 1] range."""
         pred = pl.Series("pred", [1.0, 2.0, 3.0, 4.0, 5.0])
         label = pl.Series("label", [1.0, 2.0, 3.0, 4.0, 5.0])
         result = ic_spearman(pred, label)
@@ -73,7 +73,7 @@ class TestLayeredReturns:
     """Unit tests for compute_layered_returns."""
 
     def test_compute_layered_returns_shape(self):
-        """compute_layered_returns returns a DataFrame with layer and mean_return."""
+        """AC-FR1300-01: Layered returns must have 5 layers with mean_return column."""
         rng = np.random.RandomState(42)
         n = 100
         preds = pl.DataFrame({

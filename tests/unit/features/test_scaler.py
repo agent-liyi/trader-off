@@ -156,7 +156,7 @@ class TestFitScalerAndImpute:
         assert "f2" not in scaler.mean_, "f2 should not be in scaler.mean_"
 
     def test_constant_column_zero_std(self):
-        """Scaler should handle constant columns (std=0) by setting std=1."""
+        """AC-FR0400-01: Constant column (zero std) should be handled without error."""
         start_date = date(2024, 1, 1)
         data = []
         for asset in ["A"]:

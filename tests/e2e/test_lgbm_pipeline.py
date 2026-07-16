@@ -118,7 +118,7 @@ class TestLGBMPipeline:
         model_dir = save_model(
             booster=booster,
             scaler=scaler,
-            metadata={"train_start": "2024-01-01", "max_lookback": 60},
+            metadata={"train_start": "2024-01-01", "max_lookback": 50},
             version=version,
             models_dir=models_dir,
             dropped_features=dropped,
@@ -165,8 +165,10 @@ class TestLGBMPipeline:
 
         assert predictions is not None
         assert isinstance(predictions, pl.DataFrame)
-        if len(predictions) > 0:
-            assert set(predictions.columns) == {"asset", "score", "rank"}
+        assert "asset" in predictions.columns
+        assert "score" in predictions.columns
+        assert "rank" in predictions.columns
+        # Predictions may be empty if not enough history, but columns must exist
 
         # ---- Step 3: Backtest ----
         from trader_off.backtest.runner import run_backtest

@@ -166,7 +166,7 @@ class TestLabelSkippedFilter:
     """Test that limit_up/down filter is skipped when columns are missing."""
 
     def test_skip_filter_when_columns_missing(self, tmp_path):
-        """build_labels should skip filter + WARNING when limit_up/down not in data."""
+        """AC-FR0500-04: Limit filter skipped when limit_up/limit_down columns missing."""
         close_values = [10.0 + i for i in range(10)]
         start_date = date(2024, 1, 1)
         data = []
