@@ -6,18 +6,16 @@
   "role": "Prism",
   "verdict": "pass",
   "reviewed_targets": [
-    "tests/e2e/test_lgbm_pipeline.py",
-    "tests/integration/test_real_fetcher.py",
-    "tests/integration/test_train_pipeline.py"
+    ".louke/project/project.toml"
   ],
   "blocking_findings": [],
   "accepted_risks": [],
-  "created_at": "2026-07-16T12:21:26Z",
-  "contract_bundle_hash": "0a66db880da4f5da4901a7605b76534a80b37f29f8527330fdb48559d07b14c0",
+  "created_at": "2026-07-16T12:22:31Z",
+  "contract_bundle_hash": "2587bafedd4cae5ebb195c0c915513f8256b95a5223bbbebfb3f358facb95a74",
   "metadata": {
     "commit_range": "3f962e6..HEAD",
     "source_command": "review",
     "diff": "HEAD"
   },
-  "output_hash": "9ee49d3f4d1477129fce6e282c7a57b3debdac0fca9b987e40c639e55b90305f"
+  "output_hash": "43d622864d4912be1fdcca97ae5d3c3e760a02adc2c709777f7557a3a66ed188"
 }
