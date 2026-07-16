@@ -52,7 +52,10 @@ def compute_performance_metrics(nav_df: pl.DataFrame) -> dict:
     # Sharpe ratio (risk-free rate = 0)
     mean_ret = float(np.mean(returns))
     std_ret = float(np.std(returns, ddof=1))
-    sharpe_ratio = float((mean_ret / std_ret) * np.sqrt(TRADING_DAYS_PER_YEAR)) if std_ret > 0 else 0.0
+    sharpe_ratio = (
+        float((mean_ret / std_ret) * np.sqrt(TRADING_DAYS_PER_YEAR))
+        if std_ret > 0 else 0.0
+    )
 
     # Max drawdown
     max_dd = _max_drawdown(nav)

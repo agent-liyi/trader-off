@@ -4,6 +4,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from loguru import logger
+
 from trader_off.backtest.runner import run_backtest
 
 
@@ -22,17 +24,17 @@ def main():
     args = parser.parse_args()
 
     try:
-        result = run_backtest(
+        run_backtest(
             model_version=args.model,
             strategy_name=args.strategy,
             start=date.fromisoformat(args.start),
             end=date.fromisoformat(args.end),
             capital=args.capital,
         )
-        print("Backtest finished")
+        logger.info("Backtest finished")
         return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logger.error(f"Backtest failed: {e}")
         return 1
 
 

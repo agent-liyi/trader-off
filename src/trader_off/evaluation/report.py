@@ -9,9 +9,9 @@ from dataclasses import dataclass
 import polars as pl
 
 from trader_off.evaluation.ic import (
+    compute_layered_returns,
     ic_pearson,
     ic_spearman,
-    compute_layered_returns,
 )
 
 
