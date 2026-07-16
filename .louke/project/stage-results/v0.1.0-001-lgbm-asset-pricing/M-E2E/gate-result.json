@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-E2E",
+  "kind": "gate-result",
+  "role": "Keeper",
+  "verdict": "pass",
+  "reviewed_targets": [
+    "tests/"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T12:21:34Z",
+  "contract_bundle_hash": "0a66db880da4f5da4901a7605b76534a80b37f29f8527330fdb48559d07b14c0",
+  "metadata": {
+    "commit_range": "3f962e6..HEAD",
+    "tests_roots": [
+      "tests/"
+    ]
+  },
+  "output_hash": "aa10d4e129c14f00d35f97d5e34ad726c8a234e2016e4bd3e16d35e1c467c11c"
+}
