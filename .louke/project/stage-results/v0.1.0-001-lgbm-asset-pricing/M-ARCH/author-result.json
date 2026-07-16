@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-ARCH",
+  "kind": "author-result",
+  "role": "Archer",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/test-plan.md",
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/architecture.md",
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/interfaces.md",
+    ".louke/project/project.toml"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T09:43:43Z",
+  "contract_bundle_hash": "0a66db880da4f5da4901a7605b76534a80b37f29f8527330fdb48559d07b14c0",
+  "metadata": {},
+  "output_hash": "20386c65150929197d9e0bfc1b703aa6e915a64eeba7795418c19b35250304e5"
+}

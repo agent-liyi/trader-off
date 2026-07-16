@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-DEV",
+  "kind": "review-result",
+  "role": "Prism",
+  "verdict": "pass",
+  "reviewed_targets": [
+    "tests/unit/features/test_scaler.py",
+    "tests/unit/features/test_volatility.py",
+    "tests/unit/nfr/test_keeper_acs.py"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T12:09:51Z",
+  "contract_bundle_hash": "0a66db880da4f5da4901a7605b76534a80b37f29f8527330fdb48559d07b14c0",
+  "metadata": {
+    "commit_range": "48c0290..HEAD",
+    "source_command": "review",
+    "diff": "HEAD"
+  },
+  "output_hash": "d62590347b7630c8f643ada4faf0e1939b4b01ce57761cbbff971c0f05e28223"
+}

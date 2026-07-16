@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-TESTPLAN",
+  "kind": "review-result",
+  "role": "Sage",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/test-plan.md"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T09:19:03Z",
+  "contract_bundle_hash": "3e55e1cdfdb4368a6bd67ed7f5fb37acec0a58d618431814efae3883153b4253",
+  "metadata": {
+    "source_command": "review"
+  },
+  "output_hash": "9b7cdc4f3de5e360cbe01b6c38b29dab6b6f065a42ad4348433958d3cf59af63"
+}

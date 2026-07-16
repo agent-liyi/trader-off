@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-ARCH",
+  "kind": "review-result",
+  "role": "Prism",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/architecture.md",
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/interfaces.md",
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/test-plan.md",
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/spec.md",
+    ".louke/project/specs/v0.1.0-001-lgbm-asset-pricing/acceptance.md",
+    ".louke/project/project.toml"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T09:43:24Z",
+  "contract_bundle_hash": "0a66db880da4f5da4901a7605b76534a80b37f29f8527330fdb48559d07b14c0",
+  "metadata": {
+    "source_command": "review"
+  },
+  "output_hash": "7b3e17b1c384e4f6fbcc6f037436037517ec338b4aa09873ae38b196f53f0079"
+}

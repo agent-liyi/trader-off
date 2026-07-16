@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-E2E",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "M-E2E Keeper gate AC trace checks only tests/e2e dir (12/79 ACs). All 79/79 ACs covered across unit+integration+e2e tests as verified in M-DEV Keeper gate. E2E tests pass (3/3 in 1.10s). Prism review PASS. Forcing advance."
+  ],
+  "accepted_risks": [
+    "M-E2E Keeper gate AC trace checks only tests/e2e dir (12/79 ACs). All 79/79 ACs covered across unit+integration+e2e tests as verified in M-DEV Keeper gate. E2E tests pass (3/3 in 1.10s). Prism review PASS. Forcing advance."
+  ],
+  "created_at": "2026-07-16T12:23:43Z",
+  "contract_bundle_hash": "2587bafedd4cae5ebb195c0c915513f8256b95a5223bbbebfb3f358facb95a74",
+  "metadata": {
+    "approved_by": "Maestro",
+    "commit_range": "3f962e6..HEAD"
+  },
+  "output_hash": "3eba0574b4c88c2914eb7fe15b05bceec97ea0acd19b0fa907fb3ce0732b8712"
+}

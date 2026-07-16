@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-E2E",
+  "kind": "review-result",
+  "role": "Prism",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/project.toml"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T12:22:31Z",
+  "contract_bundle_hash": "2587bafedd4cae5ebb195c0c915513f8256b95a5223bbbebfb3f358facb95a74",
+  "metadata": {
+    "commit_range": "3f962e6..HEAD",
+    "source_command": "review",
+    "diff": "HEAD"
+  },
+  "output_hash": "43d622864d4912be1fdcca97ae5d3c3e760a02adc2c709777f7557a3a66ed188"
+}

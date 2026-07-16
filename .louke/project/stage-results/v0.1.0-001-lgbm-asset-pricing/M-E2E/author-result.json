@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.1.0-001-lgbm-asset-pricing",
+  "stage": "M-E2E",
+  "kind": "author-result",
+  "role": "Shield",
+  "verdict": "pass",
+  "reviewed_targets": [
+    "tests/e2e"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-16T12:22:49Z",
+  "contract_bundle_hash": "2587bafedd4cae5ebb195c0c915513f8256b95a5223bbbebfb3f358facb95a74",
+  "metadata": {
+    "run_command": "uv run pytest tests/e2e -m e2e -v --timeout=90",
+    "cwd": "/Users/liyi/Workspace/trader-off"
+  },
+  "output_hash": "cf4f5f55e211e3bd1ffab52a63bdd975b51b0e5df01c0b2aa47ac5619965abb0"
+}
