@@ -127,6 +127,13 @@ def enumerate_factors(
 # ---------------------------------------------------------------------------
 
 
+def _zeros_like(df: pl.DataFrame) -> pl.Series:
+    """Return a zero-filled Float64 Series with the same length as ``df``.
+    Used as a safe fallback when required columns are missing.
+    """
+    return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+
+
 def _expand_template_params(
     template: FactorTemplate,
     param_space: dict[str, list],
@@ -294,7 +301,7 @@ def _compute_shift_ratio(
 
     def compute(df: pl.DataFrame) -> pl.Series:
         if field not in df.columns:
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         return df.sort(["asset", "date"]).with_columns(
             (pl.col(field) / pl.col(field).shift(n).over("asset") - 1).alias("_factor")
         )["_factor"]
@@ -319,7 +326,7 @@ def _excess_momentum_n(fields: list[str], params: dict[str, Any]):
 
     def compute(df: pl.DataFrame) -> pl.Series:
         if field not in df.columns:
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         df = df.sort(["asset", "date"])
         raw = pl.col(field) / pl.col(field).shift(n).over("asset") - 1
         cs_mean = raw.mean().over("date")
@@ -336,7 +343,7 @@ def _momentum_accel_n(fields: list[str], params: dict[str, Any]):
 
     def compute(df: pl.DataFrame) -> pl.Series:
         if field not in df.columns:
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         df = df.sort(["asset", "date"])
         mom_n = pl.col(field) / pl.col(field).shift(n).over("asset") - 1
         mom_2n = pl.col(field) / pl.col(field).shift(2 * n).over("asset") - 1
@@ -353,7 +360,7 @@ def _vol_n(fields: list[str], params: dict[str, Any]):
 
     def compute(df: pl.DataFrame) -> pl.Series:
         if field not in df.columns:
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         return df.sort(["asset", "date"]).with_columns(
             pl.col(field).pct_change().rolling_std(n, min_samples=1).over("asset").alias("_factor"),
         )["_factor"]
@@ -370,7 +377,7 @@ def _amplitude_n(fields: list[str], params: dict[str, Any]):
         required = {"high", "low", "close"}
         available = set(df.columns)
         if not required.issubset(available):
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         return df.sort(["asset", "date"]).with_columns(
             ((pl.col("high") - pl.col("low")) / pl.col("close"))
             .rolling_mean(n, min_samples=1)
@@ -390,7 +397,7 @@ def _atr_n(fields: list[str], params: dict[str, Any]):
         required = {"high", "low"}
         available = set(df.columns)
         if not required.issubset(available):
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         return df.sort(["asset", "date"]).with_columns(
             (pl.col("high") - pl.col("low"))
             .rolling_mean(n, min_samples=1)
@@ -415,7 +422,7 @@ def _turnover_n(fields: list[str], params: dict[str, Any]):
 
     def compute(df: pl.DataFrame) -> pl.Series:
         if field not in df.columns:
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         return df.sort(["asset", "date"]).with_columns(
             pl.col(field).rolling_mean(n, min_samples=1).over("asset").alias("_factor")
         )["_factor"]
@@ -433,7 +440,7 @@ def _vp_corr_n(fields: list[str], params: dict[str, Any]):
         required = {"volume", "close"}
         available = set(df.columns)
         if not required.issubset(available):
-            return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+            return _zeros_like(df)
         df = df.sort(["asset", "date"])
         vol_std = pl.col("volume").rolling_std(n, min_samples=n).over("asset")
         close_std = pl.col("close").rolling_std(n, min_samples=n).over("asset")
@@ -459,7 +466,7 @@ def _ep(fields: list[str], params: dict[str, Any]):
     def compute(df: pl.DataFrame) -> pl.Series:
         if "pe" in df.columns:
             return (1.0 / df["pe"].cast(pl.Float64).replace(0, None)).alias("_factor")
-        return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+        return _zeros_like(df)
 
     return compute
 
@@ -471,7 +478,7 @@ def _bp(fields: list[str], params: dict[str, Any]):
     def compute(df: pl.DataFrame) -> pl.Series:
         if "pb" in df.columns:
             return (1.0 / df["pb"].cast(pl.Float64).replace(0, None)).alias("_factor")
-        return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+        return _zeros_like(df)
 
     return compute
 
@@ -483,7 +490,7 @@ def _roe(fields: list[str], params: dict[str, Any]):
     def compute(df: pl.DataFrame) -> pl.Series:
         if "roe" in df.columns:
             return df["roe"].cast(pl.Float64).alias("_factor")
-        return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+        return _zeros_like(df)
 
     return compute
 
@@ -495,6 +502,6 @@ def _revenue_growth(fields: list[str], params: dict[str, Any]):
     def compute(df: pl.DataFrame) -> pl.Series:
         if "revenue_growth" in df.columns:
             return df["revenue_growth"].cast(pl.Float64).alias("_factor")
-        return pl.Series("_factor", [0.0] * len(df), dtype=pl.Float64)
+        return _zeros_like(df)
 
     return compute
