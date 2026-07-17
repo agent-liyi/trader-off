@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-SPEC",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "lk agent lex verify-project false positive: gh project item-list default limit=30 incorrectly reports #64-#67 as unlinked. Manual verification via gh api confirms all 45/45 issues linked to Project #5. All other M-SPEC exit signals pass: quote-check exit 0, verify-acceptance L1-L5 PASS, verify-issue 45/45 PASS, spec.md locked=true."
+  ],
+  "accepted_risks": [
+    "lk agent lex verify-project false positive: gh project item-list default limit=30 incorrectly reports #64-#67 as unlinked. Manual verification via gh api confirms all 45/45 issues linked to Project #5. All other M-SPEC exit signals pass: quote-check exit 0, verify-acceptance L1-L5 PASS, verify-issue 45/45 PASS, spec.md locked=true."
+  ],
+  "created_at": "2026-07-17T03:46:02Z",
+  "contract_bundle_hash": "f4d8decb12f5b051909968927d1457bac3375d89afe963a23f973eb2278d1de6",
+  "metadata": {
+    "approved_by": "Maestro",
+    "commit_range": "cf3bdea..HEAD"
+  },
+  "output_hash": "ec7229f70ce0e2d6438f57d1e5ac98eda33d0ff5397ffb58df8d385c82112067"
+}
