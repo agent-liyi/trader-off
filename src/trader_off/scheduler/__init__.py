@@ -6,8 +6,12 @@ Provides:
 - core: RetrainScheduler/SchedulerConfig/SchedulerStatus/RetrainTask
 - cron: next_cron_fire / CronTrigger
 - perf_monitor: PerfMonitor / TriggerDecision / detect_perf_decay (FR-1900)
+- api: create_app / run_app (FR-2000)
+- cli: build_retrain_parser / run_trigger / run_status (FR-2000)
 """
 
+from trader_off.scheduler.api import create_app, run_app
+from trader_off.scheduler.cli import build_retrain_parser, run_status, run_trigger
 from trader_off.scheduler.core import (
     RetrainScheduler,
     RetrainTask,
@@ -49,4 +53,11 @@ __all__ = [
     "PerfMonitor",
     "TriggerDecision",
     "detect_perf_decay",
+    # API (FR-2000)
+    "create_app",
+    "run_app",
+    # CLI (FR-2000)
+    "build_retrain_parser",
+    "run_trigger",
+    "run_status",
 ]
