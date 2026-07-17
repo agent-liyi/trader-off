@@ -2,11 +2,12 @@
 
 import sys
 from pathlib import Path
+from typing import Union
 
 from loguru import logger
 
 
-def setup_logger(module: str = "trader_off", log_dir: Path | str = "logs") -> None:
+def setup_logger(module: str = "trader_off", log_dir: Union[Path, str] = "logs") -> None:  # noqa: UP007
     """Configure structured logging to stdout and rotating log files.
 
     Args:
