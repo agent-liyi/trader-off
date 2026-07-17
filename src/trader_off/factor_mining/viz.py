@@ -236,30 +236,7 @@ def render_evaluation_report(
         reverse=True,
     )
 
-    # HTML table rows
-    html_rows: list[str] = []
-    md_rows: list[str] = []
-    for rank, (spec, ev) in enumerate(ranked, start=1):
-        html_rows.append(
-            f"<tr><td>{rank}</td><td>{spec.id}</td><td>{spec.category}</td>"
-            f"<td>{ev.icir:.4f}</td><td>{ev.ic_mean:.4f}</td>"
-            f"<td>{ev.ic_std:.4f}</td><td>{ev.rank_ic_mean:.4f}</td></tr>"
-        )
-        md_rows.append(
-            f"| {rank} | {spec.id} | {spec.category} | {ev.icir:.4f} | "
-            f"{ev.ic_mean:.4f} | {ev.ic_std:.4f} | {ev.rank_ic_mean:.4f} |"
-        )
-
-    html_table = (
-        "<table>\n<tr><th>Rank</th><th>Factor ID</th><th>Category</th>"
-        "<th>ICIR</th><th>IC Mean</th><th>IC Std</th><th>Rank IC Mean</th></tr>\n"
-        + "\n".join(html_rows)
-        + "\n</table>"
-    )
-
-    md_header = "| Rank | Factor ID | Category | ICIR | IC Mean | IC Std | Rank IC Mean |"
-    md_sep = "|------|-----------|----------|------|---------|--------|--------------|"
-    md_table = "\n".join([md_header, md_sep] + md_rows)
+    html_table, md_table = _build_tables(ranked)
 
     # Factor ID list for Markdown — with formula detail
     factor_list_lines: list[str] = []
@@ -313,6 +290,50 @@ def render_evaluation_report(
         "md": md_path,
         "figures_dir": figures_dir,
     }
+
+
+# ---------------------------------------------------------------------------
+# Internal: table builders
+# ---------------------------------------------------------------------------
+
+
+def _build_tables(
+    ranked: list[tuple[FactorSpec, FactorEvaluation]],
+) -> tuple[str, str]:
+    """Build HTML and Markdown ICIR ranking tables from ranked factor pairs.
+
+    Args:
+        ranked: List of (FactorSpec, FactorEvaluation) tuples sorted by ICIR
+            descending.
+
+    Returns:
+        A tuple of (html_table, md_table) strings.
+    """
+    html_rows: list[str] = []
+    md_rows: list[str] = []
+    for rank, (spec, ev) in enumerate(ranked, start=1):
+        html_rows.append(
+            f"<tr><td>{rank}</td><td>{spec.id}</td><td>{spec.category}</td>"
+            f"<td>{ev.icir:.4f}</td><td>{ev.ic_mean:.4f}</td>"
+            f"<td>{ev.ic_std:.4f}</td><td>{ev.rank_ic_mean:.4f}</td></tr>"
+        )
+        md_rows.append(
+            f"| {rank} | {spec.id} | {spec.category} | {ev.icir:.4f} | "
+            f"{ev.ic_mean:.4f} | {ev.ic_std:.4f} | {ev.rank_ic_mean:.4f} |"
+        )
+
+    html_table = (
+        "<table>\n<tr><th>Rank</th><th>Factor ID</th><th>Category</th>"
+        "<th>ICIR</th><th>IC Mean</th><th>IC Std</th><th>Rank IC Mean</th></tr>\n"
+        + "\n".join(html_rows)
+        + "\n</table>"
+    )
+
+    md_header = "| Rank | Factor ID | Category | ICIR | IC Mean | IC Std | Rank IC Mean |"
+    md_sep = "|------|-----------|----------|------|---------|--------|--------------|"
+    md_table = "\n".join([md_header, md_sep] + md_rows)
+
+    return html_table, md_table
 
 
 # ---------------------------------------------------------------------------
