@@ -15,7 +15,17 @@ Provides:
 """
 
 from trader_off.scheduler.api import create_app, run_app
-from trader_off.scheduler.cli import build_retrain_parser, run_status, run_trigger
+from trader_off.scheduler.cli import (
+    build_retrain_parser,
+    build_scheduler_parser,
+    load_scheduler_config,
+    run_scheduler_start,
+    run_scheduler_status,
+    run_scheduler_stop,
+    run_status,
+    run_trigger,
+    validate_cron_expr,
+)
 from trader_off.scheduler.core import (
     RetrainScheduler,
     RetrainTask,
@@ -72,8 +82,14 @@ __all__ = [
     # API (FR-2000)
     "create_app",
     "run_app",
-    # CLI (FR-2000)
+    # CLI (FR-2000 / FR-2700)
     "build_retrain_parser",
+    "build_scheduler_parser",
+    "load_scheduler_config",
+    "run_scheduler_start",
+    "run_scheduler_status",
+    "run_scheduler_stop",
     "run_trigger",
     "run_status",
+    "validate_cron_expr",
 ]
