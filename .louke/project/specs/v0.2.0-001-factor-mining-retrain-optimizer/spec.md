@@ -98,6 +98,9 @@ priority: P0
 
 ### 模块 A — 因子挖掘 (FR-0100 ~ FR-1400)
 
+> **Lex**: 【阻塞】模块A头部FR范围不准确：第99行声明模块A覆盖FR-0100~FR-1400，但实际只定义了FR-0100~FR-0900（9个FR），FR-1000至FR-1400不存在。请Sage修正范围声明为FR-0100~FR-0900或补充缺失的FR。
+
+
 <a id="fr-0100"></a>
 ### FR-0100 因子模板库定义
 
@@ -376,6 +379,9 @@ priority: P0
 
 ---
 
+> **Lex**: 【阻塞-已知⚠️】FR-1900 Decided字段标记为⚠️，等待Round 2用户确认：在线Sharpe评估是否启用（当前默认关闭，仅评估在线IC）。Clarification Log（line 1089）已记录此事项。Sage需在Round 2获取用户确认后将Decided更新为✅（确认采纳当前默认值）或调整方案。
+
+
 <a id="fr-1900"></a>
 ### FR-1900 性能衰减检测
 
@@ -589,6 +595,9 @@ priority: P0
 
 ---
 
+> **Lex**: 【阻塞】模块C头部FR范围不准确：第592行声明模块C覆盖FR-3000~FR-4400，但实际只定义了FR-3000~FR-4200（13个FR），FR-4300与FR-4400不存在。请Sage修正范围声明为FR-3000~FR-4200或补充缺失的FR。
+
+
 ### 模块 C — 组合优化器 (FR-3000 ~ FR-4400)
 
 <a id="fr-3000"></a>
@@ -631,6 +640,9 @@ priority: P0
 | Valid | Testable | Decessed |
 |---|---|---|
 | ✅ | ✅ | ✅ |
+
+> **Lex**: 【阻塞】元数据表头拼写错误：第631行的表头 Decessed 应为 Decided。此拼写错误导致quote-check工具无法正确解析Decided字段（yaml.resolved返回空字符串），需Sage修正。
+
 
 - 配置文件 `configs/industry_map.csv`(pydantic 校验 schema):
   ```
@@ -698,6 +710,9 @@ priority: P0
 | Valid | Testable | Decided |
 |---|---|---|
 | ✅ | ✅ | ✅ |
+
+> **Lex**: 【阻塞-已知⚠️】FR-3700 Decided字段标记为⚠️，等待Round 2用户确认：优化器求解库cvxpy是必装还是可选（当前默认cvxpy + scipy回退）。需确认cvxpy许可证Apache-2.0与安装体积~50MB是否可接受。Clarification Log（line 1090）已记录此事项。Sage需在Round 2获取用户确认后更新Decided字段。
+
 
 - 约束:`w_i <= 0.10` 对所有 i(单只个股权重不超过 10%)。
 - 默认值 0.10,可通过 `--max-weight` 参数调整(范围 (0, 1])。
