@@ -302,3 +302,80 @@ class TestACFR030005ReuseV010:
         assert "evaluation/ic.py" in str(pearson_file), (
             f"Expected evaluation/ic.py, got {pearson_file}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Edge case tests for coverage
+# ---------------------------------------------------------------------------
+
+
+class TestEdgeCases:
+    """Edge case coverage for evaluate_factor."""
+
+    def test_missing_columns_raises_value_error(self):
+        """Missing required columns in factor_values raises ValueError."""
+        from trader_off.factor_mining.evaluation import evaluate_factor
+
+        bad_fv = pl.DataFrame(
+            {"asset": ["A"], "date": [date(2024, 1, 1)]},
+            schema={"asset": pl.Utf8, "date": pl.Date},
+        )
+        labels = pl.DataFrame(
+            {"asset": ["A"], "date": [date(2024, 1, 1)], "label": [0.01]},
+            schema={"asset": pl.Utf8, "date": pl.Date, "label": pl.Float64},
+        )
+        with pytest.raises(ValueError, match="factor_values is missing required columns"):
+            evaluate_factor(bad_fv, labels, [date(2024, 1, 1)])
+
+    def test_missing_label_columns_raises_value_error(self):
+        """Missing required columns in labels raises ValueError."""
+        from trader_off.factor_mining.evaluation import evaluate_factor
+
+        fv = pl.DataFrame(
+            {"asset": ["A"], "date": [date(2024, 1, 1)], "value": [1.0]},
+            schema={"asset": pl.Utf8, "date": pl.Date, "value": pl.Float64},
+        )
+        bad_labels = pl.DataFrame(
+            {"asset": ["A"], "date": [date(2024, 1, 1)]},
+            schema={"asset": pl.Utf8, "date": pl.Date},
+        )
+        with pytest.raises(ValueError, match="labels is missing required columns"):
+            evaluate_factor(fv, bad_labels, [date(2024, 1, 1)])
+
+    def test_no_overlapping_data_returns_empty(self):
+        """When factor_values and labels have no overlapping (asset, date),
+        returns empty FactorEvaluation with zero fields."""
+        from trader_off.factor_mining.evaluation import evaluate_factor
+
+        fv = pl.DataFrame(
+            {"asset": ["A"], "date": [date(2024, 1, 1)], "value": [1.0]},
+            schema={"asset": pl.Utf8, "date": pl.Date, "value": pl.Float64},
+        )
+        labels = pl.DataFrame(
+            {"asset": ["B"], "date": [date(2024, 1, 2)], "label": [0.01]},
+            schema={"asset": pl.Utf8, "date": pl.Date, "label": pl.Float64},
+        )
+        result = evaluate_factor(fv, labels, [date(2024, 1, 1)])
+        assert result.ic_mean == 0.0
+        assert result.ic_std == 0.0
+        assert result.icir == 0.0
+        assert len(result.ic_ts) == 0
+        assert len(result.rank_ic_ts) == 0
+        assert len(result.layered_returns) == 5
+
+    def test_some_dates_missing_from_data(self):
+        """Dates not present in merged data are silently skipped."""
+        from trader_off.factor_mining.evaluation import evaluate_factor
+
+        fv = pl.DataFrame(
+            {"asset": ["A"], "date": [date(2024, 1, 1)], "value": [1.0]},
+            schema={"asset": pl.Utf8, "date": pl.Date, "value": pl.Float64},
+        )
+        labels = pl.DataFrame(
+            {"asset": ["A"], "date": [date(2024, 1, 1)], "label": [0.01]},
+            schema={"asset": pl.Utf8, "date": pl.Date, "label": pl.Float64},
+        )
+        # Request evaluation on dates that don't exist in data
+        result = evaluate_factor(fv, labels, [date(2025, 1, 1), date(2025, 1, 2)])
+        # No matching dates → empty result
+        assert len(result.ic_ts) == 0

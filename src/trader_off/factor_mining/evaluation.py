@@ -97,19 +97,10 @@ def evaluate_factor(
     ).sort("date")
 
     # Compute summary statistics — handle NaN (e.g., constant factor → undefined correlation)
-    ic_vals = ic_ts["ic"].to_numpy()
-    rank_ic_vals = rank_ic_ts["rank_ic"].to_numpy()
-
-    ic_mean = float(np.nan_to_num(np.nanmean(ic_vals), nan=0.0)) if len(ic_vals) > 0 else 0.0
-    ic_std = float(np.nan_to_num(np.nanstd(ic_vals, ddof=0), nan=0.0)) if len(ic_vals) > 0 else 0.0
-    rank_ic_mean = (
-        float(np.nan_to_num(np.nanmean(rank_ic_vals), nan=0.0)) if len(rank_ic_vals) > 0 else 0.0
-    )
-    rank_ic_std = (
-        float(np.nan_to_num(np.nanstd(rank_ic_vals, ddof=0), nan=0.0))
-        if len(rank_ic_vals) > 0
-        else 0.0
-    )
+    ic_mean = _safe_mean(ic_ts["ic"].to_numpy())
+    ic_std = _safe_std(ic_ts["ic"].to_numpy())
+    rank_ic_mean = _safe_mean(rank_ic_ts["rank_ic"].to_numpy())
+    rank_ic_std = _safe_std(rank_ic_ts["rank_ic"].to_numpy())
 
     # ICIR = ic_mean / ic_std; handle zero std
     if ic_std == 0.0:
@@ -119,8 +110,10 @@ def evaluate_factor(
         icir = ic_mean / ic_std
 
     # Compute layered returns — rename value → score for v0.1.0 API
-    predictions_for_layered = factor_values.rename({"value": "score"})
-    layered_returns = compute_layered_returns(predictions_for_layered, labels)
+    layered_returns = compute_layered_returns(
+        _factor_values_to_predictions(factor_values),
+        labels,
+    )
 
     return FactorEvaluation(
         ic_ts=ic_ts,
@@ -144,6 +137,23 @@ def _validate_columns(df: pl.DataFrame, required: set[str], name: str) -> None:
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"{name} is missing required columns: {sorted(missing)}")
+
+
+def _safe_mean(values: np.ndarray) -> float:
+    """Compute mean of array, ignoring NaN. Returns 0.0 if all-NaN or empty."""
+    finite = values[~np.isnan(values)]
+    return float(finite.mean()) if len(finite) > 0 else 0.0
+
+
+def _safe_std(values: np.ndarray) -> float:
+    """Compute population std of array, ignoring NaN. Returns 0.0 if all-NaN or empty."""
+    finite = values[~np.isnan(values)]
+    return float(finite.std(ddof=0)) if len(finite) > 1 else 0.0
+
+
+def _factor_values_to_predictions(factor_values: pl.DataFrame) -> pl.DataFrame:
+    """Rename ``value`` column to ``score`` for v0.1.0 layered returns API."""
+    return factor_values.rename({"value": "score"})
 
 
 def _compute_daily_ic(
@@ -184,5 +194,7 @@ def _empty_result(
         icir=0.0,
         rank_ic_mean=0.0,
         rank_ic_std=0.0,
-        layered_returns=compute_layered_returns(factor_values.rename({"value": "score"}), labels),
+        layered_returns=compute_layered_returns(
+            _factor_values_to_predictions(factor_values), labels
+        ),
     )
