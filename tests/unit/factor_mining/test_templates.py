@@ -123,6 +123,16 @@ class TestIntRangeParam:
         p = IntRangeParam(name="N", min=5, max=5, step=1)
         assert p.expanded() == [5]
 
+    def test_int_range_param_uneven_step_includes_max(self):
+        """IntRangeParam with uneven step still includes max value."""
+        p = IntRangeParam(name="N", min=5, max=60, step=7)
+        result = p.expanded()
+        # range(5, 61, 7) = [5, 12, 19, 26, 33, 40, 47, 54]
+        # fallback appends 60
+        assert result[0] == 5
+        assert result[-1] == 60
+        assert len(result) == len([5, 12, 19, 26, 33, 40, 47, 54]) + 1
+
     def test_int_range_param_frozen_immutable(self):
         """IntRangeParam is frozen (immutable)."""
         p = IntRangeParam(name="N", min=1, max=10, step=2)
