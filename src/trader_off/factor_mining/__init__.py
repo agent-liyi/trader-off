@@ -4,7 +4,8 @@ Exports:
     list_templates, FactorTemplate, IntRangeParam, ChoiceParam, BoolParam,
     FACTOR_TEMPLATE_VERSION, enumerate_factors, FactorSpec, DEFAULT_PARAM_SPACE,
     evaluate_factor, FactorEvaluation, select_factors, SelectionDiagnostics,
-    save_factor_registry, load_factor_registry, FactorRegistrySchemaError
+    save_factor_registry, load_factor_registry, FactorRegistrySchemaError,
+    compute_factor_score
 """
 
 from trader_off.factor_mining.evaluation import FactorEvaluation, evaluate_factor
@@ -18,6 +19,7 @@ from trader_off.factor_mining.registry import (
     load_factor_registry,
     save_factor_registry,
 )
+from trader_off.factor_mining.score import compute_factor_score
 from trader_off.factor_mining.selection import SelectionDiagnostics, select_factors
 from trader_off.factor_mining.templates import (
     FACTOR_TEMPLATE_VERSION,
@@ -45,4 +47,5 @@ __all__ = [
     "save_factor_registry",
     "load_factor_registry",
     "FactorRegistrySchemaError",
+    "compute_factor_score",
 ]
