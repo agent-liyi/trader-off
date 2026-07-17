@@ -38,3 +38,12 @@ class ConfigValidationError(Exception):
     """
 
     pass
+
+
+class AssetMismatchError(Exception):
+    """Raised when mu assets do not match covariance matrix assets.
+
+    Per FR-3100 AC-3.
+    """
+
+    pass
