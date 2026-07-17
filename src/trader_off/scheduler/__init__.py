@@ -7,7 +7,8 @@ Provides:
 - cron: next_cron_fire / CronTrigger
 - perf_monitor: PerfMonitor / TriggerDecision / detect_perf_decay (FR-1900)
 - registry: ModelRegistry / version GC / rollback (FR-2300)
-- drift: DriftDetector / DriftDecision / DriftResult / compute_psi / compute_ks (FR-1700/1800/2600)
+- drift: DriftDetector / DriftDecision / DriftResult /
+  compute_psi / compute_ks (FR-1700/1800/2600)
 - state: save_state / load_state / recover_tasks (FR-2500)
 - api: create_app / run_app (FR-2000)
 - cli: build_retrain_parser / run_trigger / run_status (FR-2000)
@@ -22,6 +23,7 @@ from trader_off.scheduler.core import (
     SchedulerStatus,
 )
 from trader_off.scheduler.cron import CronTrigger, next_cron_fire
+from trader_off.scheduler.drift import DriftDecision, DriftResult
 from trader_off.scheduler.perf_monitor import (
     PerfMonitor,
     TriggerDecision,
@@ -54,6 +56,9 @@ __all__ = [
     # Cron
     "CronTrigger",
     "next_cron_fire",
+    # Drift (FR-1700/1800/2600)
+    "DriftDecision",
+    "DriftResult",
     # Perf Monitor (FR-1900)
     "PerfMonitor",
     "TriggerDecision",
