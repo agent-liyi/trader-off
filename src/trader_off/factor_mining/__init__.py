@@ -3,7 +3,7 @@
 Exports:
     list_templates, FactorTemplate, IntRangeParam, ChoiceParam, BoolParam,
     FACTOR_TEMPLATE_VERSION, enumerate_factors, FactorSpec, DEFAULT_PARAM_SPACE,
-    evaluate_factor, FactorEvaluation
+    evaluate_factor, FactorEvaluation, select_factors, SelectionDiagnostics
 """
 
 from trader_off.factor_mining.evaluation import FactorEvaluation, evaluate_factor
@@ -12,6 +12,7 @@ from trader_off.factor_mining.expression import (
     FactorSpec,
     enumerate_factors,
 )
+from trader_off.factor_mining.selection import SelectionDiagnostics, select_factors
 from trader_off.factor_mining.templates import (
     FACTOR_TEMPLATE_VERSION,
     BoolParam,
@@ -33,4 +34,6 @@ __all__ = [
     "DEFAULT_PARAM_SPACE",
     "evaluate_factor",
     "FactorEvaluation",
+    "select_factors",
+    "SelectionDiagnostics",
 ]
