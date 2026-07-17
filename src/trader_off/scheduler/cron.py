@@ -119,9 +119,7 @@ class CronTrigger:
         Returns:
             The next datetime when the full retrain cron fires.
         """
-        if base is None:
-            base = self._clock.now()
-        return next_cron_fire(self._config.full_retrain_cron, base)
+        return self._compute_next(self._config.full_retrain_cron, base)
 
     def compute_next_incremental(self, base: datetime | None = None) -> datetime:
         """Compute the next incremental retrain trigger time.
@@ -132,9 +130,7 @@ class CronTrigger:
         Returns:
             The next datetime when the incremental retrain cron fires.
         """
-        if base is None:
-            base = self._clock.now()
-        return next_cron_fire(self._config.incremental_retrain_cron, base)
+        return self._compute_next(self._config.incremental_retrain_cron, base)
 
     def should_fire_full(self, last_check: datetime) -> bool:
         """Check if a full retrain should be triggered.
@@ -150,30 +146,9 @@ class CronTrigger:
         Returns:
             True if a full retrain should be triggered.
         """
-        if not self._is_on_trading_day(last_check):
-            logger.info("cron skipped, not a trading day")
+        if not self._cron_gate_passed(self._config.full_retrain_cron, last_check):
             return False
-
-        # Compute today's cron fire time from the start of the day
-        today_start = last_check.replace(hour=0, minute=0, second=0, microsecond=0)
-        try:
-            today_fire = next_cron_fire(self._config.full_retrain_cron, today_start)
-        except ValueError:
-            return False
-
-        # If no cron fire falls on today, don't trigger
-        if today_fire.date() != last_check.date():
-            return False
-
-        # Check if we've passed the cron fire time
-        if last_check < today_fire:
-            return False
-
-        # Check frequency gate
-        if not self._frequency_gate_met(last_check):
-            return False
-
-        return True
+        return self._frequency_gate_met(last_check)
 
     def should_fire_incremental(self, last_check: datetime) -> bool:
         """Check if an incremental retrain should be triggered.
@@ -190,26 +165,7 @@ class CronTrigger:
         Returns:
             True if an incremental retrain should be triggered.
         """
-        if not self._is_on_trading_day(last_check):
-            logger.info("cron skipped, not a trading day")
-            return False
-
-        # Compute today's cron fire time from the start of the day
-        today_start = last_check.replace(hour=0, minute=0, second=0, microsecond=0)
-        try:
-            today_fire = next_cron_fire(self._config.incremental_retrain_cron, today_start)
-        except ValueError:
-            return False
-
-        # If no cron fire falls on today, don't trigger
-        if today_fire.date() != last_check.date():
-            return False
-
-        # Check if we've passed the cron fire time
-        if last_check < today_fire:
-            return False
-
-        return True
+        return self._cron_gate_passed(self._config.incremental_retrain_cron, last_check)
 
     @staticmethod
     def is_trading_day(day: date) -> bool:
@@ -238,6 +194,54 @@ class CronTrigger:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _compute_next(self, cron_expr: str, base: datetime | None) -> datetime:
+        """Compute the next fire time for a cron expression.
+
+        Args:
+            cron_expr: The cron expression to evaluate.
+            base: Reference datetime (defaults to clock.now()).
+
+        Returns:
+            The next cron fire time.
+        """
+        if base is None:
+            base = self._clock.now()
+        return next_cron_fire(cron_expr, base)
+
+    def _cron_gate_passed(self, cron_expr: str, last_check: datetime) -> bool:
+        """Check if today's cron fire time has been reached.
+
+        Returns False if:
+        - Today is not a trading day (logs info).
+        - The cron expression is invalid.
+        - No cron fire falls on today.
+        - The cron fire time has not yet been reached.
+
+        Args:
+            cron_expr: The cron expression to evaluate.
+            last_check: The reference time.
+
+        Returns:
+            True if the cron fire has been reached today.
+        """
+        if not self._is_on_trading_day(last_check):
+            logger.info("cron skipped, not a trading day")
+            return False
+
+        today_start = last_check.replace(hour=0, minute=0, second=0, microsecond=0)
+        try:
+            today_fire = next_cron_fire(cron_expr, today_start)
+        except ValueError:
+            return False
+
+        if today_fire.date() != last_check.date():
+            return False
+
+        if last_check < today_fire:
+            return False
+
+        return True
 
     def _is_on_trading_day(self, now: datetime) -> bool:
         """Check if the current datetime falls on a trading day."""
