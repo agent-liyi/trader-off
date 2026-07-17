@@ -1,10 +1,11 @@
-"""Scheduler ports (T-1 ClockPort, T-2 TrainerPort).
+"""Scheduler ports (T-1 ClockPort, T-2 TrainerPort, PerfMonitorPort).
 
 Defines Protocol-based ports for dependency injection, enabling unit
 tests to inject virtual clocks and mock trainers without touching
 external systems.
 
 FR-1500: Scheduler core interfaces and lifecycle.
+FR-1900: PerfMonitorPort for IC-based performance decay detection.
 """
 
 from __future__ import annotations
@@ -15,6 +16,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Protocol
 
 if TYPE_CHECKING:
+    from trader_off.scheduler.perf_monitor import (
+        TriggerDecision as _TriggerDecision,
+    )
     from trader_off.training.serialize import ModelArtifact as _ModelArtifact
 
 
@@ -220,3 +224,23 @@ class DefaultTrainerPort:
             feature_names=artifact.feature_names,
         )
         return str(saved_path)
+
+
+# ---------------------------------------------------------------------------
+# PerfMonitorPort (FR-1900)
+# ---------------------------------------------------------------------------
+
+
+class PerfMonitorPort(Protocol):
+    """Protocol for performance degradation detection (Round-2: IC-only).
+
+    FR-1900: IC-based performance decay monitoring. No Sharpe.
+    """
+
+    def trigger_perf_degradation(self) -> _TriggerDecision:
+        """Evaluate IC-based performance and return a trigger decision.
+
+        Returns:
+            TriggerDecision with should_retrain, reason, and notes="ic_only".
+        """
+        ...
