@@ -43,6 +43,11 @@ def validate_cron_expr(expr: str) -> None:
         raise ConfigValidationError(f"invalid cron expression: {expr!r}: {exc}") from exc
 
 
+def _precedence(cli: dict[str, Any], raw: dict[str, Any], key: str, default: Any) -> Any:
+    """Resolve config value with precedence: CLI > YAML > default."""
+    return cli.get(key, raw.get(key, default))
+
+
 def _build_config_from_dict(
     raw: dict[str, Any],
     cli_overrides: dict[str, Any] | None = None,
@@ -70,12 +75,9 @@ def _build_config_from_dict(
     if not cron_raw or not isinstance(cron_raw, dict):
         raise ConfigValidationError("cron is required in scheduler config")
 
-    full_cron = cli.get("full_retrain_cron", cron_raw.get("full_retrain_cron", "0 16 * * 1-5"))
-    incr_cron = cli.get(
-        "incremental_retrain_cron",
-        cron_raw.get("incremental_retrain_cron", "0 16 * * 1-5"),
-    )
-    drift_cron = cli.get("drift_check_cron", cron_raw.get("drift_check_cron", "0 9 * * 1-5"))
+    full_cron = _precedence(cli, cron_raw, "full_retrain_cron", "0 16 * * 1-5")
+    incr_cron = _precedence(cli, cron_raw, "incremental_retrain_cron", "0 16 * * 1-5")
+    drift_cron = _precedence(cli, cron_raw, "drift_check_cron", "0 9 * * 1-5")
 
     validate_cron_expr(str(full_cron))
     validate_cron_expr(str(incr_cron))
@@ -83,61 +85,42 @@ def _build_config_from_dict(
 
     return SchedulerConfig(
         # Core
-        tick_interval_sec=float(cli.get("tick_interval_sec", raw.get("tick_interval_sec", 1.0))),
-        max_concurrent_tasks=int(
-            cli.get("max_concurrent_tasks", raw.get("max_concurrent_tasks", 1))
-        ),
-        trading_calendar=cli.get(
-            "trading_calendar",
-            raw.get("trading_calendar", "data_loader"),
-        ),
+        tick_interval_sec=float(_precedence(cli, raw, "tick_interval_sec", 1.0)),
+        max_concurrent_tasks=int(_precedence(cli, raw, "max_concurrent_tasks", 1)),
+        trading_calendar=_precedence(cli, raw, "trading_calendar", "data_loader"),
         # Cron
         full_retrain_cron=str(full_cron),
         incremental_retrain_cron=str(incr_cron),
         full_retrain_frequency_days=int(
-            cli.get(
-                "full_retrain_frequency_days",
-                cron_raw.get("full_retrain_frequency_days", 5),
-            )
+            _precedence(cli, cron_raw, "full_retrain_frequency_days", 5)
         ),
         drift_check_cron=str(drift_cron),
         # Drift thresholds
-        psi_threshold=float(cli.get("psi_threshold", raw.get("psi_threshold", 0.2))),
-        ks_pvalue_threshold=float(
-            cli.get("ks_pvalue_threshold", raw.get("ks_pvalue_threshold", 0.05))
-        ),
-        psi_strong=float(cli.get("psi_strong", raw.get("psi_strong", 0.5))),
+        psi_threshold=float(_precedence(cli, raw, "psi_threshold", 0.2)),
+        ks_pvalue_threshold=float(_precedence(cli, raw, "ks_pvalue_threshold", 0.05)),
+        psi_strong=float(_precedence(cli, raw, "psi_strong", 0.5)),
         min_drift_features_incremental=int(
-            cli.get(
-                "min_drift_features_incremental",
-                raw.get("min_drift_features_incremental", 5),
-            )
+            _precedence(cli, raw, "min_drift_features_incremental", 5)
         ),
-        min_drift_features_full=int(
-            cli.get("min_drift_features_full", raw.get("min_drift_features_full", 3))
-        ),
+        min_drift_features_full=int(_precedence(cli, raw, "min_drift_features_full", 3)),
         # Perf thresholds
-        ic_floor=float(cli.get("ic_floor", raw.get("ic_floor", 0.005))),
-        ic_drop_ratio=float(cli.get("ic_drop_ratio", raw.get("ic_drop_ratio", 0.3))),
-        ic_window=int(cli.get("ic_window", raw.get("ic_window", 20))),
+        ic_floor=float(_precedence(cli, raw, "ic_floor", 0.005)),
+        ic_drop_ratio=float(_precedence(cli, raw, "ic_drop_ratio", 0.3)),
+        ic_window=int(_precedence(cli, raw, "ic_window", 20)),
         # Retention
-        keep_latest_n=int(cli.get("keep_latest_n", raw.get("keep_latest_n", 10))),
-        keep_pinned_versions=list(
-            cli.get("keep_pinned_versions", raw.get("keep_pinned_versions", []))
-        ),
-        keep_full_retrain_only=bool(
-            cli.get("keep_full_retrain_only", raw.get("keep_full_retrain_only", True))
-        ),
+        keep_latest_n=int(_precedence(cli, raw, "keep_latest_n", 10)),
+        keep_pinned_versions=list(_precedence(cli, raw, "keep_pinned_versions", [])),
+        keep_full_retrain_only=bool(_precedence(cli, raw, "keep_full_retrain_only", True)),
         # Deploy
-        model_load_mode=cli.get("model_load_mode", raw.get("model_load_mode", "lazy")),
+        model_load_mode=_precedence(cli, raw, "model_load_mode", "lazy"),
         # API
-        run_api=bool(cli.get("run_api", raw.get("run_api", False))),
-        api_host=str(cli.get("api_host", raw.get("api_host", "127.0.0.1"))),
-        api_port=int(cli.get("api_port", raw.get("api_port", 8765))),
+        run_api=bool(_precedence(cli, raw, "run_api", False)),
+        api_host=str(_precedence(cli, raw, "api_host", "127.0.0.1")),
+        api_port=int(_precedence(cli, raw, "api_port", 8765)),
         # Persistence
-        state_dir=Path(str(cli.get("state_dir", raw.get("state_dir", "scheduler_state")))),
-        models_dir=Path(str(cli.get("models_dir", raw.get("models_dir", "models")))),
-        reports_dir=Path(str(cli.get("reports_dir", raw.get("reports_dir", "reports")))),
+        state_dir=Path(str(_precedence(cli, raw, "state_dir", "scheduler_state"))),
+        models_dir=Path(str(_precedence(cli, raw, "models_dir", "models"))),
+        reports_dir=Path(str(_precedence(cli, raw, "reports_dir", "reports"))),
     )
 
 
