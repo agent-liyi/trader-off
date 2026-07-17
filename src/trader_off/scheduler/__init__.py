@@ -3,6 +3,7 @@
 Provides:
 - ports: ClockPort / TrainerPort / VirtualClockPort / DefaultTrainerPort / TriggerReason
 - core: RetrainScheduler / SchedulerConfig / SchedulerStatus / RetrainTask
+- cron: next_cron_fire / CronTrigger
 """
 
 from trader_off.scheduler.core import (
@@ -11,6 +12,7 @@ from trader_off.scheduler.core import (
     SchedulerConfig,
     SchedulerStatus,
 )
+from trader_off.scheduler.cron import CronTrigger, next_cron_fire
 from trader_off.scheduler.ports import (
     DefaultTrainerPort,
     SystemClockPort,
@@ -31,4 +33,7 @@ __all__ = [
     "RetrainTask",
     "SchedulerConfig",
     "SchedulerStatus",
+    # Cron
+    "CronTrigger",
+    "next_cron_fire",
 ]
