@@ -6,6 +6,7 @@ Provides:
 - core: RetrainScheduler/SchedulerConfig/SchedulerStatus/RetrainTask
 - cron: next_cron_fire / CronTrigger
 - perf_monitor: PerfMonitor / TriggerDecision / detect_perf_decay (FR-1900)
+- registry: ModelRegistry / version GC / rollback (FR-2300)
 - api: create_app / run_app (FR-2000)
 - cli: build_retrain_parser / run_trigger / run_status (FR-2000)
 """
@@ -32,6 +33,7 @@ from trader_off.scheduler.ports import (
     TriggerReason,
     VirtualClockPort,
 )
+from trader_off.scheduler.registry import ModelRegistry
 
 __all__ = [
     # Ports
@@ -53,6 +55,8 @@ __all__ = [
     "PerfMonitor",
     "TriggerDecision",
     "detect_perf_decay",
+    # Registry (FR-2300)
+    "ModelRegistry",
     # API (FR-2000)
     "create_app",
     "run_app",
