@@ -47,3 +47,12 @@ class AssetMismatchError(Exception):
     """
 
     pass
+
+
+class IndustryMapConflictError(Exception):
+    """Raised when an industry map CSV contains duplicate asset entries.
+
+    Per FR-3200 AC-3.
+    """
+
+    pass
