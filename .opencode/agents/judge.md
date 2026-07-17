@@ -1,7 +1,7 @@
 ---
 description: Security audit — deep vulnerability identification (S-class, per-milestone)
 mode: subagent
-model: minimax-cn-coding-plan/MiniMax-M3
+model: moonshotai-cn/kimi-k3
 permission:
   bash: allow
   read: allow
