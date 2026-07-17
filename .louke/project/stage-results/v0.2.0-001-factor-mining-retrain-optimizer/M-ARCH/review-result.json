@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-ARCH",
+  "kind": "review-result",
+  "role": "Prism",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/specs/v0.2.0-001-factor-mining-retrain-optimizer/architecture.md",
+    ".louke/project/specs/v0.2.0-001-factor-mining-retrain-optimizer/interfaces.md",
+    ".louke/project/specs/v0.2.0-001-factor-mining-retrain-optimizer/test-plan.md",
+    ".louke/project/project.toml"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [
+    {
+      "id": "RISK-001",
+      "description": "6 entries in the cross-module table (interfaces.md §6 #2, #5, #6, #7, #13, #14, #15, #16) are covered by unit tests rather than integration tests. These are internal scheduler/portfolio sub-module calls or pure-function reuses; the test-plan correctly judges unit tests sufficient. Shield should nevertheless ensure these interfaces are exercised through their consuming integration tests (e.g., RetrainScheduler integration exercise calls evaluate_factor indirectly).",
+      "severity": "low"
+    },
+    {
+      "id": "RISK-002",
+      "description": "Architecture §9 lists 23 cross-module entries while interfaces.md §6 lists 26. The 3 additional entries in interfaces.md (#24 v0.1.0 model loading compat, #25 v0.1.0 CLI, #26 LGBMTop20Strategy) are v0.1.0 backward-compat items—appropriately added in interfaces.md §6 as the canonical cross-module list. No contradiction.",
+      "severity": "info"
+    }
+  ],
+  "created_at": "2026-07-17T08:05:00Z",
+  "contract_bundle_hash": "10286feb11872defd6ec933f2b15ca04801093639306764de13d8e46e8b8e591",
+  "metadata": {
+    "source_command": "review"
+  },
+  "output_hash": "fe4c184cc7b4e530e9201602ddbfc57ae990c1ca30862c1287695457d955278b"
+}

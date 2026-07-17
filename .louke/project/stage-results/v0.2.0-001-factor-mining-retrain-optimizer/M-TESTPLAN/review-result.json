@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-TESTPLAN",
+  "kind": "review-result",
+  "role": "Sage",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/specs/v0.2.0-001-factor-mining-retrain-optimizer/test-plan.md"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-17T05:43:25Z",
+  "contract_bundle_hash": "4dd14a81d0e7217e57371f3e070394d68cf34c919aecc37ef80e16e4e2a08189",
+  "metadata": {
+    "source_command": "review"
+  },
+  "output_hash": "f17bd5d0c258f508dac4c08cbe9ccf92290a73a44be7202c3ea5d02f8110d377"
+}

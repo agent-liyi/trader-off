@@ -9,7 +9,7 @@ release_branch = "releases/v0.2.0"
 [meta]
 pre_commit = "installed (python + base)"
 created = "2026-07-17"
-current_stage = "M-TESTPLAN"
+current_stage = "M-DEV"
 security_audit = "enabled"
 smoke_test_issue = "#33 (closed)"
 smoke_test_pr = "#32 (closed)"
@@ -19,9 +19,12 @@ backlog_project = "https://github.com/users/agent-liyi/projects/4"
 
 [e2e]
 # Host-project paths that Shield writes / Prism reviews / commit-e2e stages
-paths = ["tests/e2e"]
+# tests/perf holds NFR-0100 budget tests (marked e2e) + baselines.json
+paths = ["tests/e2e", "tests/perf"]
 # Run the host project's own e2e command
-run = "uv run pytest tests/e2e -m e2e -v --timeout=90"
+# No global --timeout: full-pipeline e2e budget is 600s; per-test timeouts
+# are declared via @pytest.mark.timeout on each e2e/perf case (see test-plan §6.5)
+run = "uv run pytest tests/e2e tests/perf -m e2e -v"
 # e2e runs from repo root (cwd omitted = repo root)
 
 [integration]
