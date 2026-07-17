@@ -53,6 +53,17 @@ indent-style = "space"
 [tool.bandit]
 exclude_dirs = ["tests"]
 
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+files = ["src/trader_off/scheduler/"]
+disallow_any_generics = false
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+ignore_errors = true
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
