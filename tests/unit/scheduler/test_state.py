@@ -15,6 +15,7 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
+import polars as pl
 import pytest
 
 from trader_off.scheduler.core import RetrainTask
@@ -328,3 +329,113 @@ def test_ac_fr2500_04_multiple_tasks_persistence(tmp_path: Path):
         assert r.mode in ("full", "incremental")
         assert isinstance(r.reason, TriggerReason)
         assert r.status in ("pending", "running", "success", "failed")
+
+
+# ---------------------------------------------------------------------------
+# load_state: unexpected format (not a list)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_load_state_unexpected_format(tmp_path: Path, caplog):
+    """load_state returns empty list when file contains a dict instead of a list."""
+    from trader_off.scheduler.state import load_state
+
+    state_dir = tmp_path / "scheduler_state"
+    state_dir.mkdir()
+    (state_dir / "last_tasks.json").write_text('{"key": "value"}')
+
+    with caplog.at_level(logging.WARNING):
+        loaded = load_state(state_dir)
+
+    assert loaded == []
+    assert "unexpected" in caplog.text.lower()
+
+
+# ---------------------------------------------------------------------------
+# append_cron_log
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_append_cron_log(tmp_path: Path):
+    """append_cron_log appends a valid JSONL line."""
+    from trader_off.scheduler.state import append_cron_log
+
+    state_dir = tmp_path / "scheduler_state"
+    entry = {
+        "timestamp": "2026-01-01T16:00:00Z",
+        "mode": "full",
+        "triggered": True,
+        "reason": "cron",
+    }
+
+    append_cron_log(state_dir, entry)
+
+    log_file = state_dir / "cron_fire_log.jsonl"
+    assert log_file.exists()
+    lines = log_file.read_text().strip().split("\n")
+    assert len(lines) == 1
+    parsed = json.loads(lines[0])
+    assert parsed["mode"] == "full"
+    assert parsed["triggered"] is True
+
+
+# ---------------------------------------------------------------------------
+# append_drift_history
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_append_drift_history_new(tmp_path: Path):
+    """append_drift_history creates a new parquet file when none exists."""
+    from trader_off.scheduler.state import append_drift_history
+
+    state_dir = tmp_path / "scheduler_state"
+    record = {
+        "date": "2026-01-01",
+        "should_retrain": False,
+        "reason": "ok",
+        "suggested_mode": "full",
+        "drift_feature_count": 0,
+    }
+
+    append_drift_history(state_dir, record)
+
+    history_file = state_dir / "drift_history.parquet"
+    assert history_file.exists()
+    df = pl.read_parquet(history_file)
+    assert len(df) == 1
+    assert df["reason"][0] == "ok"
+
+
+@pytest.mark.unit
+def test_append_drift_history_append(tmp_path: Path):
+    """append_drift_history appends to existing parquet file."""
+    from trader_off.scheduler.state import append_drift_history
+
+    state_dir = tmp_path / "scheduler_state"
+
+    record1 = {
+        "date": "2026-01-01",
+        "should_retrain": False,
+        "reason": "ok",
+        "suggested_mode": "full",
+        "drift_feature_count": 0,
+    }
+    record2 = {
+        "date": "2026-01-02",
+        "should_retrain": True,
+        "reason": "moderate_drift",
+        "suggested_mode": "incremental",
+        "drift_feature_count": 6,
+    }
+
+    append_drift_history(state_dir, record1)
+    append_drift_history(state_dir, record2)
+
+    history_file = state_dir / "drift_history.parquet"
+    df = pl.read_parquet(history_file)
+    assert len(df) == 2
+    assert df["reason"][0] == "ok"
+    assert df["reason"][1] == "moderate_drift"
