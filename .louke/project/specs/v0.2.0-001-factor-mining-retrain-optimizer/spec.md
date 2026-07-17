@@ -96,9 +96,10 @@ priority: P0
 
 ---
 
-### 模块 A — 因子挖掘 (FR-0100 ~ FR-1400)
+### 模块 A — 因子挖掘 (FR-0100 ~ FR-0900)
 
-> **Lex**: 【阻塞】模块A头部FR范围不准确：第99行声明模块A覆盖FR-0100~FR-1400，但实际只定义了FR-0100~FR-0900（9个FR），FR-1000至FR-1400不存在。请Sage修正范围声明为FR-0100~FR-0900或补充缺失的FR。
+> **Lex [RESOLVED]:** 【阻塞】模块A头部FR范围不准确：第99行声明模块A覆盖FR-0100~FR-1400，但实际只定义了FR-0100~FR-0900（9个FR），FR-1000至FR-1400不存在。请Sage修正范围声明为FR-0100~FR-0900或补充缺失的FR。
+>> **Sage:** 已修正:模块 A 头部范围由 `FR-0100 ~ FR-1400` 改为 `FR-0100 ~ FR-0900`(实际定义 9 个 FR,无缺失)。模块 B 头部已声明 `FR-1500 ~ FR-2700`,模块 C 头部声明 `FR-3000 ~ FR-4400`(待 T-003 修正)。Mechanical fix,无新增 FR。
 
 
 <a id="fr-0100"></a>
@@ -379,28 +380,32 @@ priority: P0
 
 ---
 
-> **Lex**: 【阻塞-已知⚠️】FR-1900 Decided字段标记为⚠️，等待Round 2用户确认：在线Sharpe评估是否启用（当前默认关闭，仅评估在线IC）。Clarification Log（line 1089）已记录此事项。Sage需在Round 2获取用户确认后将Decided更新为✅（确认采纳当前默认值）或调整方案。
-
+> **Lex [RESOLVED]:** 【阻塞-已知⚠️】FR-1900 Decided字段标记为⚠️，等待Round 2用户确认：在线Sharpe评估是否启用（当前默认关闭，仅评估在线IC）。Clarification Log（line 1089）已记录此事项。Sage需在Round 2获取用户确认后将Decided更新为✅（确认采纳当前默认值）或调整方案。
+>> **Sage:** 用户已 Round 2 确认：「仅 IC 不评估 Sharpe」(IC only, no Sharpe)。已做以下修改:
+>>> 1. Decided 字段由 ⚠️ 改为 ✅。
+>>> 2. 移除「回测 Sharpe」作为监控指标(在线 Sharpe 评估默认关闭)。
+>>> 3. 移除「状态字段保留 ⚠️」的描述,改为已锁定的 IC-only 决策。
+>>>> 4. acceptance.md FR-1900 AC-4 已更新:断言改为 `not hasattr(decision, "sharpe") and "ic_only" in decision.notes`,验证 Sharpe 字段缺失且标注 ic_only。
+>>> 5. Clarification Log 新增 Round 2 决策条目。
 
 <a id="fr-1900"></a>
 ### FR-1900 性能衰减检测
 
 | Valid | Testable | Decided |
 |---|---|---|
-| ✅ | ✅ | ⚠️ |
+| ✅ | ✅ | ✅ |
 
 - 模块路径:`trader_off.scheduler.perf_monitor`。
-- 监控指标(每日评估):
+- 监控指标(每日评估,**仅在线 IC**):
   - **在线 IC**:最近 20 个交易日的预测-真实收益 Pearson IC 均值。
   - **在线 Rank IC**:最近 20 个交易日的 Spearman Rank IC 均值。
-  - **回测 Sharpe**(可选,需启动子回测):最近 60 日子窗口的 Sharpe Ratio。
+- 在线 Sharpe 评估**默认关闭**:用户已确认 IC 检测预测能力衰减已足够,不引入子回测成本(避免每日子回测额外 ~60s 开销)。
 - 数据来源:每日收盘后调用 `predict(model_version="latest", watchlist=universe, asof_date=today)` 生成预测,与次日开盘后实际收益对齐计算 IC。
 - 衰减判定(可配置):
   - `ic_floor`: float,默认 0.005。IC 跌破此值视为失效。
   - `ic_drop_ratio`: float,默认 0.3(30%)。IC 较 30 日前下降 ≥ 30% 视为衰减。
 - 触发:`trigger_perf_degradation()` 返回 `TriggerDecision(reason="perf_degradation", suggested_mode="full"|"incremental")`。
-- 状态字段保留 ⚠️,因为 IC 与 Sharpe 的"衰减阈值"具体取值需在 Sage Round 2 进一步与用户确认(详见 Clarification Log)。
-- **本 FR 中"在线 IC/Sharpe"具体计算窗口、是否需要子回测评估 Sharpe,在 Round 2 与用户澄清后最终确定。当前默认仅评估在线 IC,Sharpe 评估为可选且默认关闭**。
+- 若未来需要回测 Sharpe 评估(成本敏感型场景),需新建 FR 提出,通过 v0.3+ 议题处理;本 FR 仅覆盖 IC-only 路径。
 
 ---
 
@@ -595,10 +600,11 @@ priority: P0
 
 ---
 
-> **Lex**: 【阻塞】模块C头部FR范围不准确：第592行声明模块C覆盖FR-3000~FR-4400，但实际只定义了FR-3000~FR-4200（13个FR），FR-4300与FR-4400不存在。请Sage修正范围声明为FR-3000~FR-4200或补充缺失的FR。
+> **Lex [RESOLVED]:** 【阻塞】模块C头部FR范围不准确：第592行声明模块C覆盖FR-3000~FR-4400，但实际只定义了FR-3000~FR-4200（13个FR），FR-4300与FR-4400不存在。请Sage修正范围声明为FR-3000~FR-4200或补充缺失的FR。
+>> **Sage:** 已修正:模块 C 头部范围由 `FR-3000 ~ FR-4400` 改为 `FR-3000 ~ FR-4200`(实际定义 13 个 FR,无缺失)。Mechanical fix。
 
 
-### 模块 C — 组合优化器 (FR-3000 ~ FR-4400)
+### 模块 C — 组合优化器 (FR-3000 ~ FR-4200)
 
 <a id="fr-3000"></a>
 ### FR-3000 协方差估计 — Ledoit-Wolf Shrinkage
@@ -637,11 +643,12 @@ priority: P0
 <a id="fr-3200"></a>
 ### FR-3200 行业映射接口
 
-| Valid | Testable | Decessed |
+| Valid | Testable | Decided |
 |---|---|---|
 | ✅ | ✅ | ✅ |
 
-> **Lex**: 【阻塞】元数据表头拼写错误：第631行的表头 Decessed 应为 Decided。此拼写错误导致quote-check工具无法正确解析Decided字段（yaml.resolved返回空字符串），需Sage修正。
+> **Lex [RESOLVED]:** 【阻塞】元数据表头拼写错误：第631行的表头 Decessed 应为 Decided。此拼写错误导致quote-check工具无法正确解析Decided字段（yaml.resolved返回空字符串），需Sage修正。
+>> **Sage:** 已修正:`Decessed` → `Decided`。Mechanical fix。
 
 
 - 配置文件 `configs/industry_map.csv`(pydantic 校验 schema):
@@ -711,7 +718,13 @@ priority: P0
 |---|---|---|
 | ✅ | ✅ | ✅ |
 
-> **Lex**: 【阻塞-已知⚠️】FR-3700 Decided字段标记为⚠️，等待Round 2用户确认：优化器求解库cvxpy是必装还是可选（当前默认cvxpy + scipy回退）。需确认cvxpy许可证Apache-2.0与安装体积~50MB是否可接受。Clarification Log（line 1090）已记录此事项。Sage需在Round 2获取用户确认后更新Decided字段。
+> **Lex [RESOLVED]:** 【阻塞-已知⚠️】FR-3700 Decided字段标记为⚠️，等待Round 2用户确认：优化器求解库cvxpy是必装还是可选（当前默认cvxpy + scipy回退）。需确认cvxpy许可证Apache-2.0与安装体积~50MB是否可接受。Clarification Log（line 1090）已记录此事项。Sage需在Round 2获取用户确认后更新Decided字段。
+>> **Sage:** 用户已 Round 2 确认「默认 cvxpy + scipy 回退」。已做以下修改:
+>>> 1. Decided 字段由 ⚠️ 改为 ✅。
+>>> 2. 描述改为已锁定的 cvxpy + ECOS 默认 + scipy.optimize.SLSQP 回退(移除 ⚠️ 备注)。
+>>> 3. Decision Log 第 3 行更新措辞("首选 cvxpy" → "默认 cvxpy + scipy 回退")。
+>>> 4. Clarification Log 新增 Round 2 决策条目(详见文末)。
+>>> 5. acceptance.md FR-3700 AC-1/AC-3/AC-4 描述已含 cvxpy 默认与 scipy 回退,无需调整。
 
 
 - 约束:`w_i <= 0.10` 对所有 i(单只个股权重不超过 10%)。
@@ -726,16 +739,16 @@ priority: P0
 
 | Valid | Testable | Decided |
 |---|---|---|
-| ✅ | ✅ | ⚠️ |
+| ✅ | ✅ | ✅ |
 
 - 目标函数:Maximize Sharpe Ratio
   ```
   max_w (mu^T w - r_f) / sqrt(w^T Σ w)
   ```
   其中 `r_f` 默认 0(无风险利率,可配置),`Σ` 来自 FR-3000,`mu` 来自 FR-3100。
-- 求解方法选择:
-  - **首选**:cvxpy(凸优化专用库,自然支持二次规划) — 需要 `pip install cvxpy`。
-  - **备选**:scipy.optimize.minimize(`SLSQP` 方法,继承 v0.1.0 已有的 scipy 依赖)。
+- 求解方法选择(用户已 Round 2 锁定):
+  - **默认**:cvxpy + ECOS 求解器(凸优化专用库,自然支持二次规划约束建模,许可证 Apache-2.0 友好)。需要 `pip install cvxpy`(~50MB 安装体积可接受)。
+  - **自动回退**:当 `import cvxpy` 抛 `ImportError` 时,自动切换到 `scipy.optimize.minimize`(SLSQP 方法,继承 v0.1.0 已有的 scipy 依赖),并打 INFO 日志 `"cvxpy unavailable, fallback to scipy.optimize.SLSQP"`。
 - cvxpy 转换:Max Sharpe 等价于求解:
   ```
   min_w -mu^T w
@@ -744,11 +757,9 @@ priority: P0
   ```
   (通过变量缩放 κ 处理,标准技巧;也可用 `cp.Problem(cp.Maximize(...), [...])` 直接建模)
 - 求解器配置:
-  - `solver`: cvxpy 默认 `ECOS` 或 `SCS`;scipy 备选 `SLSQP`。
+  - `solver`: cvxpy 默认 `ECOS`(无 cvxpy 时 SLSQP)。
   - `max_iterations`: 默认 1000。
   - `tolerance`: 默认 1e-6。
-- 状态字段保留 ⚠️,因为具体求解库选型(cvxpy vs scipy)需在 Sage Round 2 与用户最终确认(详见 Clarification Log)。
-- **当前默认采纳 cvxpy + ECOS 求解器**;若 cvxpy 在目标环境不可用,自动回退到 scipy.optimize.SLSQP 并打 INFO 日志。
 
 ---
 
@@ -1080,12 +1091,12 @@ priority: P0
 |---|---|---|---|
 | 因子表达式 DSL | 模板 + 参数化枚举 | dataclass `FactorTemplate` + `enum int_range/choice/bool` 参数空间 | 避免自研解析器,降低 v0.2.0 实现复杂度;同时保留 v0.3+ 升级到完整 DSL 的扩展点 |
 | 协方差估计 | 简单协方差(Ledoit-Wolf 备选) | **默认 Ledoit-Wolf**(可通过 `--cov-method sample` 切换) | Ledoit-Wolf 是无偏 + 收缩的稳健默认,样本协方差在 N 大时表现良好但小样本不稳定;提供两种以备灵活 |
-| 优化器求解库 | 未指定 | **首选 cvxpy**(凸优化专用)→ 回退 scipy.optimize.SLSQP | cvxpy 自然支持二次规划约束,SLSQP 作为无依赖备选;ADR-001 详述 |
+| 优化器求解库 | 未指定 | **默认 cvxpy + ECOS**,不可用时自动回退 scipy.optimize.SLSQP(用户 Round 2 锁定) | cvxpy 自然支持二次规划约束建模,许可证 Apache-2.0 友好,~50MB 体积可接受;SLSQP 作为零依赖兜底;ADR-001 详述 |
 | 调度器持久化 | 调度状态 | 文件系统 JSONL + parquet(`scheduler_state/`),APScheduler JobStore 备选 | 文件系统持久化简单可调试,APScheduler JobStore 更"开箱即用"但需 SQLAlchemy;ADR-002 详述 |
 | 调度器并发模型 | 未指定 | 单进程 asyncio,`max_concurrent_tasks=1` | 训练是 GPU/CPU 密集型,并发反而降低效率;单任务串行最简单可控 |
 | 自动部署触发 | 重训通过验证后自动部署 | 默认 lazy 加载(下次 predict 时读取最新版本);可选 hot-reload | lazy 模式零侵入,hot-reload 需要 watchdog 进程增加复杂度;默认优先简洁 |
 | 漂移检测组合 | PSI / KS 分别检测 | 组合判定:PSI + KS 同时显著才视为强漂移 | 单一指标容易误报,组合判定降低误报率;FR-2600 详述 |
-| 性能衰减监控 | 在线 IC / Sharpe | 默认仅在线 IC(Sharpe 评估为可选关闭) | 子回测 Sharpe 成本高(单次 ≤ 60s),在线 IC 已能反映预测能力衰减;Sharpe 评估为高级选项 |
+| 性能衰减监控 | 在线 IC / Sharpe | **仅在线 IC**(用户 Round 2 锁定,Sharpe 评估不开) | 子回测 Sharpe 成本不必要(每日子回测 ~60s 开销),在线 IC 已能反映预测能力衰减 |
 | 因子挖掘输出格式 | YAML / JSON / HTML / MD | YAML(注册表) + JSON(精选集) + HTML(主报告) + MD(精简报告) | YAML/JSON 便于程序消费,HTML/MD 便于人读 |
 | v0.1.0 命令兼容性 | 继承 | `train`/`predict`/`backtest`/`feature-importance` 命令保留;新增 `--factor-registry` 参数 | 不破坏现有用户脚本;新参数可选 |
 
@@ -1103,3 +1114,7 @@ priority: P0
 - 待 Round 2 进一步确认的 ⚠️ 项(状态 ⚠️):
   - **FR-1900 在线 Sharpe 评估是否启用**:当前默认关闭,仅评估在线 IC。Round 2 与用户确认是否需要子回测 Sharpe(成本 +60s/日),或仅 IC 已足够。
   - **FR-3700 优化器求解库(cvxpy 必选 vs 可选)**:当前默认 cvxpy + scipy 回退,Round 2 与用户最终确认 cvxpy 是否必装(许可证 Apache-2.0,体积 ~50MB)。
+
+- 2026-07-17 Sage Round 2(Step 3):用户确认两项 Round 2 待澄清项,均采纳 spec.md 中已记录的默认方案,**无需调整设计**:
+  - **FR-1900 在线 Sharpe 评估** → 用户确认「仅 IC 不评估 Sharpe」。理由:IC 检测预测能力衰减已足够,子回测 Sharpe 评估成本不必要(每日子回测额外 ~60s 开销)。已移除 FR-1900 中的 Sharpe 监控指标描述,Decided 字段由 ⚠️ 升至 ✅。acceptance.md AC-4 更新为验证"无 Sharpe 字段 + ic_only 注释"。
+  - **FR-3700 优化器求解库选型** → 用户确认「默认 cvxpy + scipy.optimize.SLSQP 回退」。理由:cvxpy 表达力强(凸优化建模自然)、许可证 Apache-2.0 友好,~50MB 安装体积可接受。Decided 字段由 ⚠️ 升至 ✅。详见 Decision Log 第 3 行已更新。

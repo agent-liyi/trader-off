@@ -407,10 +407,10 @@
 - 断言:`"ic_drop_ratio_exceeded" in decision.reason`。
 
 ### AC-4
-- 给定:Sharpe 评估开关关闭(默认)。
+- 给定:用户已确认 FR-1900 仅评估在线 IC(不评估 Sharpe)。
 - 当:调用 `trigger_perf_degradation()`。
-- 那么:函数不执行任何子回测,纯基于 IC 计算,耗时 < 1 秒。
-- 断言:`decision.computation_time_sec < 1.0 and "sharpe_eval_disabled" in decision.notes`。
+- 那么:函数纯基于 IC 计算,不执行任何子回测,耗时 < 1 秒;返回的 `TriggerDecision` 不含 `sharpe` 字段。
+- 断言:`decision.computation_time_sec < 1.0 and not hasattr(decision, "sharpe") and "ic_only" in decision.notes`。
 
 ---
 
