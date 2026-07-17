@@ -1,3 +1,8 @@
+---
+locked: true
+locked-at: 2026-07-17T03:42:32Z
+locked-by: lk agent sage record-lock
+---
 # trader-off v0.2.0 — 因子挖掘·再训练调度·组合优化器 — Spec
 
 - **Spec ID**: v0.2.0-001-factor-mining-retrain-optimizer
