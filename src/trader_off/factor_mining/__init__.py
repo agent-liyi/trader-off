@@ -2,9 +2,14 @@
 
 Exports:
     list_templates, FactorTemplate, IntRangeParam, ChoiceParam, BoolParam,
-    FACTOR_TEMPLATE_VERSION
+    FACTOR_TEMPLATE_VERSION, enumerate_factors, FactorSpec, DEFAULT_PARAM_SPACE
 """
 
+from trader_off.factor_mining.expression import (
+    DEFAULT_PARAM_SPACE,
+    FactorSpec,
+    enumerate_factors,
+)
 from trader_off.factor_mining.templates import (
     FACTOR_TEMPLATE_VERSION,
     BoolParam,
@@ -21,4 +26,7 @@ __all__ = [
     "ChoiceParam",
     "BoolParam",
     "FACTOR_TEMPLATE_VERSION",
+    "enumerate_factors",
+    "FactorSpec",
+    "DEFAULT_PARAM_SPACE",
 ]
