@@ -7,6 +7,8 @@ Provides:
 - cron: next_cron_fire / CronTrigger
 - perf_monitor: PerfMonitor / TriggerDecision / detect_perf_decay (FR-1900)
 - registry: ModelRegistry / version GC / rollback (FR-2300)
+- drift: DriftDetector / DriftDecision / DriftResult / compute_psi / compute_ks (FR-1700/1800/2600)
+- state: save_state / load_state / recover_tasks (FR-2500)
 - api: create_app / run_app (FR-2000)
 - cli: build_retrain_parser / run_trigger / run_status (FR-2000)
 """
@@ -34,6 +36,7 @@ from trader_off.scheduler.ports import (
     VirtualClockPort,
 )
 from trader_off.scheduler.registry import ModelRegistry
+from trader_off.scheduler.state import load_state, recover_tasks, save_state
 
 __all__ = [
     # Ports
@@ -55,6 +58,10 @@ __all__ = [
     "PerfMonitor",
     "TriggerDecision",
     "detect_perf_decay",
+    # State (FR-2500)
+    "save_state",
+    "load_state",
+    "recover_tasks",
     # Registry (FR-2300)
     "ModelRegistry",
     # API (FR-2000)
