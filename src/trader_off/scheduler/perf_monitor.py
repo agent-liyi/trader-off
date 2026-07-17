@@ -159,16 +159,13 @@ class PerfMonitor:
         """
         recent_ic = self._ic_history_provider(self._config.ic_window)
 
-        # Get reference data from a longer lookback window
+        # Reference mean from earlier portion of a longer lookback
         ref_window = self._config.ic_window * 2
         ref_data = self._ic_history_provider(ref_window)
-
-        # Use the earlier portion as the reference mean
         ref_mean: float | None = None
         if ref_data and len(ref_data) >= self._config.ic_window:
             early_data = ref_data[: self._config.ic_window]
-            if early_data:
-                ref_mean = sum(early_data) / len(early_data)
+            ref_mean = sum(early_data) / len(early_data)
 
         return detect_perf_decay(
             recent_ic,
