@@ -223,67 +223,81 @@ class ModelRegistry:
         """
         data = self._load()
         entries: list[dict] = data["entries"]
-        current_version: str | None = data.get("current_version")
-        pinned: set[str] = set(data.get("pinned_versions") or []) | set(self.keep_pinned_versions)
-
         if not entries:
             logger.info("GC: registry is empty, nothing to clean")
             return []
 
-        # Build sorted version list with their modes
-        indexed: list[tuple[tuple, dict]] = []
-        for entry in entries:
-            v = entry["version"]
-            indexed.append((_parse_version_key(v), entry))
-        # Sort oldest → newest
+        current_version: str | None = data.get("current_version")
+        pinned: set[str] = set(data.get("pinned_versions") or []) | set(self.keep_pinned_versions)
+
+        indexed = self._index_entries(entries)
+        keep_set = self._compute_keep_set(indexed, current_version, pinned)
+        to_delete = self._collect_versions_to_delete(indexed, keep_set, entries)
+        deleted = self._delete_version_dirs(to_delete)
+
+        # Update registry: remove deleted entries, persist
+        entries_kept = [e for e in entries if e["version"] not in to_delete]
+        data["entries"] = entries_kept
+        self._save(data)
+
+        logger.info(f"GC complete: deleted {len(deleted)} versions, {len(entries_kept)} remaining")
+        return deleted
+
+    # ------------------------------------------------------------------
+    # GC helpers
+    # ------------------------------------------------------------------
+
+    def _index_entries(self, entries: list[dict]) -> list[tuple[tuple, dict]]:
+        """Sort registry entries from oldest to newest by version key."""
+        indexed = [(_parse_version_key(e["version"]), e) for e in entries]
         indexed.sort(key=lambda x: x[0])
+        return indexed
 
-        # Determine which versions to keep based on policy
+    def _compute_keep_set(
+        self,
+        indexed: list[tuple[tuple, dict]],
+        current_version: str | None,
+        pinned: set[str],
+    ) -> set[str]:
+        """Compute the set of version strings that should survive GC."""
         if self.keep_full_retrain_only:
-            # Only count full-retrain versions toward keep_latest_n
-            full_entries = [(key, e) for key, e in indexed if e.get("mode") == "full"]
+            full_entries = [(k, e) for k, e in indexed if e.get("mode") == "full"]
             keep_count = min(self.keep_latest_n, len(full_entries))
-            # Keep the latest N full versions (newest = end of list)
-            keep_full_keys = {e["version"] for _, e in full_entries[-keep_count:]}
+            keep_set = {e["version"] for _, e in full_entries[-keep_count:]}
         else:
-            keep_count = min(self.keep_latest_n, len(entries))
-            keep_full_keys = {e["version"] for _, e in indexed[-keep_count:]}
+            keep_count = min(self.keep_latest_n, len(indexed))
+            keep_set = {e["version"] for _, e in indexed[-keep_count:]}
 
-        # Build the set of versions to keep
-        keep: set[str] = set(keep_full_keys)
-
-        # Current version is always preserved
         if current_version:
-            keep.add(current_version)
+            keep_set.add(current_version)
+        keep_set |= pinned
+        return keep_set
 
-        # Pinned versions are always preserved
-        keep |= pinned
-
-        # Determine versions to delete (in registry)
+    def _collect_versions_to_delete(
+        self,
+        indexed: list[tuple[tuple, dict]],
+        keep_set: set[str],
+        entries: list[dict],
+    ) -> set[str]:
+        """Collect versions to delete (registry entries + orphan dirs)."""
         to_delete: set[str] = set()
         for _, entry in indexed:
             v = entry["version"]
-            if v not in keep:
-                # If keep_full_retrain_only, also delete all incrementals
-                if self.keep_full_retrain_only:
-                    to_delete.add(v)
-                elif entry.get("mode") == "incremental":
-                    # Delete incrementals whose parent full version is deleted
-                    to_delete.add(v)
-                else:
+            if v not in keep_set:
+                if self.keep_full_retrain_only or entry.get("mode") != "full":
                     to_delete.add(v)
 
-        # Also find orphan directories (exist on disk but not in registry)
-        orphan: set[str] = set()
+        # Find orphan directories (exist on disk but not in registry)
+        registry_versions = {e["version"] for e in entries}
         if self.models_dir.exists():
-            registry_versions = {e["version"] for e in entries}
             for d in self.models_dir.iterdir():
-                if d.is_dir() and _is_model_version_dir(d.name):
-                    if d.name not in registry_versions:
-                        orphan.add(d.name)
-                        to_delete.add(d.name)
+                if d.is_dir() and _is_model_version_dir(d.name) and d.name not in registry_versions:
+                    to_delete.add(d.name)
 
-        # Delete directories
+        return to_delete
+
+    def _delete_version_dirs(self, to_delete: set[str]) -> list[str]:
+        """Delete version directories from disk. Returns list of successfully deleted names."""
         deleted: list[str] = []
         for v in sorted(to_delete, key=_parse_version_key):
             model_dir = self.models_dir / v
@@ -294,11 +308,4 @@ class ModelRegistry:
                     logger.info(f"GC: deleted model version {v}")
                 except OSError as exc:
                     logger.error(f"GC: failed to delete {v}: {exc}")
-
-        # Remove deleted entries from registry
-        entries_kept = [e for e in entries if e["version"] not in to_delete]
-        data["entries"] = entries_kept
-        self._save(data)
-
-        logger.info(f"GC complete: deleted {len(deleted)} versions, {len(entries_kept)} remaining")
         return deleted
