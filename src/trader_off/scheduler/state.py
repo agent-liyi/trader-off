@@ -149,7 +149,7 @@ def load_state(state_dir: Path) -> list[RetrainTask]:
     try:
         raw = target.read_text(encoding="utf-8")
         records = json.loads(raw)
-    except (json.JSONDecodeError, OSError) as exc:
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
         logger.warning("State file %s is corrupt (%s), returning empty task list", target, exc)
         return []
 
