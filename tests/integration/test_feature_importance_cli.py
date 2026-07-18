@@ -5,7 +5,6 @@ Covers the cross-module chain:
 """
 
 from datetime import date, timedelta
-from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -36,32 +35,45 @@ def _train_mock_model(tmp_path, n_features=15):
             d = start + timedelta(days=i)
             ret = rng.randn() * 0.02
             close = price * (1.0 + ret)
-            rows.append({
-                "asset": asset, "date": d,
-                "open": close * 0.99, "high": close * 1.02,
-                "low": close * 0.98, "close": close,
-                "volume": float(1_000_000 + i * 10_000),
-                "turnover": 0.02 + rng.rand() * 0.01,
-                "adj_factor": 1.0,
-                "limit_up": False, "limit_down": False,
-            })
+            rows.append(
+                {
+                    "asset": asset,
+                    "date": d,
+                    "open": close * 0.99,
+                    "high": close * 1.02,
+                    "low": close * 0.98,
+                    "close": close,
+                    "volume": float(1_000_000 + i * 10_000),
+                    "turnover": 0.02 + rng.rand() * 0.01,
+                    "adj_factor": 1.0,
+                    "limit_up": False,
+                    "limit_down": False,
+                }
+            )
             price = close
     data = pl.DataFrame(rows)
 
     data = compute_momentum_features(data)
     data = compute_volatility_features(data)
     data = compute_volume_features(data)
-    label_df = build_labels(
-        data.select(["asset", "date", "close"]), horizon=5
-    )
+    label_df = build_labels(data.select(["asset", "date", "close"]), horizon=5)
     data = data.join(label_df, on=["asset", "date"], how="left")
     data = data.filter(pl.col("label").is_not_null())
 
     feature_cols = [
-        "ret_5", "ret_10", "ret_20", "ret_60",
-        "vol_10", "vol_20", "vol_60",
-        "turnover_5", "turnover_10", "turnover_20",
-        "vp_corr_5", "vp_corr_10", "vp_corr_20",
+        "ret_5",
+        "ret_10",
+        "ret_20",
+        "ret_60",
+        "vol_10",
+        "vol_20",
+        "vol_60",
+        "turnover_5",
+        "turnover_10",
+        "turnover_20",
+        "vp_corr_5",
+        "vp_corr_10",
+        "vp_corr_20",
     ]
     X = data.select(["asset", "date"] + feature_cols)
 
@@ -71,13 +83,9 @@ def _train_mock_model(tmp_path, n_features=15):
     valid_dates = dates_sorted[split_idx:]
 
     X_train = X.filter(pl.col("date").is_in(train_dates))
-    y_train = data.filter(
-        pl.col("date").is_in(train_dates)
-    )["label"].drop_nulls()
+    y_train = data.filter(pl.col("date").is_in(train_dates))["label"].drop_nulls()
     X_valid = X.filter(pl.col("date").is_in(valid_dates))
-    y_valid = data.filter(
-        pl.col("date").is_in(valid_dates)
-    )["label"].drop_nulls()
+    y_valid = data.filter(pl.col("date").is_in(valid_dates))["label"].drop_nulls()
 
     X_scaled, scaler, dropped = fit_scaler_and_impute(X_train)
     common = min(len(X_scaled), len(y_train), len(X_valid), len(y_valid))
@@ -97,16 +105,16 @@ def _train_mock_model(tmp_path, n_features=15):
 class TestFeatureImportance:
     """Integration: training → feature_importance → CLI output."""
 
-    def test_ac_fr1400_01_extract_sorted(self, tmp_path):
-        """AC-FR1400-01: extract_feature_importance returns sorted DataFrame."""
+    def test_extract_sorted(self, tmp_path):
+        """extract_feature_importance returns sorted DataFrame."""
         booster, feature_names = _train_mock_model(tmp_path)
 
         result = extract_feature_importance(booster, feature_names)
 
         assert isinstance(result, pl.DataFrame)
-        assert {"feature", "importance", "rank"}.issubset(
-            set(result.columns)
-        ), f"Missing columns: {result.columns}"
+        assert {"feature", "importance", "rank"}.issubset(set(result.columns)), (
+            f"Missing columns: {result.columns}"
+        )
 
         # Should have one row per feature
         assert len(result) == len(feature_names), (
@@ -121,10 +129,10 @@ class TestFeatureImportance:
             )
 
         # Rank starts from 1
-        assert result["rank"][0] == 1, f"First rank should be 1"
+        assert result["rank"][0] == 1, "First rank should be 1"
 
-    def test_ac_fr1400_02_cli_output(self, tmp_path, capsys):
-        """AC-FR1400-02: CLI feature-importance prints Top 20 table."""
+    def test_cli_output(self, tmp_path, capsys):
+        """CLI feature-importance prints Top 20 table."""
         booster, feature_names = _train_mock_model(tmp_path)
 
         # Save model first for CLI to load
@@ -138,9 +146,13 @@ class TestFeatureImportance:
         models_dir = tmp_path / "models"
         version = "20260101_120000"
         save_model(
-            booster=booster, scaler=scaler,
-            metadata={}, version=version, models_dir=models_dir,
-            dropped_features=[], feature_names=feature_names,
+            booster=booster,
+            scaler=scaler,
+            metadata={},
+            version=version,
+            models_dir=models_dir,
+            dropped_features=[],
+            feature_names=feature_names,
         )
 
         # Call extractor directly and verify output format

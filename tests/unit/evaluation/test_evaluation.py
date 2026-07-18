@@ -1,18 +1,15 @@
-"""Tests for prediction evaluation (FR-1300)."""
+"""Tests for prediction evaluation."""
 
 from datetime import date, timedelta
 
 import numpy as np
 import polars as pl
-import pytest
-from scipy import stats as scipy_stats
 
+from trader_off.evaluation.ic import compute_layered_returns, ic_pearson, ic_spearman
 from trader_off.evaluation.report import (
     PredictionQualityReport,
     evaluate_predictions,
 )
-from trader_off.evaluation.ic import ic_pearson, ic_spearman, compute_layered_returns
-
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -52,7 +49,7 @@ class TestICFunctions:
     """Unit tests for ic_pearson and ic_spearman."""
 
     def test_ic_pearson_range(self):
-        """AC-FR1300-01: IC Pearson values must be in [-1, 1] range."""
+        """IC Pearson values must be in [-1, 1] range."""
         pred = pl.Series("pred", [1.0, 2.0, 3.0, 4.0, 5.0])
         label = pl.Series("label", [2.0, 4.0, 6.0, 8.0, 10.0])
         result = ic_pearson(pred, label)
@@ -61,7 +58,7 @@ class TestICFunctions:
         assert result > 0.99
 
     def test_ic_spearman_range(self):
-        """AC-FR1300-01: IC Spearman values must be in [-1, 1] range."""
+        """IC Spearman values must be in [-1, 1] range."""
         pred = pl.Series("pred", [1.0, 2.0, 3.0, 4.0, 5.0])
         label = pl.Series("label", [1.0, 2.0, 3.0, 4.0, 5.0])
         result = ic_spearman(pred, label)
@@ -73,19 +70,25 @@ class TestLayeredReturns:
     """Unit tests for compute_layered_returns."""
 
     def test_compute_layered_returns_shape(self):
-        """AC-FR1300-01: Layered returns must have 5 layers with mean_return column."""
+        """Layered returns must have 5 layers with mean_return column."""
         rng = np.random.RandomState(42)
         n = 100
-        preds = pl.DataFrame({
-            "date": [date(2024, 1, 1)] * n,
-            "asset": [f"{i:04d}.SZ" for i in range(n)],
-            "score": rng.randn(n),
-        }, schema={"date": pl.Date, "asset": pl.Utf8, "score": pl.Float64})
-        labels = pl.DataFrame({
-            "date": [date(2024, 1, 1)] * n,
-            "asset": [f"{i:04d}.SZ" for i in range(n)],
-            "label": rng.randn(n) * 0.1,
-        }, schema={"date": pl.Date, "asset": pl.Utf8, "label": pl.Float64})
+        preds = pl.DataFrame(
+            {
+                "date": [date(2024, 1, 1)] * n,
+                "asset": [f"{i:04d}.SZ" for i in range(n)],
+                "score": rng.randn(n),
+            },
+            schema={"date": pl.Date, "asset": pl.Utf8, "score": pl.Float64},
+        )
+        labels = pl.DataFrame(
+            {
+                "date": [date(2024, 1, 1)] * n,
+                "asset": [f"{i:04d}.SZ" for i in range(n)],
+                "label": rng.randn(n) * 0.1,
+            },
+            schema={"date": pl.Date, "asset": pl.Utf8, "label": pl.Float64},
+        )
 
         result = compute_layered_returns(preds, labels, n_layers=5)
         assert len(result) == 5
@@ -95,9 +98,9 @@ class TestLayeredReturns:
 class TestEvaluatePredictions:
     """Unit tests for evaluate_predictions."""
 
-    # AC-FR1300-01: returns PredictionQualityReport
-    def test_ac_fr1300_01_report_fields(self):
-        """AC-FR1300-01: evaluate_predictions returns PredictionQualityReport."""
+    # returns PredictionQualityReport
+    def test_report_fields(self):
+        """evaluate_predictions returns PredictionQualityReport."""
         preds, labels = _make_aligned_data(n_dates=20, n_assets=50)
         report = evaluate_predictions(preds, labels)
 
@@ -116,9 +119,9 @@ class TestEvaluatePredictions:
         assert "date" in report.rank_ic_ts.columns
         assert "rank_ic" in report.rank_ic_ts.columns
 
-    # AC-FR1300-02: ic_ts row count = unique dates, ic in [-1,1]
-    def test_ac_fr1300_02_ic_range(self):
-        """AC-FR1300-02: ic_ts rows = n_unique_dates, ic values in [-1,1]."""
+    # ic_ts row count = unique dates, ic in [-1,1]
+    def test_ic_range(self):
+        """ic_ts rows = n_unique_dates, ic values in [-1,1]."""
         preds, labels = _make_aligned_data(n_dates=10, n_assets=100)
         report = evaluate_predictions(preds, labels)
 
@@ -129,18 +132,18 @@ class TestEvaluatePredictions:
         for v in ic_vals:
             assert -1.0 <= v <= 1.0, f"ic={v} out of range"
 
-    # AC-FR1300-03: __all__ exports
-    def test_ac_fr1300_03_imports(self):
-        """AC-FR1300-03: __all__ contains ic_pearson, ic_spearman, compute_layered_returns."""
+    # __all__ exports
+    def test_imports(self):
+        """__all__ contains ic_pearson, ic_spearman, compute_layered_returns."""
         from trader_off import evaluation as ev
 
         assert "ic_pearson" in ev.__all__
         assert "ic_spearman" in ev.__all__
         assert "compute_layered_returns" in ev.__all__
 
-    # AC-FR1300-04: output files written
-    def test_ac_fr1300_04_csv_output(self, tmp_path):
-        """AC-FR1300-04: prediction_quality.csv and layered_returns.csv written."""
+    # output files written
+    def test_csv_output(self, tmp_path):
+        """prediction_quality.csv and layered_returns.csv written."""
         preds, labels = _make_aligned_data(n_dates=10, n_assets=100)
         report = evaluate_predictions(preds, labels)
 

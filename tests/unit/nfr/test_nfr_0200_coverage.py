@@ -1,7 +1,6 @@
 """Tests for NFR-0200: pytest-cov coverage configuration.
 
 AC-NFR0200-01: pytest-cov configured, total coverage ≥97%.
-AC-NFR0200-02: Coverage configuration is invokable via pytest --cov.
 """
 
 from pathlib import Path

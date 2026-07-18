@@ -47,8 +47,8 @@ def _make_aligned_data(
 class TestEvalOutput:
     """Integration: evaluation → CSV output files."""
 
-    def test_ac_fr1300_04_csv_output(self, tmp_path):
-        """AC-FR1300-04: prediction_quality.csv and layered_returns.csv files.
+    def test_csv_output(self, tmp_path):
+        """prediction_quality.csv and layered_returns.csv files.
 
         Verifies that evaluate_predictions produces writable DataFrames
         for prediction quality and layered returns.
@@ -67,28 +67,22 @@ class TestEvalOutput:
         ic_df = pl.read_csv(ic_csv)
         assert "date" in ic_df.columns
         assert "ic" in ic_df.columns
-        assert len(ic_df) == 10, (
-            f"Expected 10 IC rows, got {len(ic_df)}"
-        )
+        assert len(ic_df) == 10, f"Expected 10 IC rows, got {len(ic_df)}"
 
         # Write layered_returns.csv
         layered_csv = tmp_path / "layered_returns.csv"
         report.layered_returns.write_csv(layered_csv)
         assert layered_csv.exists(), "Missing layered_returns.csv"
-        assert layered_csv.stat().st_size > 0, (
-            "layered_returns.csv is empty"
-        )
+        assert layered_csv.stat().st_size > 0, "layered_returns.csv is empty"
 
         # Verify layered returns structure
         lr_df = pl.read_csv(layered_csv)
         assert "layer" in lr_df.columns
         assert "mean_return" in lr_df.columns
-        assert len(lr_df) == 5, (
-            f"Expected 5 layers, got {len(lr_df)}"
-        )
+        assert len(lr_df) == 5, f"Expected 5 layers, got {len(lr_df)}"
 
-    def test_ac_fr1300_01_report_fields(self):
-        """AC-FR1300-01: PredictionQualityReport has all required fields."""
+    def test_report_fields(self):
+        """PredictionQualityReport has all required fields."""
         preds, labels = _make_aligned_data(n_dates=5, n_assets=50)
 
         report = evaluate_predictions(preds, labels)

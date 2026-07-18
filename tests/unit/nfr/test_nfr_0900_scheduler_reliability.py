@@ -3,7 +3,6 @@
 AC-NFR0900-01: Concurrent trigger_now() safety (no race conditions).
 AC-NFR0900-02: State corruption simulation (garbage in state.json → recovery).
 AC-NFR0900-03: Double start() is idempotent.
-AC-NFR0900-04: stop() before start() is a graceful no-op.
 """
 
 import asyncio
@@ -226,13 +225,13 @@ async def test_nfr0900_03_stop_idempotent(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# AC-NFR0900-04: stop() from not-started scheduler is graceful no-op
+# stop() from not-started scheduler is graceful no-op
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-async def test_nfr0900_04_stop_before_start_graceful(tmp_path):
-    """AC-NFR0900-04: stop() on scheduler that hasn't started is a graceful no-op."""
+async def test_stop_before_start_graceful(tmp_path):
+    """stop() on scheduler that hasn't started is a graceful no-op."""
     config = SchedulerConfig(
         clock=VirtualClockPort(),
     )
@@ -255,8 +254,8 @@ async def test_nfr0900_04_stop_before_start_graceful(tmp_path):
 
 
 @pytest.mark.unit
-async def test_nfr0900_04_get_status_before_start_works(tmp_path):
-    """AC-NFR0900-04: get_status() works even before start() is called."""
+async def test_get_status_before_start_works(tmp_path):
+    """get_status() works even before start() is called."""
     config = SchedulerConfig(
         clock=VirtualClockPort(),
     )

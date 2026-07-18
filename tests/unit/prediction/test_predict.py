@@ -216,10 +216,10 @@ class TestPredict:
         assert any(r["asset"] == "000003.SZ" for r in skipped)
         assert any("insufficient_history" in r["reason"] for r in skipped)
 
-    # AC-FR0900-04: mock DataLoader call_count == len(watchlist), count=120
+    # DataLoader call_count == len(watchlist), count=120
     @pytest.mark.asyncio
-    async def test_ac_fr0900_04_lookback_120(self, scaler, mock_booster):
-        """AC-FR0900-04: DataLoader.get_history called once per asset with count=120."""
+    async def test_lookback_120(self, scaler, mock_booster):
+        """DataLoader.get_history called once per asset with count=120."""
         watchlist = ["000001.SZ", "000002.SZ"]
         asof = date(2024, 12, 31)
 

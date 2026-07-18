@@ -1,6 +1,5 @@
 """Tests for lightGBM model training (FR-0700)."""
 
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import lightgbm as lgb
@@ -65,9 +64,7 @@ class TestTrainModel:
         )
 
         objective = booster.params.get("objective", "")
-        assert objective in ("regression", "regression_l2"), (
-            f"Unexpected objective: {objective}"
-        )
+        assert objective in ("regression", "regression_l2"), f"Unexpected objective: {objective}"
 
     # AC-FR0700-03: Early stopping
     def test_ac_fr0700_03_early_stopping(self):
@@ -107,9 +104,7 @@ class TestTrainModel:
 
         # Best iteration should be less than max n_estimators
         best_iter = booster.best_iteration
-        assert best_iter < 300, (
-            f"Expected early stopping (best_iter < 300), got {best_iter}"
-        )
+        assert best_iter < 300, f"Expected early stopping (best_iter < 300), got {best_iter}"
 
     # AC-FR0700-04: train.log contains best_iteration and final_train_loss
     def test_ac_fr0700_04_train_log(self, synthetic_regression_data, tmp_path):
@@ -140,9 +135,9 @@ class TestTrainModel:
             f"train.log missing 'final_train_loss': {log_content[:200]}"
         )
 
-    # AC-FR0700-05: Params verification (mock LGBMRegressor)
-    def test_ac_fr0700_05_params_passed_correctly(self, synthetic_regression_data):
-        """AC-FR0700-05: Custom params are passed to LGBMRegressor."""
+    # Params verification (mock LGBMRegressor)
+    def test_params_passed_correctly(self, synthetic_regression_data):
+        """Custom params are passed to LGBMRegressor."""
         X_train, y_train, X_valid, y_valid = synthetic_regression_data
 
         custom_params = {

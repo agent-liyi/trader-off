@@ -10,7 +10,6 @@ import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
-import numpy as np
 import polars as pl
 import pytest
 
@@ -18,10 +17,19 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 # Feature columns expected in the model (15 total)
 FEATURE_COLS = [
-    "ret_5", "ret_10", "ret_20", "ret_60",
-    "vol_10", "vol_20", "vol_60",
-    "turnover_5", "turnover_10", "turnover_20",
-    "vp_corr_5", "vp_corr_10", "vp_corr_20",
+    "ret_5",
+    "ret_10",
+    "ret_20",
+    "ret_60",
+    "vol_10",
+    "vol_20",
+    "vol_60",
+    "turnover_5",
+    "turnover_10",
+    "turnover_20",
+    "vp_corr_5",
+    "vp_corr_10",
+    "vp_corr_20",
 ]
 
 
@@ -48,9 +56,7 @@ class TestLGBMPipeline:
     """End-to-end test: train → predict → backtest → evaluate → visualize."""
 
     # ruff: noqa: PLR0915 — e2e pipeline by nature has many steps
-    def test_ac_fr1500_01_full_pipeline(
-        self, fixture_data, watchlist, baseline_nav, tmp_path
-    ):
+    def test_ac_fr1500_01_full_pipeline(self, fixture_data, watchlist, baseline_nav, tmp_path):
         """AC-FR1500-01: Full pipeline runs and produces all expected outputs.
 
         Verifies the complete chain:
@@ -84,9 +90,7 @@ class TestLGBMPipeline:
         data = compute_volume_features(data)
 
         # Build labels
-        label_df = build_labels(
-            data.select(["asset", "date", "close"]), horizon=5
-        )
+        label_df = build_labels(data.select(["asset", "date", "close"]), horizon=5)
         data = data.join(label_df, on=["asset", "date"], how="left")
 
         # Drop rows with NaN labels (last 5 days per asset)
@@ -123,12 +127,8 @@ class TestLGBMPipeline:
         common_train = min(len(X_scaled), len(y_train_vals))
         common_valid = min(len(X_valid_feat), len(y_valid_vals))
 
-        assert common_train >= 10, (
-            f"Need at least 10 aligned train rows, got {common_train}"
-        )
-        assert common_valid >= 5, (
-            f"Need at least 5 aligned valid rows, got {common_valid}"
-        )
+        assert common_train >= 10, f"Need at least 10 aligned train rows, got {common_train}"
+        assert common_valid >= 5, f"Need at least 5 aligned valid rows, got {common_valid}"
 
         params = {
             "num_leaves": 8,
@@ -140,15 +140,9 @@ class TestLGBMPipeline:
 
         booster = train_model(
             X_train=X_scaled.head(common_train).select(scaler.feature_names),
-            y_train=pl.Series(
-                "label", y_train_vals.head(common_train).to_list()
-            ),
-            X_valid=X_valid_feat.head(common_valid).select(
-                scaler.feature_names
-            ),
-            y_valid=pl.Series(
-                "label", y_valid_vals.head(common_valid).to_list()
-            ),
+            y_train=pl.Series("label", y_train_vals.head(common_train).to_list()),
+            X_valid=X_valid_feat.head(common_valid).select(scaler.feature_names),
+            y_valid=pl.Series("label", y_valid_vals.head(common_valid).to_list()),
             params=params,
         )
 
@@ -181,6 +175,7 @@ class TestLGBMPipeline:
 
         # Verify artifact can be loaded back
         import lightgbm as lgb
+
         from trader_off.data.preprocess import StandardScaler
 
         artifact = load_model(version=version, models_dir=models_dir)
@@ -190,9 +185,7 @@ class TestLGBMPipeline:
         assert isinstance(artifact.scaler, StandardScaler), (
             f"Expected StandardScaler, got {type(artifact.scaler)}"
         )
-        assert len(artifact.feature_names) > 0, (
-            "feature_names should not be empty"
-        )
+        assert len(artifact.feature_names) > 0, "feature_names should not be empty"
 
         # ----------------------------------------------------------------
         # Step 2: Predict
@@ -223,9 +216,9 @@ class TestLGBMPipeline:
         predictions = asyncio.run(run_predict())
 
         assert isinstance(predictions, pl.DataFrame)
-        assert {"asset", "score", "rank"}.issubset(
-            set(predictions.columns)
-        ), f"Missing columns in predictions: {predictions.columns}"
+        assert {"asset", "score", "rank"}.issubset(set(predictions.columns)), (
+            f"Missing columns in predictions: {predictions.columns}"
+        )
 
         # Predictions sorted descending by score (AC-FR0900-02)
         if len(predictions) > 0:
@@ -252,7 +245,7 @@ class TestLGBMPipeline:
 
         report_dir = result.report_dir
 
-        # Assert core backtest output files (AC-FR1100-02)
+        # Assert core backtest output files
         assert (report_dir / "summary.json").exists(), "Missing summary.json"
         nav_files = list(report_dir.glob("nav_*.parquet"))
         assert len(nav_files) > 0, "Missing nav parquet"
@@ -261,7 +254,7 @@ class TestLGBMPipeline:
         trade_files = list(report_dir.glob("trades_*.parquet"))
         assert len(trade_files) > 0, "Missing trades parquet"
 
-        # Assert summary.json has all required fields (AC-FR1200-01)
+        # Assert summary.json has all required fields
         summary = json.loads((report_dir / "summary.json").read_text())
         required_keys = {
             "annualized_return",
@@ -278,28 +271,20 @@ class TestLGBMPipeline:
             val = summary[key]
             # total_trades must be a non-negative integer
             if key == "total_trades":
-                assert isinstance(val, int), (
-                    f"summary['{key}'] must be int, got {type(val)}"
-                )
-                assert val >= 0, (
-                    f"summary['{key}'] must be >= 0, got {val}"
-                )
+                assert isinstance(val, int), f"summary['{key}'] must be int, got {type(val)}"
+                assert val >= 0, f"summary['{key}'] must be >= 0, got {val}"
             # win_rate is in [0, 1]
             elif key == "win_rate":
                 assert isinstance(val, (float, int)), (
                     f"summary['{key}'] must be numeric, got {type(val)}"
                 )
-                assert 0.0 <= float(val) <= 1.0, (
-                    f"summary['{key}'] out of [0,1]: {val}"
-                )
+                assert 0.0 <= float(val) <= 1.0, f"summary['{key}'] out of [0,1]: {val}"
             # max_drawdown is non-positive
             elif key == "max_drawdown":
                 assert isinstance(val, (float, int)), (
                     f"summary['{key}'] must be numeric, got {type(val)}"
                 )
-                assert float(val) <= 0.0, (
-                    f"summary['{key}'] should be <=0, got {val}"
-                )
+                assert float(val) <= 0.0, f"summary['{key}'] should be <=0, got {val}"
             # all other float fields: just check numeric type
             else:
                 assert isinstance(val, (float, int)), (
@@ -313,27 +298,23 @@ class TestLGBMPipeline:
             extract_feature_importance,
         )
 
-        importance_df = extract_feature_importance(
-            artifact.booster, artifact.feature_names
-        )
+        importance_df = extract_feature_importance(artifact.booster, artifact.feature_names)
 
         assert isinstance(importance_df, pl.DataFrame)
         if len(importance_df) > 0:
-            assert {"feature", "importance", "rank"}.issubset(
-                set(importance_df.columns)
-            ), f"Missing columns in importance: {importance_df.columns}"
+            assert {"feature", "importance", "rank"}.issubset(set(importance_df.columns)), (
+                f"Missing columns in importance: {importance_df.columns}"
+            )
             assert importance_df["importance"].is_sorted(descending=True), (
                 "Feature importance not sorted descending"
             )
 
-        # Write feature_importance.csv (AC-FR1300-04, AC-FR1400-01)
+        # Write feature_importance.csv
         fi_csv = report_dir / "feature_importance.csv"
         if len(importance_df) > 0:
             importance_df.write_csv(fi_csv)
             assert fi_csv.exists(), "Missing feature_importance.csv"
-            assert fi_csv.stat().st_size > 0, (
-                "feature_importance.csv is empty"
-            )
+            assert fi_csv.stat().st_size > 0, "feature_importance.csv is empty"
 
         # ----------------------------------------------------------------
         # Step 5: Evaluation (IC, layered returns)
@@ -343,9 +324,7 @@ class TestLGBMPipeline:
         has_eval = False
         if len(predictions) > 0:
             # Build labels aligned with predictions for evaluation
-            preds_with_date = predictions.with_columns(
-                pl.lit(asof_date).alias("date")
-            )
+            preds_with_date = predictions.with_columns(pl.lit(asof_date).alias("date"))
             eval_labels = data.select(["asset", "date", "label"]).filter(
                 pl.col("date") == asof_date
             )
@@ -360,9 +339,7 @@ class TestLGBMPipeline:
                 if len(ic_df) > 0:
                     ic_df.write_csv(ic_csv)
                     assert ic_csv.exists(), "Missing prediction_quality.csv"
-                    assert ic_csv.stat().st_size > 0, (
-                        "prediction_quality.csv is empty"
-                    )
+                    assert ic_csv.stat().st_size > 0, "prediction_quality.csv is empty"
 
                 # Write layered_returns.csv
                 layered_csv = report_dir / "layered_returns.csv"
@@ -370,9 +347,7 @@ class TestLGBMPipeline:
                 if len(lr_df) > 0:
                     lr_df.write_csv(layered_csv)
                     assert layered_csv.exists(), "Missing layered_returns.csv"
-                    assert layered_csv.stat().st_size > 0, (
-                        "layered_returns.csv is empty"
-                    )
+                    assert layered_csv.stat().st_size > 0, "layered_returns.csv is empty"
 
         # ----------------------------------------------------------------
         # Step 6: Visualization (3 PNG figures)
@@ -415,8 +390,7 @@ class TestLGBMPipeline:
                 )
                 assert ic_path.exists(), "Missing ic_timeseries.png"
                 assert ic_path.stat().st_size > 1024, (
-                    f"ic_timeseries.png too small: "
-                    f"{ic_path.stat().st_size} bytes"
+                    f"ic_timeseries.png too small: {ic_path.stat().st_size} bytes"
                 )
 
         # Feature importance bar chart (AC-FR1600-03)
@@ -430,15 +404,12 @@ class TestLGBMPipeline:
             )
             assert fi_png.exists(), "Missing feature_importance_top20.png"
             assert fi_png.stat().st_size > 1024, (
-                f"feature_importance_top20.png too small: "
-                f"{fi_png.stat().st_size} bytes"
+                f"feature_importance_top20.png too small: {fi_png.stat().st_size} bytes"
             )
 
         # ---- Timing assertion (AC-FR1500-02) ----
         elapsed = time.perf_counter() - t0
-        assert elapsed < 90, (
-            f"E2E pipeline took {elapsed:.1f}s, must be <90s"
-        )
+        assert elapsed < 90, f"E2E pipeline took {elapsed:.1f}s, must be <90s"
 
     def test_ac_fr1500_02_runtime_standalone(self):
         """AC-FR1500-02: E2E test completes within 90 seconds.
@@ -466,19 +437,23 @@ class TestLGBMPipeline:
 
         # Verify fixture data structure
         ohlcv = pl.read_parquet(ohlcv_path)
-        assert len(ohlcv) == 600, (
-            f"Expected 600 rows (10×60), got {len(ohlcv)}"
-        )
+        assert len(ohlcv) == 600, f"Expected 600 rows (10×60), got {len(ohlcv)}"
         assets = ohlcv["asset"].unique().to_list()
-        assert len(assets) == 10, (
-            f"Expected 10 unique assets, got {len(assets)}"
-        )
+        assert len(assets) == 10, f"Expected 10 unique assets, got {len(assets)}"
 
         # Verify column schema includes required OHLCV + limit fields
         required_cols = {
-            "asset", "date", "open", "high", "low", "close",
-            "volume", "turnover", "adj_factor",
-            "limit_up", "limit_down",
+            "asset",
+            "date",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "turnover",
+            "adj_factor",
+            "limit_up",
+            "limit_down",
         }
         assert required_cols.issubset(set(ohlcv.columns)), (
             f"Missing columns: {required_cols - set(ohlcv.columns)}"
