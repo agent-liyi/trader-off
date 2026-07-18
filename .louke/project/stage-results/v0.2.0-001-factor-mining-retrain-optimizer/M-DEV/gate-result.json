@@ -4,15 +4,13 @@
   "stage": "M-DEV",
   "kind": "gate-result",
   "role": "Keeper",
-  "verdict": "fail",
+  "verdict": "pass",
   "reviewed_targets": [
     "tests/"
   ],
-  "blocking_findings": [
-    "archer ci-scan failed (spec=v0.2.0-001-factor-mining-retrain-optimizer, tests=['tests/'])"
-  ],
+  "blocking_findings": [],
   "accepted_risks": [],
-  "created_at": "2026-07-18T08:22:56Z",
+  "created_at": "2026-07-18T08:55:37Z",
   "contract_bundle_hash": "81f5214ac33320474951525926fabed6434a1ea8539b3429a613dda927dfef82",
   "metadata": {
     "commit_range": "9d1f480..HEAD",
@@ -20,5 +18,5 @@
       "tests/"
     ]
   },
-  "output_hash": "8514902941ae22b680570a1c8f4276efb9ded58deea9b2417b9f47b5381e3031"
+  "output_hash": "7fa552af8ffe82a7acb04a9c84201636f2823af00f08defc38bfca9103282736"
 }
