@@ -128,3 +128,42 @@ class TestIndustryNeutralConstraint:
         benchmark_weights = {"a1": 0.3, "a2": 0.1}
         with pytest.raises(ValueError, match="benchmark_weights"):
             industry_neutral_constraint(tickers, industry_map, benchmark_weights)
+
+
+class TestMaxPositionConstraint:
+    """Tests for max_position_constraint (FR-3600)."""
+
+    def test_ac_fr3600_01_default_ten_percent(self):
+        """AC-FR3600-01: returns bounds with upper bound 0.10 by default."""
+        from trader_off.portfolio.constraints import max_position_constraint
+
+        n = 10
+        bounds, max_weight = max_position_constraint(n)
+        lb, ub = bounds
+        assert max_weight == approx(0.10)
+        assert lb.shape == (n,)
+        assert ub.shape == (n,)
+        assert np.allclose(lb, 0.0)
+        assert np.allclose(ub, 0.10)
+
+    def test_ac_fr3600_02_custom_max_weight(self):
+        """AC-FR3600-02: custom max_weight is applied to all upper bounds."""
+        from trader_off.portfolio.constraints import max_position_constraint
+
+        n = 10
+        bounds, max_weight = max_position_constraint(n, max_weight=0.05)
+        lb, ub = bounds
+        assert max_weight == approx(0.05)
+        assert np.allclose(lb, 0.0)
+        assert np.allclose(ub, 0.05)
+
+    def test_ac_fr3600_01_various_sizes(self):
+        """FR-3600: works for various portfolio sizes."""
+        from trader_off.portfolio.constraints import max_position_constraint
+
+        for n in [1, 5, 50, 100]:
+            bounds, max_weight = max_position_constraint(n)
+            lb, ub = bounds
+            assert lb.shape == (n,)
+            assert ub.shape == (n,)
+            assert max_weight == approx(0.10)

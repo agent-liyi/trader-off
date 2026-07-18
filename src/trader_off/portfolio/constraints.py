@@ -120,3 +120,25 @@ def industry_neutral_constraint(
         )
 
     return a_eq, b_eq
+
+
+def max_position_constraint(
+    n: int,
+    max_weight: float = 0.10,
+) -> tuple[tuple[np.ndarray, np.ndarray], float]:
+    """Generate per-asset upper-bound bounds (w_i ≤ max_weight).
+
+    The returned bounds combine the long-only lower bound ``w_i ≥ 0`` with
+    the per-asset upper bound ``w_i ≤ max_weight``.
+
+    Args:
+        n: Number of assets.
+        max_weight: Maximum allowed weight per asset (default 0.10).
+
+    Returns:
+        ``((lb, ub), max_weight)`` where ``lb`` and ``ub`` are arrays of
+        length *n* suitable for scipy ``bounds`` or cvxpy ``w >= 0, w <= max_weight``.
+    """
+    lb = np.zeros(n, dtype=np.float64)
+    ub = np.full(n, max_weight, dtype=np.float64)
+    return (lb, ub), max_weight
