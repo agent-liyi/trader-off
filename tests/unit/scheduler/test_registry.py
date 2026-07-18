@@ -104,7 +104,10 @@ class TestGcKeepLatest:
         assert not (models_dir / "v0.2.0.2").exists()
 
     def test_gc_keeps_all_when_under_limit(self, tmp_path: Path):
-        """GC does nothing when version count <= keep_latest_n."""
+        """GC does nothing when version count <= keep_latest_n.
+
+        AC references: AC-FR2300-01 (GC with keep_latest_n).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -124,7 +127,10 @@ class TestGcKeepLatest:
             assert (models_dir / f"v0.2.0.{i}").exists()
 
     def test_gc_preserves_registry_integrity_after_delete(self, tmp_path: Path):
-        """Registry file is updated after GC, removed entries are gone."""
+        """Registry file is updated after GC, removed entries are gone.
+
+        AC references: AC-FR2300-01 (GC cleans up entries).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -147,7 +153,10 @@ class TestGcKeepLatest:
         assert "v0.2.0.2" not in remaining
 
     def test_gc_never_deletes_current_version_even_if_beyond_limit(self, tmp_path: Path):
-        """AC-FR2300 constraint: GC must never delete the current version."""
+        """AC-FR2300-01: GC must never delete the current version.
+
+        AC references: AC-FR2300-01.
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -213,7 +222,10 @@ class TestGcPinnedVersions:
         assert not (models_dir / "v0.2.0.1").exists()
 
     def test_multiple_pinned_versions_all_survive(self, tmp_path: Path):
-        """Multiple pinned versions all survive GC."""
+        """Multiple pinned versions all survive GC.
+
+        AC references: AC-FR2300-02 (pinned versions survive GC).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -290,7 +302,10 @@ class TestGcFullRetrainOnly:
         assert len(full_survivors) == 5
 
     def test_full_only_keeps_only_full_within_limit(self, tmp_path: Path):
-        """Full versions beyond keep_latest_n are still deleted even with full_only."""
+        """Full versions beyond keep_latest_n are still deleted even with full_only.
+
+        AC references: AC-FR2300-03 (keep_full_retrain_only).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -318,7 +333,10 @@ class TestGcFullRetrainOnly:
             assert (models_dir / f"v0.2.0.{i}").exists()
 
     def test_full_only_with_mixed_does_not_count_incremental(self, tmp_path: Path):
-        """With keep_latest_n=3, 2 full + 5 incremental → only 2 full kept, all incr deleted."""
+        """With keep_latest_n=3, 2 full + 5 incremental → only 2 full kept, all incr deleted.
+
+        AC references: AC-FR2300-03 (keep_full_retrain_only).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -375,7 +393,10 @@ class TestRollback:
         assert data["current_version"] == "v0.2.0.3"
 
     def test_rollback_to_nonexistent_raises(self, tmp_path: Path):
-        """Rollback to a non-existent version raises ValueError."""
+        """Rollback to a non-existent version raises ValueError.
+
+        AC references: AC-FR2300-04 (rollback_to validation).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -399,7 +420,10 @@ class TestListVersions:
     """list_versions returns sorted version strings."""
 
     def test_list_versions_sorted(self, tmp_path: Path):
-        """list_versions returns versions in sorted order (oldest first)."""
+        """list_versions returns versions in sorted order (oldest first).
+
+        AC references: AC-FR2300-01 (version ordering for GC).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -417,7 +441,10 @@ class TestListVersions:
         assert versions == ["v0.2.0.1", "v0.2.0.2", "v0.2.0.5", "v0.2.0.10"]
 
     def test_list_versions_with_v010_timestamp_format(self, tmp_path: Path):
-        """list_versions handles v0.1.0 timestamp format and orders correctly."""
+        """list_versions handles v0.1.0 timestamp format and orders correctly.
+
+        AC references: AC-FR2300-01 (version ordering for GC, v0.1.0 format).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -438,7 +465,10 @@ class TestListVersions:
         ]
 
     def test_list_versions_mixed_incremental(self, tmp_path: Path):
-        """list_versions correctly orders incremental versions."""
+        """list_versions correctly orders incremental versions.
+
+        AC references: AC-FR2300-01 (version ordering for GC with incremental versions).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -470,6 +500,10 @@ class TestCurrent:
     """current() returns the current_version."""
 
     def test_current_returns_version(self, tmp_path: Path):
+        """current() returns the current_version.
+
+        AC references: AC-FR2300-04 (current_version tracking).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -480,6 +514,10 @@ class TestCurrent:
         assert reg.current() == "v0.2.0.1"
 
     def test_current_returns_none_when_not_set(self, tmp_path: Path):
+        """current() returns None when current_version is not set.
+
+        AC references: AC-FR2300-04 (current_version tracking).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -490,6 +528,10 @@ class TestCurrent:
         assert reg.current() is None
 
     def test_current_returns_none_for_empty_registry(self, tmp_path: Path):
+        """current() returns None for empty registry.
+
+        AC references: AC-FR2300-04 (current_version tracking).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -508,6 +550,10 @@ class TestGetEntry:
     """get_entry returns the entry for a given version."""
 
     def test_get_entry_existing(self, tmp_path: Path):
+        """get_entry returns the entry for an existing version.
+
+        AC references: AC-FR2300-01 (registry entry lookup).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -517,11 +563,14 @@ class TestGetEntry:
         reg = ModelRegistry(registry_path, models_dir)
         entry = reg.get_entry("v0.2.0.1")
 
-        assert entry is not None
         assert entry["version"] == "v0.2.0.1"
         assert entry["mode"] == "full"
 
     def test_get_entry_nonexistent(self, tmp_path: Path):
+        """get_entry returns None for non-existent version.
+
+        AC references: AC-FR2300-01 (registry entry lookup).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -540,6 +589,10 @@ class TestAppend:
     """append adds a new entry to the registry."""
 
     def test_append_adds_entry(self, tmp_path: Path):
+        """append adds a new entry to the registry.
+
+        AC references: AC-FR2300-01 (registry entry management).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
         registry_path.parent.mkdir(parents=True, exist_ok=True)
@@ -551,6 +604,10 @@ class TestAppend:
         assert reg.get_entry("v0.2.0.1") is not None
 
     def test_append_persists_to_disk(self, tmp_path: Path):
+        """append persists entries to disk.
+
+        AC references: AC-FR2300-01 (registry persistence).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
         registry_path.parent.mkdir(parents=True, exist_ok=True)
@@ -573,7 +630,10 @@ class TestVersionOrdering:
     """Confirm both version formats sort correctly."""
 
     def test_v020_format_ordering(self, tmp_path: Path):
-        """v0.2.0 format: v0.2.0.3 < v0.2.0.5 < v0.2.0.5.incr1 < v0.2.0.10."""
+        """v0.2.0 format: v0.2.0.3 < v0.2.0.5 < v0.2.0.5.incr1 < v0.2.0.10.
+
+        AC references: AC-FR2300-01 (version ordering for GC).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -596,7 +656,10 @@ class TestVersionOrdering:
         ]
 
     def test_mixed_format_ordering(self, tmp_path: Path):
-        """v0.1.0 timestamps sort before v0.2.0 semver versions."""
+        """v0.1.0 timestamps sort before v0.2.0 semver versions.
+
+        AC references: AC-FR2300-01 (version ordering for GC with mixed formats).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -628,7 +691,10 @@ class TestGcEdgeCases:
     """Edge cases for GC behavior."""
 
     def test_gc_empty_registry(self, tmp_path: Path):
-        """GC on empty registry returns empty list."""
+        """GC on empty registry returns empty list.
+
+        AC references: AC-FR2300-01 (GC edge case handling).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -639,7 +705,10 @@ class TestGcEdgeCases:
         assert deleted == []
 
     def test_gc_removes_directories_that_are_not_in_registry(self, tmp_path: Path):
-        """GC also cleans up orphan directories not in the registry."""
+        """GC also cleans up orphan directories not in the registry.
+
+        AC references: AC-FR2300-01 (GC orphan cleanup).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -658,7 +727,10 @@ class TestGcEdgeCases:
         assert (models_dir / "v0.2.0.1").exists()
 
     def test_gc_keeps_non_model_directories(self, tmp_path: Path):
-        """GC does not delete directories that don't look like model versions."""
+        """GC does not delete directories that don't look like model versions.
+
+        AC references: AC-FR2300-01 (GC preserves non-version directories).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -685,8 +757,10 @@ class TestParseVersionKey:
     """Coverage for _parse_version_key branches."""
 
     def test_v010_invalid_date_string_falls_back_to_version(self, tmp_path: Path):
-        """Lines 53-55: v0.1.0 format matches but strptime fails (e.g., Feb 30).
+        """v0.1.0 format matches but strptime fails (e.g., Feb 30).
         Falls back to (0, version) string comparison.
+
+        AC references: AC-FR2300-01 (version parsing robustness).
         """
         from trader_off.scheduler.registry import _parse_version_key
 
@@ -695,7 +769,10 @@ class TestParseVersionKey:
         assert result == (0, "20240230_250000")
 
     def test_v020_short_format_no_incr(self, tmp_path: Path):
-        """Lines 62-65: v0.2.0 short format (3 parts, no .incr) parses correctly."""
+        """v0.2.0 short format (3 parts, no .incr) parses correctly.
+
+        AC references: AC-FR2300-01 (version parsing).
+        """
         from trader_off.scheduler.registry import _parse_version_key
 
         # v0.2.5 (major=0, minor=2, build=5)
@@ -703,7 +780,10 @@ class TestParseVersionKey:
         assert result == (1, 0, 2, 5)
 
     def test_unknown_version_format_logs_warning(self, tmp_path: Path, monkeypatch):
-        """Lines 67-69: Unknown format returns (2, version) and logs WARNING."""
+        """Unknown format returns (2, version) and logs WARNING.
+
+        AC references: AC-FR2300-01 (version parsing robustness).
+        """
         from trader_off.scheduler.registry import _parse_version_key
 
         logged_warnings: list[str] = []
@@ -729,12 +809,14 @@ class TestGcKeepFullRetrainOnlyFalse:
     """Lines 268-269: keep_full_retrain_only=False includes all versions (full + incremental)."""
 
     def test_keep_set_includes_latest_n_regardless_of_mode(self, tmp_path: Path):
-        """Lines 268-269: keep_latest_n=2 with keep_full_retrain_only=False keeps 2 latest overall.
+        """AC-FR2300-03: keep_latest_n=2 with keep_full_retrain_only=False keeps 2 latest overall.
 
         With keep_full_retrain_only=False, the keep set includes the latest N versions
         regardless of mode (full or incremental). But deletion logic differs:
         - Full versions outside keep set survive (not deleted)
         - Incremental versions outside keep set are deleted
+
+        AC references: AC-FR2300-03
         """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
@@ -784,7 +866,10 @@ class TestGcOrphanHandling:
     """Lines 287->284, 292->297, 304->302, 309-310: orphan dir / orphan entry handling."""
 
     def test_orphan_directory_deleted(self, tmp_path: Path):
-        """Orphan dir (on disk but not in registry) is deleted by gc()."""
+        """Orphan dir (on disk but not in registry) is deleted by gc().
+
+        AC references: AC-FR2300-01 (GC orphan cleanup).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -803,7 +888,10 @@ class TestGcOrphanHandling:
         assert (models_dir / "v0.2.0.1").exists()
 
     def test_orphan_entry_deleted_but_registry_remains_valid(self, tmp_path: Path):
-        """Registry entry whose dir doesn't exist is removed; registry.json stays valid."""
+        """Registry entry whose dir doesn't exist is removed; registry.json stays valid.
+
+        AC references: AC-FR2300-01 (GC orphan entry cleanup).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -840,7 +928,10 @@ class TestGcOrphanHandling:
         assert "v0.2.0.4" in remaining  # in keep set
 
     def test_orphan_v010_dir_deleted(self, tmp_path: Path):
-        """Orphan v0.1.0-format directory (YYYYMMDD_HHMMSS) is deleted."""
+        """Orphan v0.1.0-format directory (YYYYMMDD_HHMMSS) is deleted.
+
+        AC references: AC-FR2300-01 (GC orphan cleanup with v0.1.0 format).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -867,7 +958,10 @@ class TestLazyRegistry:
     """ModelRegistry handles non-existent registry.json gracefully."""
 
     def test_empty_when_registry_missing(self, tmp_path: Path):
-        """When registry.json doesn't exist, list_versions returns empty."""
+        """When registry.json doesn't exist, list_versions returns empty.
+
+        AC references: AC-FR2300-01 (lazy registry initialization).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 
@@ -876,7 +970,10 @@ class TestLazyRegistry:
         assert reg.current() is None
 
     def test_append_creates_registry_if_missing(self, tmp_path: Path):
-        """append creates the registry file if it doesn't exist."""
+        """append creates the registry file if it doesn't exist.
+
+        AC references: AC-FR2300-01 (lazy registry creation).
+        """
         models_dir = tmp_path / "models"
         registry_path = models_dir / "registry.json"
 

@@ -129,7 +129,10 @@ class TestSolveMaxSharpe:
         assert "scipy.optimize.SLSQP" in stream.getvalue()
 
     def test_ac_fr3700_01_infeasible(self):
-        """FR-3700: infeasible problem returns weights=None and status=infeasible."""
+        """AC-FR3700-01: infeasible problem returns weights=None and status=infeasible.
+
+        AC references: AC-FR3700-01 (solver status reporting).
+        """
         n = 5
         assets = [f"stock_{i:03d}" for i in range(n)]
         mu = {asset: 0.001 for asset in assets}
@@ -209,7 +212,10 @@ class TestSolveMaxSharpe:
         assert captured_kwargs["tolerance"] == 1e-4
 
     def test_cvxpy_infeasible_returns_none_weights(self, solver_fixture, mocker):
-        """cvxpy solver returns weights=None for infeasible problem."""
+        """cvxpy solver returns weights=None for infeasible problem.
+
+        AC references: AC-FR3700-01 (solver status reporting).
+        """
         from trader_off.portfolio import solver as solver_module
 
         def mock_solve_cvxpy(*args, **kwargs):
@@ -237,7 +243,10 @@ class TestSolveMaxSharpe:
         assert result.solver_status == "infeasible"
 
     def test_cvxpy_unbounded_returns_none_weights(self, solver_fixture, mocker):
-        """cvxpy solver returns weights=None for unbounded problem."""
+        """cvxpy solver returns weights=None for unbounded problem.
+
+        AC references: AC-FR3700-01 (solver status reporting).
+        """
         from trader_off.portfolio import solver as solver_module
 
         def mock_solve_cvxpy(*args, **kwargs):
@@ -265,8 +274,10 @@ class TestSolveMaxSharpe:
         assert result.solver_status == "unbounded"
 
     def test_scipy_neg_sharpe_zero_variance(self, solver_fixture):
-        """scipy path handles zero variance gracefully."""
-        # Create a covariance matrix with zero variance
+        """scipy path handles zero variance gracefully.
+
+        AC references: AC-FR3700-01 (solver handles edge cases without crashing).
+        """
         n = 5
         assets = [f"stock_{i:03d}" for i in range(n)]
         mu = {asset: 0.001 for asset in assets}
@@ -274,11 +285,13 @@ class TestSolveMaxSharpe:
         constraints = OptimizerConstraints()
 
         result = solve_max_sharpe(mu, cov, assets, constraints, backend="scipy")
-        # Should handle zero variance without division by zero
-        assert result is not None
+        assert result.backend_used == "scipy"
 
     def test_scipy_solver_status_infeasible(self, solver_fixture):
-        """scipy solver returns infeasible status for impossible constraints."""
+        """scipy solver returns infeasible status for impossible constraints.
+
+        AC references: AC-FR3700-01 (solver status reporting).
+        """
         n = 5
         assets = [f"stock_{i:03d}" for i in range(n)]
         mu = {asset: 0.001 for asset in assets}
@@ -289,7 +302,10 @@ class TestSolveMaxSharpe:
         assert result.solver_status in ("infeasible", "optimal", "optimal_inaccurate")
 
     def test_scipy_weights_at_max_weight_cap(self, solver_fixture):
-        """scipy enforces max_weight cap of 10%."""
+        """scipy enforces max_weight cap of 10%.
+
+        AC references: AC-FR3600-01 (max weight constraint enforcement).
+        """
         n = 20
         assets = [f"stock_{i:03d}" for i in range(n)]
         mu = {asset: 0.001 * (i + 1) for i, asset in enumerate(assets)}
@@ -301,7 +317,10 @@ class TestSolveMaxSharpe:
             assert np.all(result.weights <= 0.10 + 1e-6)
 
     def test_scipy_backend_used(self, solver_fixture):
-        """scipy backend is correctly reported."""
+        """scipy backend is correctly reported.
+
+        AC references: AC-FR3700-01 (backend_used in SolverResult).
+        """
         constraints = OptimizerConstraints()
         result = solve_max_sharpe(
             solver_fixture["mu"],
@@ -314,7 +333,10 @@ class TestSolveMaxSharpe:
         assert result.backend_used == "scipy"
 
     def test_cvxpy_industry_neutral_with_benchmark(self, solver_fixture, mocker):
-        """cvxpy handles industry neutral with custom benchmark."""
+        """cvxpy handles industry neutral with custom benchmark.
+
+        AC references: AC-FR3500-01 (industry neutral constraint enforcement).
+        """
         from trader_off.portfolio import solver as solver_module
 
         n = len(solver_fixture["assets"])
@@ -347,7 +369,10 @@ class TestSolveMaxSharpe:
         assert result.backend_used == "cvxpy"
 
     def test_scipy_industry_neutral_no_industry_map(self, solver_fixture):
-        """scipy with industry_neutral=True but no industry_map skips constraint."""
+        """scipy with industry_neutral=True but no industry_map skips constraint.
+
+        AC references: AC-FR3500-01 (industry neutral constraint requires industry_map).
+        """
         constraints = OptimizerConstraints(industry_neutral=True)
         result = solve_max_sharpe(
             solver_fixture["mu"],
@@ -357,11 +382,14 @@ class TestSolveMaxSharpe:
             industry_map=None,
             backend="scipy",
         )
-        assert result is not None
         assert result.backend_used == "scipy"
+        assert result.solver_status in {"optimal", "optimal_inaccurate", "infeasible"}
 
     def test_cvxpy_industry_neutral_no_industry_map(self, solver_fixture, mocker):
-        """cvxpy with industry_neutral=True but no industry_map skips constraint."""
+        """cvxpy with industry_neutral=True but no industry_map skips constraint.
+
+        AC references: AC-FR3500-01 (industry neutral constraint requires industry_map).
+        """
         from trader_off.portfolio import solver as solver_module
 
         n = len(solver_fixture["assets"])
@@ -391,7 +419,10 @@ class TestSolveMaxSharpe:
         assert result.backend_used == "cvxpy"
 
     def test_solver_diagnostics_contains_nfev(self, solver_fixture):
-        """scipy diagnostics include nfev iteration count."""
+        """scipy diagnostics include nfev iteration count.
+
+        AC references: AC-FR3700-04 (solver kwargs exposed in diagnostics).
+        """
         result = solve_max_sharpe(
             solver_fixture["mu"],
             solver_fixture["cov"],
@@ -403,7 +434,10 @@ class TestSolveMaxSharpe:
         assert "nfev" in result.diagnostics
 
     def test_solver_backend_auto_uses_cvxpy(self, solver_fixture, mocker):
-        """backend='auto' uses cvxpy when available."""
+        """backend='auto' uses cvxpy when available.
+
+        AC references: AC-FR3700-01 (cvxpy is primary solver).
+        """
         import trader_off.portfolio.solver as solver_module
 
         n = len(solver_fixture["assets"])
@@ -432,7 +466,10 @@ class TestSolveMaxSharpe:
         assert result.backend_used == "cvxpy"
 
     def test_solver_backend_auto_falls_back_when_cvxpy_unavailable(self, solver_fixture, mocker):
-        """backend='auto' falls back to scipy when cvxpy is unavailable."""
+        """backend='auto' falls back to scipy when cvxpy is unavailable.
+
+        AC references: AC-FR3700-03 (cvxpy unavailable triggers scipy fallback).
+        """
         import trader_off.portfolio.solver as solver_module
 
         mocker.patch.object(solver_module, "HAS_CVXPY", False)
@@ -457,7 +494,10 @@ class TestCvpxyBranches:
     """Coverage for cvxpy solver branches: solvers, constraints, weight renormalization."""
 
     def test_cvxpy_exception_triggers_scipy_fallback(self, solver_fixture, mocker):
-        """Lines 265-270: cvxpy Problem.solve exception causes fallback to scipy."""
+        """cvxpy Problem.solve exception causes fallback to scipy.
+
+        AC references: AC-FR3700-03 (cvxpy failure triggers scipy fallback).
+        """
         import trader_off.portfolio.solver as solver_module
 
         def failing_solve(self, *args, **kwargs):
@@ -478,7 +518,10 @@ class TestCvpxyBranches:
         assert result.weights is not None
 
     def test_cvxpy_build_constraints_no_industry_neutral(self, solver_fixture, mocker):
-        """Lines 143-152: cvxpy build skips industry_neutral when industry_map is None."""
+        """cvxpy build skips industry_neutral when industry_map is None.
+
+        AC references: AC-FR3500-01 (industry neutral constraint requires industry_map).
+        """
         from trader_off.portfolio import solver as solver_module
 
         n = len(solver_fixture["assets"])
@@ -510,7 +553,10 @@ class TestCvpxyBranches:
         assert result.weights is not None
 
     def test_cvxpy_build_constraints_long_only_false(self, solver_fixture, mocker):
-        """Lines 146-149: long_only=False skips w >= 0 constraint."""
+        """long_only=False skips w >= 0 constraint.
+
+        AC references: AC-FR3400-01 (long-only constraint enforcement).
+        """
         from trader_off.portfolio import solver as solver_module
 
         n = len(solver_fixture["assets"])
@@ -539,7 +585,10 @@ class TestCvpxyBranches:
         assert result.backend_used == "cvxpy"
 
     def test_cvxpy_build_constraints_max_weight_none(self, solver_fixture, mocker):
-        """Lines 149-152: max_weight=None skips w <= max_weight constraint."""
+        """max_weight=None skips w <= max_weight constraint.
+
+        AC references: AC-FR3600-01 (max weight constraint enforcement).
+        """
         from trader_off.portfolio import solver as solver_module
 
         n = len(solver_fixture["assets"])
@@ -568,7 +617,10 @@ class TestCvpxyBranches:
         assert result.backend_used == "cvxpy"
 
     def test_cvxpy_industry_neutral_with_default_benchmark(self, solver_fixture, mocker):
-        """Lines 154-157: industry_neutral with default benchmark (None)."""
+        """industry_neutral with default benchmark (None).
+
+        AC references: AC-FR3500-01 (industry neutral constraint enforcement).
+        """
         from trader_off.portfolio import solver as solver_module
 
         n = len(solver_fixture["assets"])
@@ -599,7 +651,10 @@ class TestCvpxyBranches:
         assert result.backend_used == "cvxpy"
 
     def test_scipy_industry_neutral_default_benchmark(self, solver_fixture):
-        """Lines 300-303: scipy fallback with industry_neutral and default benchmark."""
+        """scipy fallback with industry_neutral and default benchmark.
+
+        AC references: AC-FR3500-01 (industry neutral constraint enforcement).
+        """
         assets = solver_fixture["assets"]
         mu = solver_fixture["mu"]
         cov = solver_fixture["cov"]
@@ -615,11 +670,14 @@ class TestCvpxyBranches:
         result = solve_max_sharpe(
             mu, cov, assets, constraints, industry_map=industry_map, backend="scipy"
         )
-        assert result is not None
         assert result.backend_used == "scipy"
+        assert result.solver_status in {"optimal", "optimal_inaccurate", "infeasible"}
 
     def test_scipy_max_weight_constraint(self, solver_fixture):
-        """Lines 295-296: scipy with max_weight constraint."""
+        """scipy with max_weight constraint.
+
+        AC references: AC-FR3600-01 (max weight constraint enforcement).
+        """
         constraints = OptimizerConstraints(max_weight=0.15, sum_to_one=True, long_only=True)
         result = solve_max_sharpe(
             solver_fixture["mu"],
@@ -633,7 +691,10 @@ class TestCvpxyBranches:
             assert np.all(result.weights <= 0.15 + 1e-6)
 
     def test_scipy_solver_status_optimal_inaccurate(self, solver_fixture):
-        """Lines 371-375: scipy returns optimal_inaccurate when result_scipy.status == 1."""
+        """scipy returns optimal_inaccurate when result_scipy.status == 1.
+
+        AC references: AC-FR3700-01 (solver status reporting).
+        """
         n = 5
         assets = [f"stock_{i:03d}" for i in range(n)]
         mu = {asset: 0.001 for asset in assets}
@@ -645,7 +706,10 @@ class TestCvpxyBranches:
         assert result.backend_used == "scipy"
 
     def test_scipy_constraint_sum_to_one_only(self, solver_fixture):
-        """Lines 292-293: scipy with sum_to_one=True and no max_weight."""
+        """scipy with sum_to_one=True and no max_weight.
+
+        AC references: AC-FR3300-01 (sum-to-one constraint enforcement).
+        """
         constraints = OptimizerConstraints(sum_to_one=True, long_only=True)
         result = solve_max_sharpe(
             solver_fixture["mu"],
@@ -659,7 +723,10 @@ class TestCvpxyBranches:
             assert abs(result.weights.sum() - 1.0) < 1e-6
 
     def test_scipy_only_long_only_no_sum_constraint(self, solver_fixture):
-        """Lines 319-321: scipy long-only bounds with no sum constraint."""
+        """scipy long-only bounds with no sum constraint.
+
+        AC references: AC-FR3400-01 (long-only constraint enforcement).
+        """
         constraints = OptimizerConstraints(sum_to_one=False, long_only=True)
         result = solve_max_sharpe(
             solver_fixture["mu"],
