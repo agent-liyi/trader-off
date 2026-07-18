@@ -133,29 +133,33 @@ class TestIndustryNeutralConstraint:
 class TestMaxPositionConstraint:
     """Tests for max_position_constraint (FR-3600)."""
 
-    def test_ac_fr3600_01_default_ten_percent(self):
-        """AC-FR3600-01: returns bounds with upper bound 0.10 by default."""
+    @pytest.fixture
+    def default_bounds(self):
+        """Default bounds for 10 assets."""
         from trader_off.portfolio.constraints import max_position_constraint
 
-        n = 10
-        bounds, max_weight = max_position_constraint(n)
+        return max_position_constraint(10)
+
+    def _assert_bounds(self, bounds, max_weight, n, expected_max_weight):
+        """Helper: assert bounds shape, lower bound, and upper bound."""
         lb, ub = bounds
-        assert max_weight == approx(0.10)
+        assert max_weight == approx(expected_max_weight)
         assert lb.shape == (n,)
         assert ub.shape == (n,)
         assert np.allclose(lb, 0.0)
-        assert np.allclose(ub, 0.10)
+        assert np.allclose(ub, expected_max_weight)
+
+    def test_ac_fr3600_01_default_ten_percent(self, default_bounds):
+        """AC-FR3600-01: returns bounds with upper bound 0.10 by default."""
+        bounds, max_weight = default_bounds
+        self._assert_bounds(bounds, max_weight, 10, 0.10)
 
     def test_ac_fr3600_02_custom_max_weight(self):
         """AC-FR3600-02: custom max_weight is applied to all upper bounds."""
         from trader_off.portfolio.constraints import max_position_constraint
 
-        n = 10
-        bounds, max_weight = max_position_constraint(n, max_weight=0.05)
-        lb, ub = bounds
-        assert max_weight == approx(0.05)
-        assert np.allclose(lb, 0.0)
-        assert np.allclose(ub, 0.05)
+        bounds, max_weight = max_position_constraint(10, max_weight=0.05)
+        self._assert_bounds(bounds, max_weight, 10, 0.05)
 
     def test_ac_fr3600_01_various_sizes(self):
         """FR-3600: works for various portfolio sizes."""
@@ -163,7 +167,4 @@ class TestMaxPositionConstraint:
 
         for n in [1, 5, 50, 100]:
             bounds, max_weight = max_position_constraint(n)
-            lb, ub = bounds
-            assert lb.shape == (n,)
-            assert ub.shape == (n,)
-            assert max_weight == approx(0.10)
+            self._assert_bounds(bounds, max_weight, n, 0.10)
