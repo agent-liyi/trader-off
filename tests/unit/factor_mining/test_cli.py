@@ -5,7 +5,6 @@ pipeline orchestration. The actual factor mining pipeline steps are mocked to
 avoid real computation.
 """
 
-import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -53,9 +52,12 @@ class TestMineFactorsCLIErrors:
         nonexistent = tmp_path / "nonexistent.yaml"
         # File must not exist
 
-        result = factor_mining_cli.main(argv=[
-            "--config", str(nonexistent),
-        ])
+        result = factor_mining_cli.main(
+            argv=[
+                "--config",
+                str(nonexistent),
+            ]
+        )
 
         assert result == 4
         captured = capsys.readouterr()
@@ -121,31 +123,40 @@ class TestMineFactorsCLISuccess:
         mock_selected = mock_candidates[:30]
 
         # Patch pipeline functions on the module where they are used
-        with patch.object(
-            factor_mining_cli, "list_templates", return_value=[]
-        ), patch.object(
-            factor_mining_cli, "enumerate_factors", return_value=mock_candidates
-        ), patch.object(
-            factor_mining_cli, "evaluate_factor", side_effect=mock_evaluations
-        ), patch.object(
-            factor_mining_cli, "select_factors",
-            return_value=(mock_selected, MagicMock()),
-        ), patch.object(
-            factor_mining_cli, "save_factor_registry",
-            return_value=(Path("/tmp/factors.yaml"), Path("/tmp/selected.json")),
+        with (
+            patch.object(factor_mining_cli, "list_templates", return_value=[]),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=mock_candidates),
+            patch.object(factor_mining_cli, "evaluate_factor", side_effect=mock_evaluations),
+            patch.object(
+                factor_mining_cli,
+                "select_factors",
+                return_value=(mock_selected, MagicMock()),
+            ),
+            patch.object(
+                factor_mining_cli,
+                "save_factor_registry",
+                return_value=(Path("/tmp/factors.yaml"), Path("/tmp/selected.json")),
+            ),
         ):
-            result = factor_mining_cli.main(argv=[
-                "--config", str(config_path),
-                "--top-k", "30",
-                "--output", str(tmp_path / "out"),
-                "--registry-dir", str(tmp_path / "registry"),
-            ])
+            result = factor_mining_cli.main(
+                argv=[
+                    "--config",
+                    str(config_path),
+                    "--top-k",
+                    "30",
+                    "--output",
+                    str(tmp_path / "out"),
+                    "--registry-dir",
+                    str(tmp_path / "registry"),
+                ]
+            )
 
         assert result == 0, f"Expected exit 0, got {result}"
         captured = capsys.readouterr()
         assert "枚举了" in captured.out, f"stdout: {captured.out}"
         assert "精选" in captured.out, f"stdout: {captured.out}"
         import re
+
         match = re.search(r"枚举了 (\d+) 个候选因子", captured.out)
         assert match is not None, f"Expected count pattern, got: {captured.out}"
         assert int(match.group(1)) >= 200
@@ -180,33 +191,142 @@ class TestMineFactorsCLISuccess:
         mock_evaluations = [self._make_mock_evaluation(i) for i in range(num_candidates)]
         mock_selected = mock_candidates[:5]
 
-        with patch.object(
-            factor_mining_cli, "list_templates", return_value=[]
-        ), patch.object(
-            factor_mining_cli, "enumerate_factors", return_value=mock_candidates
-        ), patch.object(
-            factor_mining_cli, "evaluate_factor", side_effect=mock_evaluations
-        ), patch.object(
-            factor_mining_cli, "select_factors",
-            return_value=(mock_selected, MagicMock()),
-        ), patch.object(
-            factor_mining_cli, "save_factor_registry",
-            return_value=(Path("/tmp/factors.yaml"), Path("/tmp/selected.json")),
+        with (
+            patch.object(factor_mining_cli, "list_templates", return_value=[]),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=mock_candidates),
+            patch.object(factor_mining_cli, "evaluate_factor", side_effect=mock_evaluations),
+            patch.object(
+                factor_mining_cli,
+                "select_factors",
+                return_value=(mock_selected, MagicMock()),
+            ),
+            patch.object(
+                factor_mining_cli,
+                "save_factor_registry",
+                return_value=(Path("/tmp/factors.yaml"), Path("/tmp/selected.json")),
+            ),
         ):
-            result = factor_mining_cli.main(argv=[
-                "--config", str(config_path),
-                "--top-k", "30",
-                "--output", str(tmp_path / "out"),
-                "--registry-dir", str(tmp_path / "registry"),
-            ])
+            result = factor_mining_cli.main(
+                argv=[
+                    "--config",
+                    str(config_path),
+                    "--top-k",
+                    "30",
+                    "--output",
+                    str(tmp_path / "out"),
+                    "--registry-dir",
+                    str(tmp_path / "registry"),
+                ]
+            )
 
         assert result == 3, f"Expected exit 3, got {result}"
         captured = capsys.readouterr()
         assert "精选" in captured.out, f"stdout: {captured.out}"
         # Verify selected count is 5 (< 10)
         import re
+
         match = re.search(r"精选 (\d+) 个因子", captured.out)
         assert match is not None
         selected_count = int(match.group(1))
         assert selected_count == 5
         assert selected_count < 10
+
+    def test_load_config_reads_yaml(self, tmp_path):
+        """_load_config reads and parses YAML config file."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("start: '2020-01-01'\nend: '2024-12-31'\ntop_k: 30\n")
+
+        result = factor_mining_cli._load_config(config_path)
+
+        assert result["start"] == "2020-01-01"
+        assert result["end"] == "2024-12-31"
+        assert result["top_k"] == 30
+
+    def test_evaluation_exception_skips_factor(self, tmp_path):
+        """Exception during factor evaluation is caught and logged."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("start: '2020-01-01'\nend: '2024-12-31'\n")
+
+        # Mock evaluate_factor to raise for all candidates
+        mock_spec = MagicMock()
+        mock_spec.id = "bad_factor"
+
+        with (
+            patch.object(factor_mining_cli, "list_templates", return_value=[]),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=[mock_spec]),
+            patch.object(
+                factor_mining_cli, "evaluate_factor", side_effect=RuntimeError("eval failed")
+            ),
+            patch.object(factor_mining_cli, "select_factors", return_value=([], MagicMock())),
+            patch.object(
+                factor_mining_cli, "save_factor_registry", return_value=tmp_path / "factors.yaml"
+            ),
+        ):
+            # Should not raise, but returns 3 (no factors evaluated)
+            result = factor_mining_cli._run_pipeline(
+                MagicMock(
+                    config=config_path, top_k=30, corr_threshold=0.9, output=None, registry_dir=None
+                )
+            )
+
+            assert result == 3
+
+    def test_validate_config_not_found(self, tmp_path):
+        """_validate_config returns 4 when config file does not exist."""
+        nonexistent = tmp_path / "nonexistent.yaml"
+        result = factor_mining_cli._validate_config(nonexistent)
+        assert result == 4
+
+    def test_validate_config_success(self, tmp_path):
+        """_validate_config returns None when config file exists."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("start: '2020-01-01'\n")
+        result = factor_mining_cli._validate_config(config_path)
+        assert result is None
+
+    def test_run_with_custom_output_dir(self, tmp_path):
+        """CLI with custom --output directory."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("start: '2020-01-01'\nend: '2024-12-31'\n")
+        output_dir = tmp_path / "custom_output"
+
+        with (
+            patch.object(factor_mining_cli, "list_templates", return_value=[]),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=[]),
+            patch.object(factor_mining_cli, "select_factors", return_value=([], MagicMock())),
+        ):
+            result = factor_mining_cli.main(
+                argv=[
+                    "--config",
+                    str(config_path),
+                    "--output",
+                    str(output_dir),
+                ]
+            )
+
+        assert result == 3  # No factors evaluated
+
+    def test_run_pipeline_creates_directories(self, tmp_path):
+        """_run_pipeline creates output and registry directories."""
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("start: '2020-01-01'\nend: '2024-12-31'\n")
+        output_dir = tmp_path / "cli_output"
+        registry_dir = tmp_path / "cli_registry"
+
+        with (
+            patch.object(factor_mining_cli, "list_templates", return_value=[]),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=[]),
+            patch.object(factor_mining_cli, "select_factors", return_value=([], MagicMock())),
+        ):
+            factor_mining_cli._run_pipeline(
+                MagicMock(
+                    config=config_path,
+                    top_k=30,
+                    corr_threshold=0.9,
+                    output=output_dir,
+                    registry_dir=registry_dir,
+                )
+            )
+
+        assert output_dir.exists()
+        assert registry_dir.exists()

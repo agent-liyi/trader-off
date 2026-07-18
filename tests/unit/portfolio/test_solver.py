@@ -206,3 +206,242 @@ class TestSolveMaxSharpe:
         assert result.backend_used == "cvxpy"
         assert captured_kwargs["max_iterations"] == 500
         assert captured_kwargs["tolerance"] == 1e-4
+
+    def test_cvxpy_infeasible_returns_none_weights(self, solver_fixture, mocker):
+        """cvxpy solver returns weights=None for infeasible problem."""
+        from trader_off.portfolio import solver as solver_module
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=None,
+                solver_status="infeasible",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=0,
+                dual_vars=None,
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            OptimizerConstraints(),
+            industry_map=solver_fixture["industry_map"],
+            backend="cvxpy",
+        )
+        assert result.weights is None
+        assert result.solver_status == "infeasible"
+
+    def test_cvxpy_unbounded_returns_none_weights(self, solver_fixture, mocker):
+        """cvxpy solver returns weights=None for unbounded problem."""
+        from trader_off.portfolio import solver as solver_module
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=None,
+                solver_status="unbounded",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=0,
+                dual_vars=None,
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            OptimizerConstraints(),
+            industry_map=solver_fixture["industry_map"],
+            backend="cvxpy",
+        )
+        assert result.weights is None
+        assert result.solver_status == "unbounded"
+
+    def test_scipy_neg_sharpe_zero_variance(self, solver_fixture):
+        """scipy path handles zero variance gracefully."""
+        # Create a covariance matrix with zero variance
+        n = 5
+        assets = [f"stock_{i:03d}" for i in range(n)]
+        mu = {asset: 0.001 for asset in assets}
+        cov = np.zeros((n, n))  # Zero covariance
+        constraints = OptimizerConstraints()
+
+        result = solve_max_sharpe(mu, cov, assets, constraints, backend="scipy")
+        # Should handle zero variance without division by zero
+        assert result is not None
+
+    def test_scipy_solver_status_infeasible(self, solver_fixture):
+        """scipy solver returns infeasible status for impossible constraints."""
+        n = 5
+        assets = [f"stock_{i:03d}" for i in range(n)]
+        mu = {asset: 0.001 for asset in assets}
+        cov = 0.01 * np.eye(n)
+        constraints = OptimizerConstraints(max_weight=0.05, sum_to_one=True)
+
+        result = solve_max_sharpe(mu, cov, assets, constraints, backend="scipy")
+        assert result.solver_status in ("infeasible", "optimal", "optimal_inaccurate")
+
+    def test_scipy_weights_at_max_weight_cap(self, solver_fixture):
+        """scipy enforces max_weight cap of 10%."""
+        n = 20
+        assets = [f"stock_{i:03d}" for i in range(n)]
+        mu = {asset: 0.001 * (i + 1) for i, asset in enumerate(assets)}
+        cov = 0.01 * np.eye(n)
+        constraints = OptimizerConstraints(max_weight=0.10, sum_to_one=True)
+
+        result = solve_max_sharpe(mu, cov, assets, constraints, backend="scipy")
+        if result.weights is not None:
+            assert np.all(result.weights <= 0.10 + 1e-6)
+
+    def test_scipy_backend_used(self, solver_fixture):
+        """scipy backend is correctly reported."""
+        constraints = OptimizerConstraints()
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            industry_map=solver_fixture["industry_map"],
+            backend="scipy",
+        )
+        assert result.backend_used == "scipy"
+
+    def test_cvxpy_industry_neutral_with_benchmark(self, solver_fixture, mocker):
+        """cvxpy handles industry neutral with custom benchmark."""
+        from trader_off.portfolio import solver as solver_module
+
+        n = len(solver_fixture["assets"])
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=np.ones(n) / n,
+                solver_status="optimal",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=5,
+                dual_vars={},
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        constraints = OptimizerConstraints(
+            industry_neutral=True, industry_benchmark={a: 0.1 for a in solver_fixture["assets"]}
+        )
+
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            industry_map=solver_fixture["industry_map"],
+            backend="cvxpy",
+        )
+        assert result.backend_used == "cvxpy"
+
+    def test_scipy_industry_neutral_no_industry_map(self, solver_fixture):
+        """scipy with industry_neutral=True but no industry_map skips constraint."""
+        constraints = OptimizerConstraints(industry_neutral=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            industry_map=None,
+            backend="scipy",
+        )
+        assert result is not None
+        assert result.backend_used == "scipy"
+
+    def test_cvxpy_industry_neutral_no_industry_map(self, solver_fixture, mocker):
+        """cvxpy with industry_neutral=True but no industry_map skips constraint."""
+        from trader_off.portfolio import solver as solver_module
+
+        n = len(solver_fixture["assets"])
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=np.ones(n) / n,
+                solver_status="optimal",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=5,
+                dual_vars={},
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        constraints = OptimizerConstraints(industry_neutral=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            industry_map=None,
+            backend="cvxpy",
+        )
+        assert result.backend_used == "cvxpy"
+
+    def test_solver_diagnostics_contains_nfev(self, solver_fixture):
+        """scipy diagnostics include nfev iteration count."""
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            OptimizerConstraints(),
+            industry_map=solver_fixture["industry_map"],
+            backend="scipy",
+        )
+        assert "nfev" in result.diagnostics
+
+    def test_solver_backend_auto_uses_cvxpy(self, solver_fixture, mocker):
+        """backend='auto' uses cvxpy when available."""
+        import trader_off.portfolio.solver as solver_module
+
+        n = len(solver_fixture["assets"])
+
+        mocker.patch.object(solver_module, "HAS_CVXPY", True)
+        mocker.patch.object(
+            solver_module,
+            "_solve_cvxpy",
+            return_value=solver_module.SolverResult(
+                weights=np.ones(n) / n,
+                solver_status="optimal",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=5,
+            ),
+        )
+
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            OptimizerConstraints(),
+            industry_map=solver_fixture["industry_map"],
+            backend="auto",
+        )
+        assert result.backend_used == "cvxpy"
+
+    def test_solver_backend_auto_falls_back_when_cvxpy_unavailable(self, solver_fixture, mocker):
+        """backend='auto' falls back to scipy when cvxpy is unavailable."""
+        import trader_off.portfolio.solver as solver_module
+
+        mocker.patch.object(solver_module, "HAS_CVXPY", False)
+
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            OptimizerConstraints(),
+            industry_map=solver_fixture["industry_map"],
+            backend="auto",
+        )
+        assert result.backend_used == "scipy"

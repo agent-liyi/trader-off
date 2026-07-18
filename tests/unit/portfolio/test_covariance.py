@@ -110,3 +110,33 @@ class TestEstimateCovariance:
 
         with pytest.raises(InsufficientDataError, match="need at least 30 days"):
             estimate_covariance(returns_df_10x20, method="sample")
+
+    def test_unknown_method_raises(self, returns_df_100x252):
+        """Unknown method name raises ValueError."""
+        from trader_off.portfolio.covariance import estimate_covariance
+
+        with pytest.raises(ValueError, match="Unknown method"):
+            estimate_covariance(returns_df_100x252, method="invalid_method")
+
+    def test_negative_eigenvalue_warning(self, returns_df_100x252, mocker):
+        """Covariance with negative eigenvalues logs warning."""
+        import io
+
+        from loguru import logger
+
+        from trader_off.portfolio.covariance import estimate_covariance
+
+        stream = io.StringIO()
+        handler_id = logger.add(stream, level="WARNING", format="{message}")
+
+        # Mock eigvalsh to return values including negatives
+        mocker.patch("numpy.linalg.eigvalsh", return_value=np.array([-1e-5, 0.1, 0.2, 0.3]))
+
+        try:
+            estimate_covariance(returns_df_100x252, method="sample")
+        finally:
+            logger.remove(handler_id)
+
+        # Should have logged warning about negative eigenvalues
+        log_output = stream.getvalue()
+        assert "negative" in log_output.lower() or "eigenvalue" in log_output.lower()

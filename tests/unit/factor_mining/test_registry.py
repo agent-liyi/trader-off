@@ -464,3 +464,126 @@ class TestFactorRegistrySchemaError:
         exc = FactorRegistrySchemaError(msg)
         assert str(exc) == msg
         assert exc.args[0] == msg
+
+
+class TestAtomicWriteFailure:
+    """Tests for _atomic_write exception cleanup."""
+
+    def test_atomic_write_cleans_up_on_exception(self, tmp_path):
+        """_atomic_write removes temp file when write fails."""
+        from trader_off.factor_mining.registry import _atomic_write
+
+        target = tmp_path / "factors.yaml"
+        # Pass invalid content that can't be written (directory doesn't exist for fd writing)
+        # Actually we need a scenario where the write itself fails
+        import os
+
+        # Use a read-only directory to cause write failure
+        readonly_dir = tmp_path / "readonly"
+        readonly_dir.mkdir()
+        os.chmod(readonly_dir, 0o444)
+
+        try:
+            with pytest.raises(Exception):
+                _atomic_write("content", target, readonly_dir, ".yaml")
+        finally:
+            os.chmod(readonly_dir, 0o755)
+
+        # No temp files should remain
+        remaining = list(readonly_dir.glob("**/*"))
+        # Only the directory itself should exist (or be empty of temp files)
+        temp_files = [f for f in remaining if f.is_file() and f.suffix == ".tmp"]
+        assert len(temp_files) == 0
+
+    def test_unsupported_file_format_raises(self, tmp_path):
+        """Loading a file with unsupported extension raises FactorRegistrySchemaError."""
+        from trader_off.factor_mining.registry import load_factor_registry
+
+        bad_file = tmp_path / "factors.txt"
+        bad_file.write_text("some content")
+
+        with pytest.raises(Exception):  # FactorRegistrySchemaError
+            load_factor_registry(bad_file)
+
+    def test_missing_top_level_field(self, tmp_path):
+        """Loading YAML missing 'factors' field raises FactorRegistrySchemaError."""
+        from trader_off.factor_mining.registry import (
+            FactorRegistrySchemaError,
+            load_factor_registry,
+        )
+
+        bad_yaml = tmp_path / "missing_factors.yaml"
+        bad_yaml.write_text(
+            yaml.dump(
+                {
+                    "factor_template_version": "v1",
+                    "generated_at": "2026-07-17T10:00:00Z",
+                    "total_candidates": 0,
+                }
+            )
+        )
+
+        with pytest.raises(FactorRegistrySchemaError, match="missing required field"):
+            load_factor_registry(bad_yaml)
+
+    def test_factors_entry_not_dict(self, tmp_path):
+        """Loading YAML with non-dict entry in factors list raises error."""
+        from trader_off.factor_mining.registry import (
+            FactorRegistrySchemaError,
+            load_factor_registry,
+        )
+
+        bad_yaml = tmp_path / "bad_factor_entry.yaml"
+        bad_yaml.write_text(
+            yaml.dump(
+                {
+                    "factor_template_version": "v1",
+                    "factors": [
+                        {
+                            "id": "test",
+                            "category": "momentum",
+                            "template": "t",
+                            "params": {},
+                            "formula": "x",
+                        },
+                        "not_a_dict",  # Invalid!
+                    ],
+                }
+            )
+        )
+
+        with pytest.raises(FactorRegistrySchemaError, match="must be a dict"):
+            load_factor_registry(bad_yaml)
+
+    def test_factor_missing_required_field(self, tmp_path):
+        """Loading YAML with factor missing required field raises error."""
+        from trader_off.factor_mining.registry import (
+            FactorRegistrySchemaError,
+            load_factor_registry,
+        )
+
+        bad_yaml = tmp_path / "missing_formula.yaml"
+        bad_yaml.write_text(
+            yaml.dump(
+                {
+                    "factor_template_version": "v1",
+                    "factors": [
+                        {"id": "test", "category": "momentum", "template": "t", "params": {}},
+                        # missing "formula"
+                    ],
+                }
+            )
+        )
+
+        with pytest.raises(FactorRegistrySchemaError, match="missing required field"):
+            load_factor_registry(bad_yaml)
+
+    def test_json_unsupported_format(self, tmp_path):
+        """Loading .txt file raises FactorRegistrySchemaError."""
+        from trader_off.factor_mining.registry import load_factor_registry
+
+        bad_file = tmp_path / "factors.xml"
+        bad_file.write_text("<factors/>")
+
+        with pytest.raises(Exception):
+            load_factor_registry(bad_file)

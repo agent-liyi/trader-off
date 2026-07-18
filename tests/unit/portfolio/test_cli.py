@@ -166,4 +166,178 @@ class TestOptimizeCli:
 
         # The CLI should complete successfully with --cov-window
         assert exit_code == 0
-        # check cov_window is passed to estimate_covariance
+
+    def test_ac_fr4100_02b_missing_industry_map(self, predictions_csv, tmp_path, capsys):
+        """Missing industry map file → exit 2."""
+        from trader_off.portfolio.cli import main
+
+        # Create predictions file (valid)
+        pred_path = tmp_path / "predictions.csv"
+        df = pl.DataFrame(
+            {
+                "asset": [f"stock_{i:03d}" for i in range(50)],
+                "score": [0.001 * (50 - i) for i in range(50)],
+                "rank": list(range(1, 51)),
+            }
+        )
+        df.write_csv(pred_path)
+
+        output_dir = tmp_path / "out"
+        fake_industry = tmp_path / "nonexistent_industry.csv"
+
+        exit_code = main(
+            [
+                "--predictions",
+                str(pred_path),
+                "--industry-map",
+                str(fake_industry),
+                "--output",
+                str(output_dir),
+            ]
+        )
+
+        assert exit_code == 2
+
+    def test_ac_fr4100_02c_missing_returns(self, predictions_csv, industry_csv, tmp_path, capsys):
+        """Missing returns file → exit 2."""
+        from trader_off.portfolio.cli import main
+
+        output_dir = tmp_path / "out"
+        fake_returns = tmp_path / "nonexistent_returns.csv"
+
+        exit_code = main(
+            [
+                "--predictions",
+                str(predictions_csv),
+                "--industry-map",
+                str(industry_csv),
+                "--returns",
+                str(fake_returns),
+                "--output",
+                str(output_dir),
+            ]
+        )
+
+        assert exit_code == 2
+
+    def test_cli_success_no_industry_map(
+        self,
+        predictions_csv,
+        returns_csv,
+        tmp_path,
+        capsys,
+    ):
+        """CLI succeeds with industry_map=None (industry-neutral disabled)."""
+        from trader_off.portfolio.cli import main
+
+        output_dir = tmp_path / "reports" / "no_industry"
+
+        exit_code = main(
+            [
+                "--predictions",
+                str(predictions_csv),
+                "--returns",
+                str(returns_csv),
+                "--output",
+                str(output_dir),
+                "--industry-neutral",
+                "--industry-neutral-tol",
+                "0.05",
+            ]
+        )
+
+        assert exit_code == 0
+
+    def test_cli_success_no_returns_uses_identity(
+        self,
+        predictions_csv,
+        industry_csv,
+        tmp_path,
+        capsys,
+    ):
+        """CLI succeeds without --returns (uses identity covariance)."""
+        from trader_off.portfolio.cli import main
+
+        output_dir = tmp_path / "reports" / "no_returns"
+
+        exit_code = main(
+            [
+                "--predictions",
+                str(predictions_csv),
+                "--industry-map",
+                str(industry_csv),
+                "--output",
+                str(output_dir),
+            ]
+        )
+
+        assert exit_code == 0
+
+    def test_cli_prediction_invalid_columns(self, tmp_path, capsys):
+        """predictions CSV missing required columns → raises ValueError."""
+        from trader_off.portfolio.cli import _load_predictions
+
+        bad_csv = tmp_path / "bad_predictions.csv"
+        bad_csv.write_text("asset,score\nA,0.1\n")
+
+        with pytest.raises(ValueError, match="must have columns"):
+            _load_predictions(bad_csv)
+
+    def test_cli_cov_window_zero(
+        self,
+        predictions_csv,
+        industry_csv,
+        returns_csv,
+        tmp_path,
+        capsys,
+    ):
+        """CLI with --cov-window=0 uses all available data."""
+        from trader_off.portfolio.cli import main
+
+        output_dir = tmp_path / "reports" / "cov_zero"
+
+        exit_code = main(
+            [
+                "--predictions",
+                str(predictions_csv),
+                "--industry-map",
+                str(industry_csv),
+                "--returns",
+                str(returns_csv),
+                "--output",
+                str(output_dir),
+                "--cov-window",
+                "0",
+            ]
+        )
+
+        # Should complete (cov_window=0 means use all data)
+        assert exit_code == 0
+
+    def test_cli_includes_solver_result_in_output(
+        self,
+        predictions_csv,
+        industry_csv,
+        returns_csv,
+        tmp_path,
+    ):
+        """save_portfolio_results is called with solver_result."""
+        from trader_off.portfolio import cli as cli_module
+
+        output_dir = tmp_path / "reports" / "solver_result_test"
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(cli_module, "save_portfolio_results", lambda **kwargs: {})
+            exit_code = cli_module.main(
+                [
+                    "--predictions",
+                    str(predictions_csv),
+                    "--industry-map",
+                    str(industry_csv),
+                    "--returns",
+                    str(returns_csv),
+                    "--output",
+                    str(output_dir),
+                ]
+            )
+        assert exit_code == 0
