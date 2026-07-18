@@ -126,6 +126,14 @@ class OptimizedTopKStrategy(BaseStrategy):
         await self._fallback_strategy.init()
         logger.info("OptimizedTopKStrategy running in fallback (LGBMTop20Strategy) mode")
 
+    def _trade_extra(self, weight: float) -> dict:
+        """Build extra dict for trade_target_pct calls."""
+        return {
+            "reason": "optimized_topk",
+            "weight": float(weight),
+            "version": self.model_version,
+        }
+
     async def on_day_open(self, tm: datetime) -> None:
         """Generate predictions and rebalance portfolio.
 
@@ -149,15 +157,10 @@ class OptimizedTopKStrategy(BaseStrategy):
 
         # Place orders for target positions
         for asset, weight in sorted_assets:
-            extra = {
-                "reason": "optimized_topk",
-                "weight": float(weight),
-                "version": self.model_version,
-            }
             self.broker.trade_target_pct(
                 asset=asset,
                 pct=float(weight),
-                extra=extra,
+                extra=self._trade_extra(weight),
             )
             self._position_cache[asset] = float(weight)
 
@@ -167,11 +170,7 @@ class OptimizedTopKStrategy(BaseStrategy):
                 self.broker.trade_target_pct(
                     asset=asset,
                     pct=0.0,
-                    extra={
-                        "reason": "optimized_topk",
-                        "weight": 0.0,
-                        "version": self.model_version,
-                    },
+                    extra=self._trade_extra(0.0),
                 )
                 del self._position_cache[asset]
 
