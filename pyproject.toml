@@ -38,6 +38,7 @@ markers = [
     "e2e: end-to-end tests",
     "integration: integration tests requiring external dependencies",
     "slow: slow-running tests",
+    "perf: performance benchmark tests (NFR-0100)",
 ]
 addopts = "--strict-markers"
 

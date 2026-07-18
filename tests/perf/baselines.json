@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "description": "NFR-0100 perf budget baselines for unit-level operations",
+  "baselines": {
+    "enumerate_factors_small_fixture": {
+      "max_seconds": 1.0,
+      "description": "enumerate_factors with N=1..10 on small fixture",
+      "AC": "AC-5 (unit-level)"
+    },
+    "select_factors_small_fixture": {
+      "max_seconds": 0.5,
+      "description": "select_factors with 30 candidates, top_k=10",
+      "AC": "AC-5 (unit-level)"
+    }
+  }
+}
