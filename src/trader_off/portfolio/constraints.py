@@ -110,13 +110,13 @@ def industry_neutral_constraint(
     m = len(industries)
     a_eq = np.zeros((m, n), dtype=np.float64)
     b_eq = np.zeros(m, dtype=np.float64)
-    ticker_index = {ticker: idx for idx, ticker in enumerate(tickers)}
+    industry_array = np.array([industry_map[t] for t in tickers])
 
     for row_idx, industry in enumerate(industries):
-        for ticker in tickers:
-            if industry_map[ticker] == industry:
-                col_idx = ticker_index[ticker]
-                a_eq[row_idx, col_idx] = 1.0
-                b_eq[row_idx] += benchmark_weights[ticker]
+        mask = industry_array == industry
+        a_eq[row_idx, mask] = 1.0
+        b_eq[row_idx] = sum(
+            benchmark_weights[ticker] for ticker, is_member in zip(tickers, mask) if is_member
+        )
 
     return a_eq, b_eq
