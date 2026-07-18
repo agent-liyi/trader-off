@@ -32,6 +32,7 @@ class TestFullRetrain:
         assert artifact.booster.num_trees() > 0, (
             "Booster should have at least 1 tree after training"
         )
+        # AC-FR2100-01: scaler must be present in ModelArtifact
         assert artifact.scaler is not None, "Scaler must not be None"
         assert len(artifact.feature_names) > 0, "feature_names must be non-empty"
         assert isinstance(artifact.metadata, dict), "metadata must be a dict"

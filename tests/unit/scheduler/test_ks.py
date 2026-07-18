@@ -357,7 +357,9 @@ def test_compute_feature_ks_batch():
     # the p-values should be much higher on average
     shifted_p = shifted["p_value"].mean()
     unshifted_p = unshifted["p_value"].mean()
+    # AC-FR1800-02: shifted features must have lower p-values (drift detected)
     assert shifted_p is not None
+    # AC-FR1800-01: unshifted features must have higher p-values (no drift)
     assert unshifted_p is not None
     assert shifted_p < unshifted_p, (
         f"Shifted features should have lower p-values "

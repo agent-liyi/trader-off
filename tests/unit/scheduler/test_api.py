@@ -423,10 +423,8 @@ async def test_run_app_starts_and_binds():
         await asyncio.sleep(0.05)
         # Server started — clean up
         api_task.cancel()
-        try:
-            await api_task
-        except asyncio.CancelledError:
-            pass
+        # FAKE-003 fix: verify task completion via done() without awaiting
+        assert api_task.done(), "api_task should be done after cancel()"
     finally:
         await scheduler.stop()
         await start_task

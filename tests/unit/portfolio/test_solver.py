@@ -47,13 +47,18 @@ class TestSolveMaxSharpe:
         return expected / volatility, expected, volatility
 
     def _solver_result_checks(self, result, assets, constraints):
-        """Shared assertions for a successful solver result."""
+        """Shared assertions for a successful solver result.
+
+        Validates AC-FR3700-01 (optimal status) and AC-FR3700-02 (scipy path).
+        """
         assert isinstance(result, SolverResult)
+        # AC-FR3700-01: weights must be non-null on success
         assert result.weights is not None
         assert len(result.weights) == len(assets)
         assert result.solver_status in {"optimal", "optimal_inaccurate"}
         assert result.solve_time_sec < 5.0
         assert result.backend_used in {"cvxpy", "scipy"}
+        # AC-FR3700-02: diagnostics available for audit
         assert result.diagnostics.get("max_iterations") is not None
         assert result.diagnostics.get("tolerance") is not None
 
@@ -124,6 +129,7 @@ class TestSolveMaxSharpe:
             logger.remove(handler_id)
 
         assert result.backend_used == "scipy"
+        # AC-FR3700-03: weights must be present after fallback
         assert result.weights is not None
         assert "cvxpy unavailable" in stream.getvalue()
         assert "scipy.optimize.SLSQP" in stream.getvalue()
@@ -515,6 +521,7 @@ class TestCvpxyBranches:
             backend="cvxpy",
         )
         assert result.backend_used == "scipy"
+        # AC-FR3700-03: fallback must produce valid weights
         assert result.weights is not None
 
     def test_cvxpy_build_constraints_no_industry_neutral(self, solver_fixture, mocker):
@@ -550,6 +557,7 @@ class TestCvpxyBranches:
             backend="cvxpy",
         )
         assert result.backend_used == "cvxpy"
+        # AC-FR3500-01: industry_neutral ignored when industry_map is None
         assert result.weights is not None
 
     def test_cvxpy_build_constraints_long_only_false(self, solver_fixture, mocker):

@@ -111,6 +111,7 @@ class TestNextCronFirePureFunction:
         est = timezone(timedelta(hours=-5))
         base = datetime(2026, 7, 17, 10, 0, tzinfo=est)
         result = next_cron_fire("0 16 * * 1-5", base)
+        # AC-FR1500-01: tz-aware input produces tz-aware output
         assert result.tzinfo is not None, "Result should be tz-aware"
         # The hour should be 16 in EST
         assert result.hour == 16, f"Expected hour 16 in timezone, got {result.hour}"
@@ -119,6 +120,7 @@ class TestNextCronFirePureFunction:
         """T-3: tz-aware UTC base produces correct result."""
         base = datetime(2026, 7, 17, 15, 0, tzinfo=UTC)
         result = next_cron_fire("0 16 * * 1-5", base)
+        # AC-FR1500-01: UTC timezone must be preserved in output
         assert result.tzinfo is not None
         assert result.hour == 16
 

@@ -281,7 +281,8 @@ def test_ac_fr2500_03_recover_tasks():
     assert recovered[0].task_id == "T-20260101-0001"
     assert recovered[0].status == "failed"
     assert recovered[0].error == "scheduler restart"
-    assert recovered[0].end_time is not None  # should be set
+    # AC-FR2500-03: end_time must be set when task becomes failed
+    assert recovered[0].end_time is not None
 
     # Task 2: pending → still pending
     assert recovered[1].task_id == "T-20260101-0002"

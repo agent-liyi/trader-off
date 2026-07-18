@@ -61,7 +61,7 @@ async def test_ac_fr2000_01_trigger_output_format():
     assert exit_code == 0
     output = captured_stdout.getvalue()
 
-    # Verify task_id=<uuid> format
+    # Verify task_id=<uuid> format (AC-FR2000-01)
     match = re.search(r"task_id=(\S+)", output)
     assert match is not None, f"Expected 'task_id=...' in output, got: {output}"
     task_id = match.group(1)

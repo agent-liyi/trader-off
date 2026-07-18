@@ -300,10 +300,8 @@ class TestWatchRegistry:
             assert changes[-1] == "v0.2.0.6", "on_change should see the new version"
         finally:
             watch_task.cancel()
-            try:
+            with pytest.raises(asyncio.CancelledError):
                 await watch_task
-            except asyncio.CancelledError:
-                pass
 
     @pytest.mark.asyncio
     async def test_watch_no_change_no_callback(self, tmp_path: Path):
@@ -336,10 +334,8 @@ class TestWatchRegistry:
             assert call_count == 0, "on_change should NOT be called when version is stable"
         finally:
             watch_task.cancel()
-            try:
+            with pytest.raises(asyncio.CancelledError):
                 await watch_task
-            except asyncio.CancelledError:
-                pass
 
     @pytest.mark.asyncio
     async def test_watch_handles_missing_registry_gracefully(self, tmp_path: Path):
@@ -361,10 +357,8 @@ class TestWatchRegistry:
             assert not watch_task.done(), "watch_registry should survive missing file"
         finally:
             watch_task.cancel()
-            try:
+            with pytest.raises(asyncio.CancelledError):
                 await watch_task
-            except asyncio.CancelledError:
-                pass
 
     @pytest.mark.asyncio
     async def test_watch_sync_callback(self, tmp_path: Path):
@@ -397,10 +391,8 @@ class TestWatchRegistry:
             assert changes[-1] == "v0.2.0.6"
         finally:
             watch_task.cancel()
-            try:
+            with pytest.raises(asyncio.CancelledError):
                 await watch_task
-            except asyncio.CancelledError:
-                pass
 
 
 # ---------------------------------------------------------------------------
@@ -479,7 +471,7 @@ class TestDeployFailureSafety:
             ic_floor=0.005,
         )
 
-        # Both versions should still be in the registry
+        # Both versions should still be in the registry (AC-FR2400-04)
         assert registry.get_entry("v0.2.0.5") is not None
         assert registry.get_entry("v0.2.0.8") is not None
         assert len(registry.list_versions()) == 2
@@ -506,7 +498,7 @@ class TestDeployFailureSafety:
 
         assert result is True
         assert registry.current() == "v0.2.0.6"
-        # Both versions still listed
+        # Both versions still listed (AC-FR2400-01)
         assert len(registry.list_versions()) == 2
         assert registry.get_entry("v0.2.0.5") is not None
         assert registry.get_entry("v0.2.0.6") is not None

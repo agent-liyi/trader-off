@@ -107,7 +107,7 @@ class TestPerfMemory:
     """AC-4: peak memory ≤ 16 GB check via psutil (or documented gap)."""
 
     def test_peak_memory_tracking_available(self):
-        """AC-4: psutil should be available or gap documented."""
+        """AC-NFR0100-05: psutil should be available or gap documented."""
         try:
             import psutil
 
@@ -115,4 +115,7 @@ class TestPerfMemory:
             mem_info = process.memory_info()
             assert mem_info.rss > 0, "psutil available but memory info unavailable"
         except ImportError:
-            pytest.skip("psutil not installed — AC-4 memory check deferred to Shield (M-E2E)")
+            # AC-NFR0100-05: memory check deferred to Shield (M-E2E) when psutil unavailable
+            pytest.skip(
+                "psutil not installed — AC-NFR0100-05 memory check deferred to Shield (M-E2E)"
+            )

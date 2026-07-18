@@ -221,10 +221,11 @@ def test_t1_virtual_clock_advance():
     clock.set_now(target)
     assert clock.now() == target
 
-    # SystemClockPort returns real time
+    # SystemClockPort returns real time (T-1 seam)
     sys_clock = SystemClockPort()
     assert isinstance(sys_clock.now(), datetime)
-    assert sys_clock.now().tzinfo is not None  # must be tz-aware
+    # AC-FR1500-01: SystemClockPort must produce tz-aware datetimes
+    assert sys_clock.now().tzinfo is not None
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +267,7 @@ def test_scheduler_config_defaults():
     config = SchedulerConfig()
     assert config.tick_interval_sec == 1.0
     assert config.max_concurrent_tasks == 1
+    # AC-FR1500-01: clock is injected (T-1 seam must be present)
     assert config.clock is not None
     assert hasattr(config.clock, "now")
 

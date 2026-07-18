@@ -65,9 +65,11 @@ class TestListTemplates:
         with min=5, max=60, step=5, expanded() returns 12 values."""
         templates = list_templates()
         momentum_template = next((t for t in templates if t.name == "momentum_N"), None)
+        # AC-FR0100-02: template must exist to validate param structure
         assert momentum_template is not None, "momentum_N template not found"
 
         n_param = momentum_template.params.get("N")
+        # AC-FR0100-02: N param must be present as IntRangeParam
         assert n_param is not None, "No 'N' param in momentum_N"
         assert isinstance(n_param, IntRangeParam), f"Expected IntRangeParam, got {type(n_param)}"
         assert n_param.min == 5, f"Expected min=5, got {n_param.min}"

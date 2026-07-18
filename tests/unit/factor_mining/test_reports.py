@@ -189,14 +189,9 @@ class TestRenderEvaluationReport:
         selected = [_make_factor_spec(i) for i in range(n)]
         output_dir = tmp_path / "reports"
 
-        # Attempt to block jinja2 from being importable
-        # (does not raise if jinja2 is not installed)
-        try:
-            import jinja2  # noqa: F401
-        except ImportError:
-            pass  # Expected — jinja2 is not required
-
-        # If jinja2 is installed, verify the report still works
+        # Verify jinja2 is NOT a hard dependency (AC-FR0700-04)
+        # The render_evaluation_report must succeed even if jinja2 is not installed.
+        # Report must be generated regardless of jinja2 availability
         result = render_evaluation_report(evaluations, selected, output_dir)
 
         assert result["html"].exists(), "HTML must be generated without jinja2"

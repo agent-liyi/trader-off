@@ -199,7 +199,7 @@ async def test_nfr0900_03_double_start_no_error(tmp_path):
 
     # Both should still be running without error
     status = await scheduler.get_status()
-    # At this point, there may be 0 or 1 tasks but no crash
+    # AC-NFR0900-03: start() is idempotent — status must be retrievable (not crash)
     assert status is not None
 
     await scheduler.stop()

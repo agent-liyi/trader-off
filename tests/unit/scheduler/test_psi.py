@@ -149,7 +149,9 @@ def test_ac_fr1700_03_feature_psi():
     shifted_mean = shifted["psi"].mean()
     unshifted_mean = unshifted["psi"].mean()
 
+    # AC-FR1700-03: shifted features must have higher PSI (drift detected)
     assert shifted_mean is not None
+    # AC-FR1700-03: unshifted features have lower PSI (no drift)
     assert unshifted_mean is not None
     assert shifted_mean > unshifted_mean, (
         f"Shifted features should have higher PSI "

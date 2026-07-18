@@ -60,6 +60,7 @@ def test_nfr1000_03_roundtrip_v020_model(tmp_path):
     artifact = load_model("v0.2.0.test", models_dir=str(models_dir))
 
     assert isinstance(artifact, ModelArtifact)
+    # AC-NFR1000-02: round-trip preserves booster
     assert artifact.booster is not None
     assert isinstance(artifact.scaler, StandardScaler)
     assert artifact.feature_names == ["f0", "f1", "f2"]
@@ -162,6 +163,7 @@ def test_nfr1000_01_v010_model_format_loads(tmp_path):
     artifact = load_model(version, models_dir=str(models_dir))
 
     assert isinstance(artifact, ModelArtifact)
+    # AC-NFR1000-01: v0.1.0 booster must be loadable
     assert artifact.booster is not None
     assert isinstance(artifact.booster, lgb.Booster)
     assert isinstance(artifact.scaler, StandardScaler)

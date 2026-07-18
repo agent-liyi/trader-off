@@ -158,6 +158,7 @@ class TestMineFactorsCLISuccess:
         import re
 
         match = re.search(r"枚举了 (\d+) 个候选因子", captured.out)
+        # AC-FR0800-02: candidate count must be reported
         assert match is not None, f"Expected count pattern, got: {captured.out}"
         assert int(match.group(1)) >= 200
 
@@ -177,7 +178,11 @@ class TestMineFactorsCLISuccess:
     ):
         """AC-FR0800-04: top-k=30 but only 5 candidates →
         exit code 3, stdout contains selected count < 10,
-        WARNING 'fewer than 10 selected factors'."""
+        WARNING 'fewer than 10 selected factors'.
+
+        Validates:
+        - AC-FR0800-04: exit code 3 when selected < 10
+        """
         config_path = tmp_path / "test_config.yaml"
         config_path.write_text("start: '2020-01-01'\nend: '2024-12-31'\n")
 
@@ -226,6 +231,7 @@ class TestMineFactorsCLISuccess:
         import re
 
         match = re.search(r"精选 (\d+) 个因子", captured.out)
+        # AC-FR0800-04: selected count must be reported
         assert match is not None
         selected_count = int(match.group(1))
         assert selected_count == 5
