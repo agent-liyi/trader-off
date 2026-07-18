@@ -109,26 +109,17 @@ def _validate_args(args: OptimizeArgs) -> int | None:
     """Validate CLI arguments and return exit code or None to continue."""
     if not args.predictions.exists():
         logger.error(f"predictions file not found: {args.predictions}")
-        print(  # noqa: T201
-            f"Error: predictions file not found: {args.predictions}",
-            file=sys.stderr,
-        )
+        sys.stderr.write(f"Error: predictions file not found: {args.predictions}\n")
         return 2
 
     if args.industry_map is not None and not args.industry_map.exists():
         logger.error(f"industry map file not found: {args.industry_map}")
-        print(  # noqa: T201
-            f"Error: industry map file not found: {args.industry_map}",
-            file=sys.stderr,
-        )
+        sys.stderr.write(f"Error: industry map file not found: {args.industry_map}\n")
         return 2
 
     if args.returns is not None and not args.returns.exists():
         logger.error(f"returns file not found: {args.returns}")
-        print(  # noqa: T201
-            f"Error: returns file not found: {args.returns}",
-            file=sys.stderr,
-        )
+        sys.stderr.write(f"Error: returns file not found: {args.returns}\n")
         return 2
 
     return None
@@ -155,10 +146,7 @@ def _run_optimization(args: OptimizeArgs) -> int:
 
     if len(tickers) < 5:
         logger.error(f"too few assets ({len(tickers)} < 5)")
-        print(  # noqa: T201
-            f"Error: too few assets ({len(tickers)} < 5)",
-            file=sys.stderr,
-        )
+        sys.stderr.write(f"Error: too few assets ({len(tickers)} < 5)\n")
         return 3
 
     # Build expected returns
@@ -223,10 +211,9 @@ def _run_optimization(args: OptimizeArgs) -> int:
         constraint_report=None,
     )
 
-    # Output summary (print to stdout, following CLI convention)
-    print(f"Sharpe={opt_sharpe:.4f} (baseline={eq_sharpe:.4f})")  # noqa: T201
-    print(f"报告落盘到 {out_dir}")  # noqa: T201
-
+    # Output summary (stdout, CLI convention)
+    sys.stdout.write(f"Sharpe={opt_sharpe:.4f} (baseline={eq_sharpe:.4f})\n")
+    sys.stdout.write(f"报告落盘到 {out_dir}\n")
     return 0
 
 

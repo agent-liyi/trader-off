@@ -13,7 +13,7 @@ Exit codes:
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -117,10 +117,7 @@ def _validate_config(config_path: Path) -> int | None:
     """
     if not config_path.exists():
         logger.error(f"config file not found: {config_path}")
-        print(  # noqa: T201
-            f"ConfigValidationError: config file not found: {config_path}",
-            file=sys.stderr,
-        )
+        sys.stderr.write(f"ConfigValidationError: config file not found: {config_path}\n")
         return 4
     return None
 
@@ -156,7 +153,7 @@ def _run_pipeline(args: Namespace) -> int:
         Exit code: 0 success, 3 <10 selected.
     """
     # -- Parse outputs paths --
-    now_ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    now_ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     output_dir = args.output or Path(f"reports/factor_mining_{now_ts}")
     registry_dir = args.registry_dir or Path("factor_registry")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -209,9 +206,8 @@ def _run_pipeline(args: Namespace) -> int:
     )
 
     # -- Step 6: Summary output --
-    print(f"枚举了 {len(candidates)} 个候选因子")  # noqa: T201
-    print(f"精选 {len(selected)} 个因子")  # noqa: T201
-
+    sys.stdout.write(f"枚举了 {len(candidates)} 个候选因子\n")
+    sys.stdout.write(f"精选 {len(selected)} 个因子\n")
     if len(selected) < 10:
         logger.warning("fewer than 10 selected factors")
         return 3
