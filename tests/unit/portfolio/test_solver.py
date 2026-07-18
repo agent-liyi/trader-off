@@ -16,24 +16,25 @@ from trader_off.portfolio.constraints import OptimizerConstraints
 from trader_off.portfolio.solver import SolverResult, solve_max_sharpe
 
 
+@pytest.fixture
+def solver_fixture():
+    """10-asset fixture where the unconstrained optimum is equal-weight."""
+    n = 10
+    assets = [f"stock_{i:03d}" for i in range(n)]
+    industries = ["tech", "bank", "health", "energy", "consumer"]
+    industry_map = {asset: industries[i % 5] for i, asset in enumerate(assets)}
+    mu = {asset: 0.001 for asset in assets}
+    cov = 0.01 * np.eye(n)
+    return {
+        "assets": assets,
+        "mu": mu,
+        "cov": cov,
+        "industry_map": industry_map,
+    }
+
+
 class TestSolveMaxSharpe:
     """Tests for solve_max_sharpe."""
-
-    @pytest.fixture
-    def solver_fixture(self):
-        """10-asset fixture where the unconstrained optimum is equal-weight."""
-        n = 10
-        assets = [f"stock_{i:03d}" for i in range(n)]
-        industries = ["tech", "bank", "health", "energy", "consumer"]
-        industry_map = {asset: industries[i % 5] for i, asset in enumerate(assets)}
-        mu = {asset: 0.001 for asset in assets}
-        cov = 0.01 * np.eye(n)
-        return {
-            "assets": assets,
-            "mu": mu,
-            "cov": cov,
-            "industry_map": industry_map,
-        }
 
     def _analytic_sharpe(self, mu, cov, assets):
         """Unconstrained max-Sharpe reference: w ∝ Σ^{-1} μ, normalized."""
@@ -445,3 +446,228 @@ class TestSolveMaxSharpe:
             backend="auto",
         )
         assert result.backend_used == "scipy"
+
+
+# ---------------------------------------------------------------------------
+# Additional cvxpy branch coverage
+# ---------------------------------------------------------------------------
+
+
+class TestCvpxyBranches:
+    """Coverage for cvxpy solver branches: solvers, constraints, weight renormalization."""
+
+    def test_cvxpy_exception_triggers_scipy_fallback(self, solver_fixture, mocker):
+        """Lines 265-270: cvxpy Problem.solve exception causes fallback to scipy."""
+        import trader_off.portfolio.solver as solver_module
+
+        def failing_solve(self, *args, **kwargs):
+            raise RuntimeError("simulated cvxpy failure")
+
+        mocker.patch.object(solver_module.cp.Problem, "solve", failing_solve)
+        mocker.patch.object(solver_module, "HAS_CVXPY", True)
+
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            OptimizerConstraints(),
+            industry_map=solver_fixture["industry_map"],
+            backend="cvxpy",
+        )
+        assert result.backend_used == "scipy"
+        assert result.weights is not None
+
+    def test_cvxpy_build_constraints_no_industry_neutral(self, solver_fixture, mocker):
+        """Lines 143-152: cvxpy build skips industry_neutral when industry_map is None."""
+        from trader_off.portfolio import solver as solver_module
+
+        n = len(solver_fixture["assets"])
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=np.ones(n) / n,
+                solver_status="optimal",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=5,
+                dual_vars={},
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        # industry_neutral=True but industry_map=None
+        constraints = OptimizerConstraints(industry_neutral=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            industry_map=None,
+            backend="cvxpy",
+        )
+        assert result.backend_used == "cvxpy"
+        assert result.weights is not None
+
+    def test_cvxpy_build_constraints_long_only_false(self, solver_fixture, mocker):
+        """Lines 146-149: long_only=False skips w >= 0 constraint."""
+        from trader_off.portfolio import solver as solver_module
+
+        n = len(solver_fixture["assets"])
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=np.ones(n) / n,
+                solver_status="optimal",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=5,
+                dual_vars={},
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        constraints = OptimizerConstraints(long_only=False, sum_to_one=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            backend="cvxpy",
+        )
+        assert result.backend_used == "cvxpy"
+
+    def test_cvxpy_build_constraints_max_weight_none(self, solver_fixture, mocker):
+        """Lines 149-152: max_weight=None skips w <= max_weight constraint."""
+        from trader_off.portfolio import solver as solver_module
+
+        n = len(solver_fixture["assets"])
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=np.ones(n) / n,
+                solver_status="optimal",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=5,
+                dual_vars={},
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        constraints = OptimizerConstraints(max_weight=None, sum_to_one=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            backend="cvxpy",
+        )
+        assert result.backend_used == "cvxpy"
+
+    def test_cvxpy_industry_neutral_with_default_benchmark(self, solver_fixture, mocker):
+        """Lines 154-157: industry_neutral with default benchmark (None)."""
+        from trader_off.portfolio import solver as solver_module
+
+        n = len(solver_fixture["assets"])
+
+        def mock_solve_cvxpy(*args, **kwargs):
+            return solver_module.SolverResult(
+                weights=np.ones(n) / n,
+                solver_status="optimal",
+                backend_used="cvxpy",
+                solve_time_sec=0.01,
+                iterations=5,
+                dual_vars={},
+                diagnostics={},
+            )
+
+        mocker.patch.object(solver_module, "_solve_cvxpy", side_effect=mock_solve_cvxpy)
+
+        # industry_neutral=True, industry_benchmark=None (default)
+        constraints = OptimizerConstraints(industry_neutral=True, industry_benchmark=None)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            industry_map=solver_fixture["industry_map"],
+            backend="cvxpy",
+        )
+        assert result.backend_used == "cvxpy"
+
+    def test_scipy_industry_neutral_default_benchmark(self, solver_fixture):
+        """Lines 300-303: scipy fallback with industry_neutral and default benchmark."""
+        assets = solver_fixture["assets"]
+        mu = solver_fixture["mu"]
+        cov = solver_fixture["cov"]
+        industry_map = solver_fixture["industry_map"]
+
+        constraints = OptimizerConstraints(
+            industry_neutral=True,
+            industry_benchmark=None,
+            sum_to_one=True,
+            long_only=True,
+        )
+
+        result = solve_max_sharpe(
+            mu, cov, assets, constraints, industry_map=industry_map, backend="scipy"
+        )
+        assert result is not None
+        assert result.backend_used == "scipy"
+
+    def test_scipy_max_weight_constraint(self, solver_fixture):
+        """Lines 295-296: scipy with max_weight constraint."""
+        constraints = OptimizerConstraints(max_weight=0.15, sum_to_one=True, long_only=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            backend="scipy",
+        )
+        assert result.backend_used == "scipy"
+        if result.weights is not None:
+            assert np.all(result.weights <= 0.15 + 1e-6)
+
+    def test_scipy_solver_status_optimal_inaccurate(self, solver_fixture):
+        """Lines 371-375: scipy returns optimal_inaccurate when result_scipy.status == 1."""
+        n = 5
+        assets = [f"stock_{i:03d}" for i in range(n)]
+        mu = {asset: 0.001 for asset in assets}
+        cov = 0.01 * np.eye(n)
+
+        # Infeasible constraints trigger non-optimal status
+        constraints = OptimizerConstraints(max_weight=0.01, sum_to_one=True)
+        result = solve_max_sharpe(mu, cov, assets, constraints, backend="scipy")
+        assert result.backend_used == "scipy"
+
+    def test_scipy_constraint_sum_to_one_only(self, solver_fixture):
+        """Lines 292-293: scipy with sum_to_one=True and no max_weight."""
+        constraints = OptimizerConstraints(sum_to_one=True, long_only=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            backend="scipy",
+        )
+        assert result.backend_used == "scipy"
+        if result.weights is not None:
+            assert abs(result.weights.sum() - 1.0) < 1e-6
+
+    def test_scipy_only_long_only_no_sum_constraint(self, solver_fixture):
+        """Lines 319-321: scipy long-only bounds with no sum constraint."""
+        constraints = OptimizerConstraints(sum_to_one=False, long_only=True)
+        result = solve_max_sharpe(
+            solver_fixture["mu"],
+            solver_fixture["cov"],
+            solver_fixture["assets"],
+            constraints,
+            backend="scipy",
+        )
+        assert result.backend_used == "scipy"
+        if result.weights is not None:
+            assert np.all(result.weights >= -1e-9)

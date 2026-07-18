@@ -677,6 +677,188 @@ class TestGcEdgeCases:
 
 
 # ---------------------------------------------------------------------------
+# _parse_version_key coverage
+# ---------------------------------------------------------------------------
+
+
+class TestParseVersionKey:
+    """Coverage for _parse_version_key branches."""
+
+    def test_v010_invalid_date_string_falls_back_to_version(self, tmp_path: Path):
+        """Lines 53-55: v0.1.0 format matches but strptime fails (e.g., Feb 30).
+        Falls back to (0, version) string comparison.
+        """
+        from trader_off.scheduler.registry import _parse_version_key
+
+        # 20240230_250000 matches YYYYMMDD_HHMMSS pattern but 25:00:00 is invalid
+        result = _parse_version_key("20240230_250000")
+        assert result == (0, "20240230_250000")
+
+    def test_v020_short_format_no_incr(self, tmp_path: Path):
+        """Lines 62-65: v0.2.0 short format (3 parts, no .incr) parses correctly."""
+        from trader_off.scheduler.registry import _parse_version_key
+
+        # v0.2.5 (major=0, minor=2, build=5)
+        result = _parse_version_key("v0.2.5")
+        assert result == (1, 0, 2, 5)
+
+    def test_unknown_version_format_logs_warning(self, tmp_path: Path, monkeypatch):
+        """Lines 67-69: Unknown format returns (2, version) and logs WARNING."""
+        from trader_off.scheduler.registry import _parse_version_key
+
+        logged_warnings: list[str] = []
+
+        def mock_warning(msg, *args):
+            logged_warnings.append(msg % args if args else msg)
+
+        import trader_off.scheduler.registry as registry_module
+
+        monkeypatch.setattr(registry_module.logger, "warning", mock_warning)
+
+        result = _parse_version_key("unknown-format-xyz")
+        assert result == (2, "unknown-format-xyz")
+        assert any("Unknown version format" in w for w in logged_warnings)
+
+
+# ---------------------------------------------------------------------------
+# GC keep_full_retrain_only=False
+# ---------------------------------------------------------------------------
+
+
+class TestGcKeepFullRetrainOnlyFalse:
+    """Lines 268-269: keep_full_retrain_only=False includes all versions (full + incremental)."""
+
+    def test_keep_set_includes_latest_n_regardless_of_mode(self, tmp_path: Path):
+        """Lines 268-269: keep_latest_n=2 with keep_full_retrain_only=False keeps 2 latest overall.
+
+        With keep_full_retrain_only=False, the keep set includes the latest N versions
+        regardless of mode (full or incremental). But deletion logic differs:
+        - Full versions outside keep set survive (not deleted)
+        - Incremental versions outside keep set are deleted
+        """
+        models_dir = tmp_path / "models"
+        registry_path = models_dir / "registry.json"
+
+        # Mixed full + incremental: [full, incr, full, incr, full]
+        entries = [
+            _make_entry("v0.2.0.1", mode="full"),
+            _make_entry("v0.2.0.2", mode="incremental", incr_seq=1, parent_version="v0.2.0.1"),
+            _make_entry("v0.2.0.3", mode="full"),
+            _make_entry("v0.2.0.4", mode="incremental", incr_seq=2, parent_version="v0.2.0.3"),
+            _make_entry("v0.2.0.5", mode="full"),
+        ]
+        for e in entries:
+            _make_model_dir(models_dir, e["version"])
+
+        _write_registry(registry_path, entries, current_version="v0.2.0.5")
+
+        reg = ModelRegistry(
+            registry_path,
+            models_dir,
+            keep_latest_n=2,
+            keep_full_retrain_only=False,
+        )
+        deleted = reg.gc()
+
+        # Sort order: v0.2.0.1(full), v0.2.0.2(incr), v0.2.0.3(full),
+        # v0.2.0.4(incr), v0.2.0.5(full)
+        # keep_latest_n=2 → latest 2 non-current: v0.2.0.4(incr), v0.2.0.5(full=current)
+        # keep_set = {v0.2.0.4, v0.2.0.5}
+        # v0.2.0.2(incr) not in keep_set → deleted (mode != full)
+        # v0.2.0.1, v0.2.0.3 not in keep_set → NOT deleted (mode == full,
+        # keep_full_retrain_only=False)
+        assert "v0.2.0.5" not in deleted  # current
+        assert "v0.2.0.4" not in deleted  # in keep set (2nd latest)
+        assert "v0.2.0.2" in deleted  # incremental outside keep set → deleted
+        # full outside keep set → survives (keep_full_retrain_only=False)
+        assert "v0.2.0.1" not in deleted
+        assert "v0.2.0.3" not in deleted
+
+
+# ---------------------------------------------------------------------------
+# GC orphan directory and orphan entry handling
+# ---------------------------------------------------------------------------
+
+
+class TestGcOrphanHandling:
+    """Lines 287->284, 292->297, 304->302, 309-310: orphan dir / orphan entry handling."""
+
+    def test_orphan_directory_deleted(self, tmp_path: Path):
+        """Orphan dir (on disk but not in registry) is deleted by gc()."""
+        models_dir = tmp_path / "models"
+        registry_path = models_dir / "registry.json"
+
+        entries = [_make_entry("v0.2.0.1")]
+        _make_model_dir(models_dir, "v0.2.0.1")
+        # v0.2.0.99 looks like a version dir but isn't in registry
+        _make_model_dir(models_dir, "v0.2.0.99")
+
+        _write_registry(registry_path, entries)
+
+        reg = ModelRegistry(registry_path, models_dir, keep_latest_n=5)
+        deleted = reg.gc()
+
+        assert "v0.2.0.99" in deleted
+        assert not (models_dir / "v0.2.0.99").exists()
+        assert (models_dir / "v0.2.0.1").exists()
+
+    def test_orphan_entry_deleted_but_registry_remains_valid(self, tmp_path: Path):
+        """Registry entry whose dir doesn't exist is removed; registry.json stays valid."""
+        models_dir = tmp_path / "models"
+        registry_path = models_dir / "registry.json"
+
+        entries = [
+            _make_entry("v0.2.0.1"),
+            _make_entry("v0.2.0.2"),  # dir will NOT be created (orphan entry)
+            _make_entry("v0.2.0.3"),
+            _make_entry("v0.2.0.4"),
+        ]
+        _make_model_dir(models_dir, "v0.2.0.1")
+        _make_model_dir(models_dir, "v0.2.0.3")
+        _make_model_dir(models_dir, "v0.2.0.4")
+        # v0.2.0.2 has an entry but no directory on disk
+
+        _write_registry(registry_path, entries, current_version="v0.2.0.1")
+
+        reg = ModelRegistry(registry_path, models_dir, keep_latest_n=1)
+        deleted = reg.gc()
+
+        # With 4 entries, keep_latest_n=1:
+        # latest 1 non-current = v0.2.0.4
+        # keep_set = {v0.2.0.4, current=v0.2.0.1}
+        # v0.2.0.2 and v0.2.0.3 not in keep_set → deleted
+        # Note: v0.2.0.2 has no directory, so _delete_version_dirs doesn't return it
+        # (only returns versions whose dirs were actually deleted)
+        assert "v0.2.0.3" in deleted  # has directory
+        assert "v0.2.0.2" not in deleted  # no directory, not in returned list
+        # But v0.2.0.2 IS removed from registry (orphan entry)
+        data = json.loads(registry_path.read_text())
+        remaining = [e["version"] for e in data["entries"]]
+        assert "v0.2.0.2" not in remaining  # orphan entry removed from registry
+        assert "v0.2.0.3" not in remaining  # regular entry also removed
+        assert "v0.2.0.1" in remaining  # current
+        assert "v0.2.0.4" in remaining  # in keep set
+
+    def test_orphan_v010_dir_deleted(self, tmp_path: Path):
+        """Orphan v0.1.0-format directory (YYYYMMDD_HHMMSS) is deleted."""
+        models_dir = tmp_path / "models"
+        registry_path = models_dir / "registry.json"
+
+        entries = [_make_entry("v0.2.0.1")]
+        _make_model_dir(models_dir, "v0.2.0.1")
+        # v0.1.0 format orphan dir
+        _make_model_dir(models_dir, "20240101_000000")
+
+        _write_registry(registry_path, entries)
+
+        reg = ModelRegistry(registry_path, models_dir, keep_latest_n=5)
+        deleted = reg.gc()
+
+        assert "20240101_000000" in deleted
+        assert not (models_dir / "20240101_000000").exists()
+
+
+# ---------------------------------------------------------------------------
 # Registry not exists yet (lazy creation)
 # ---------------------------------------------------------------------------
 
