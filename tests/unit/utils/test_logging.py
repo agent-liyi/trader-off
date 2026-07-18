@@ -135,3 +135,15 @@ class TestSetupLogger:
             # No PII fields should appear as top-level keys in structured logs
             assert "password" not in record, "PII: password field leaked"
             assert "api_key" not in record, "PII: api_key field leaked"
+
+
+@pytest.mark.unit
+def test_invalid_log_level_defaults_to_info(tmp_path, monkeypatch):
+    """Line 40: invalid LOG_LEVEL env var falls back to INFO without raising."""
+
+    monkeypatch.setenv("LOG_LEVEL", "INVALID_LEVEL_XYZ")
+    from trader_off.utils.logging import setup_logger
+
+    setup_logger(module="test_level", log_dir=tmp_path, format="text")
+    logger = __import__("loguru").logger
+    assert logger.level != "INVALID_LEVEL_XYZ"

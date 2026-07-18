@@ -220,3 +220,104 @@ class TestOptimizedTopKStrategyOnDayOpen:
         # stock_old should have been cleared (pct=0)
         cleared_assets = [c["asset"] for c in broker.calls if c["pct"] == 0.0]
         assert "stock_old" in cleared_assets or len(strategy._position_cache) >= 0
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: fallback on_day_open, no weights early return, on_stop
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def valid_weights_csv(tmp_path: Path) -> Path:
+    """Create a valid weights.csv with 25 tickers."""
+    path = tmp_path / "weights.csv"
+    rows = []
+    for i in range(25):
+        w = 0.04 if i < 20 else 0.0
+        rows.append(f"stock_{i:03d},{w},banking,{0.001 + i * 0.0001},true")
+    path.write_text("asset,weight,sector,mu,in_universe\n" + "\n".join(rows))
+    return path
+
+
+@pytest.mark.unit
+async def test_on_day_open_calls_fallback_and_returns(valid_weights_csv, tmp_path) -> None:
+    """Lines 144-146: _fallback flag triggers _fallback_strategy.on_day_open."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from trader_off.strategies.optimized_topk import OptimizedTopKStrategy
+
+    weights_path = tmp_path / "weights.csv"
+    weights_path.write_text(valid_weights_csv.read_text())
+
+    mock_fallback = MagicMock()
+    mock_fallback.on_day_open = AsyncMock()
+    mock_fallback.on_stop = AsyncMock()
+
+    strategy = OptimizedTopKStrategy(
+        broker=MagicMock(),
+        config={
+            "weights_dir": str(weights_path.parent),
+            "top_k": 20,
+        },
+    )
+    strategy._fallback = True
+    strategy._fallback_strategy = mock_fallback
+    tm = datetime(2026, 7, 20)
+    await strategy.on_day_open(tm)
+
+    mock_fallback.on_day_open.assert_called_once_with(tm)
+
+
+@pytest.mark.unit
+async def test_on_day_open_skips_when_weights_empty(valid_weights_csv, tmp_path) -> None:
+    """Lines 149-150: early return when self.weights is empty."""
+    from trader_off.strategies.optimized_topk import OptimizedTopKStrategy
+
+    weights_path = tmp_path / "weights.csv"
+    weights_path.write_text(valid_weights_csv.read_text())
+
+    broker = MockBroker()
+    strategy = OptimizedTopKStrategy(
+        broker=broker,
+        config={
+            "weights_csv": str(weights_path),
+            "top_k": 20,
+        },
+    )
+    strategy.weights = {}
+
+    tm = datetime(2026, 7, 20)
+    await strategy.on_day_open(tm)
+
+    assert len(broker.calls) == 0
+
+
+@pytest.mark.unit
+async def test_on_stop_clears_cache_and_fallback(valid_weights_csv, tmp_path) -> None:
+    """Lines 190-194: on_stop clears weights, position_cache, and calls fallback."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    from trader_off.strategies.optimized_topk import OptimizedTopKStrategy
+
+    weights_path = tmp_path / "weights.csv"
+    weights_path.write_text(valid_weights_csv.read_text())
+
+    mock_fallback = MagicMock()
+    mock_fallback.on_stop = AsyncMock()
+
+    strategy = OptimizedTopKStrategy(
+        broker=MagicMock(),
+        config={
+            "weights_dir": str(weights_path.parent),
+            "top_k": 20,
+        },
+    )
+    strategy._fallback = True
+    strategy._fallback_strategy = mock_fallback
+    strategy._position_cache = {"AAPL": 0.1, "MSFT": 0.2}
+
+    await strategy.on_stop()
+
+    assert strategy.weights is None
+    assert strategy._position_cache == {}
+    mock_fallback.on_stop.assert_called_once()

@@ -7,7 +7,6 @@ from pathlib import Path
 import joblib
 import lightgbm as lgb
 import numpy as np
-import polars as pl
 import pytest
 
 from trader_off.data.preprocess import StandardScaler
@@ -22,7 +21,7 @@ from trader_off.utils.exceptions import ModelVersionExistsError
 @pytest.fixture
 def dummy_booster() -> lgb.Booster:
     """Create a minimal trained lightGBM booster."""
-    X = np.random.RandomState(42).randn(100, 3)
+    X = np.random.RandomState(42).randn(100, 3)  # noqa: N806
     y = np.random.RandomState(42).randn(100)
     train_data = lgb.Dataset(X, label=y)
     params = {
@@ -60,9 +59,7 @@ class TestSaveModel:
     """Unit tests for save_model."""
 
     # AC-FR0800-01: All files created
-    def test_ac_fr0800_01_save_files(
-        self, dummy_booster, dummy_scaler, dummy_metadata, tmp_path
-    ):
+    def test_ac_fr0800_01_save_files(self, dummy_booster, dummy_scaler, dummy_metadata, tmp_path):
         """AC-FR0800-01: save_model creates all 5 required files."""
         version = "20260101_120000"
         models_dir = tmp_path / "models"
@@ -194,3 +191,38 @@ class TestSaveModel:
         assert artifact.feature_names == feature_names
         assert isinstance(artifact.metadata, dict)
         assert artifact.metadata["best_iteration"] == 120
+
+
+@pytest.mark.unit
+def test_load_model_wrong_booster_type_raises(tmp_path: Path) -> None:
+    """Line 146: load_model raises TypeError when model.pkl is not a Booster."""
+    from trader_off.training.serialize import load_model, save_model
+
+    version = "v_wrong_type"
+    models_dir = tmp_path / "models"
+
+    dummy_meta = {
+        "train_time": "2026-07-16T12:00:00Z",
+        "train_start": "2021-01-01",
+        "train_end": "2024-12-31",
+        "params": {"num_leaves": 4, "learning_rate": 0.05},
+        "best_iteration": 5,
+    }
+    scaler = StandardScaler(
+        mean_={"f1": 0.0, "f2": 1.0},
+        std_={"f1": 1.0, "f2": 2.0},
+        feature_names=["f1", "f2"],
+    )
+
+    save_model(
+        booster="not_a_booster",
+        scaler=scaler,
+        metadata=dummy_meta,
+        version=version,
+        models_dir=models_dir,
+        dropped_features=[],
+        feature_names=["f1", "f2"],
+    )
+
+    with pytest.raises(TypeError, match="Expected lightgbm.Booster"):
+        load_model(version=version, models_dir=models_dir)

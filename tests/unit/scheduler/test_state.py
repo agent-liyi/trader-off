@@ -439,3 +439,26 @@ def test_append_drift_history_append(tmp_path: Path):
     assert len(df) == 2
     assert df["reason"][0] == "ok"
     assert df["reason"][1] == "moderate_drift"
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: atomic write failure cleanup (lines 101-105)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_atomic_write_oserror_cleans_up_temp(tmp_path: Path) -> None:
+    """Lines 101-105: _atomic_write removes temp file when os.fsync fails."""
+    from unittest.mock import patch
+
+    from trader_off.scheduler.state import _atomic_write
+
+    target = tmp_path / "test.txt"
+
+    with patch("os.fsync", side_effect=OSError("disk error")):
+        with pytest.raises(OSError):
+            _atomic_write(target, "content")
+
+    assert not target.exists()
+    tmp_file = tmp_path / "test.txt.tmp"
+    assert not tmp_file.exists()

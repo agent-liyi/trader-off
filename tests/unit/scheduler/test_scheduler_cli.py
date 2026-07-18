@@ -537,3 +537,228 @@ def test_scheduler_use_default_config():
     )
     assert isinstance(config, SchedulerConfig)
     assert config.tick_interval_sec == 1.0
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage: YAML non-dict, placeholder port, run_scheduler_start/stop/status defaults
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_load_scheduler_config_yaml_not_mapping(tmp_path: Path):
+    """YAML file containing a list instead of a dict raises ConfigValidationError."""
+    from trader_off.utils.exceptions import ConfigValidationError
+
+    config_path = tmp_path / "scheduler.yaml"
+    config_path.write_text("- item1\n- item2")
+
+    with pytest.raises(ConfigValidationError, match="YAML mapping"):
+        from trader_off.scheduler.cli import load_scheduler_config
+
+        load_scheduler_config(config_path)
+
+
+@pytest.mark.unit
+async def test_run_scheduler_start_default_stdout():
+    """run_scheduler_start uses sys.stdout when stdout is None."""
+    from trader_off.scheduler.cli import run_scheduler_start
+    from trader_off.scheduler.core import SchedulerConfig
+
+    config = SchedulerConfig()
+    exit_code = await run_scheduler_start(config=config, stdout=None, run_loop=False)
+    assert exit_code == 0
+
+
+@pytest.mark.unit
+async def test_run_scheduler_stop_default_stdout():
+    """run_scheduler_stop uses sys.stdout when stdout is None."""
+    from datetime import UTC, datetime
+
+    from trader_off.scheduler.cli import run_scheduler_stop
+    from trader_off.scheduler.core import RetrainScheduler
+    from trader_off.scheduler.ports import VirtualClockPort
+
+    config = SchedulerConfig(
+        clock=VirtualClockPort(start=datetime(2026, 7, 17, 15, 0, 0, tzinfo=UTC)),
+    )
+    scheduler = RetrainScheduler(
+        config=config,
+        model_registry=MagicMock(),
+        drift_detector=MagicMock(),
+        perf_monitor=MagicMock(),
+        trainer=MagicMock(),
+    )
+    start_task = asyncio.create_task(scheduler.start())
+    await asyncio.sleep(0.01)
+
+    try:
+        exit_code = await run_scheduler_stop(scheduler=scheduler, stdout=None)
+        assert exit_code == 0
+    finally:
+        await scheduler.stop()
+        await start_task
+
+
+@pytest.mark.unit
+async def test_run_scheduler_status_with_optional_fields():
+    """Lines 275, 277, 279, 281: all optional status fields are printed."""
+    from datetime import UTC, datetime
+    from unittest.mock import AsyncMock, MagicMock
+
+    from trader_off.scheduler.cli import run_scheduler_status
+    from trader_off.scheduler.core import SchedulerStatus
+
+    scheduler = MagicMock()
+
+    status = SchedulerStatus(
+        running=True,
+        active_tasks=1,
+        pending_tasks=2,
+        next_trigger_time=datetime(2026, 7, 20, 16, 0, 0, tzinfo=UTC),
+        next_trigger_mode="full",
+        last_full_retrain_date=datetime(2026, 7, 17, tzinfo=UTC).date(),
+        last_incremental_retrain_date=datetime(2026, 7, 18, tzinfo=UTC).date(),
+    )
+    scheduler.get_status = AsyncMock(return_value=status)
+    if hasattr(scheduler, "_task_history"):
+        delattr(scheduler, "_task_history")
+
+    captured_stdout = StringIO()
+    exit_code = await run_scheduler_status(scheduler=scheduler, stdout=captured_stdout)
+
+    assert exit_code == 0
+    output = captured_stdout.getvalue()
+    assert "next_trigger_time=" in output
+    assert "next_trigger_mode=" in output
+    assert "last_full_retrain_date=" in output
+    assert "last_incremental_retrain_date=" in output
+
+
+@pytest.mark.unit
+async def test_run_scheduler_status_default_stdout():
+    """run_scheduler_status uses sys.stdout when stdout is None."""
+    from datetime import UTC, datetime
+
+    from trader_off.scheduler.cli import run_scheduler_status
+    from trader_off.scheduler.core import RetrainScheduler
+    from trader_off.scheduler.ports import VirtualClockPort
+
+    config = SchedulerConfig(
+        clock=VirtualClockPort(start=datetime(2026, 7, 17, 15, 0, 0, tzinfo=UTC)),
+    )
+    scheduler = RetrainScheduler(
+        config=config,
+        model_registry=MagicMock(),
+        drift_detector=MagicMock(),
+        perf_monitor=MagicMock(),
+        trainer=MagicMock(),
+    )
+    start_task = asyncio.create_task(scheduler.start())
+    await asyncio.sleep(0.01)
+
+    try:
+        exit_code = await run_scheduler_status(scheduler=scheduler, stdout=None)
+        assert exit_code == 0
+    finally:
+        await scheduler.stop()
+        await start_task
+
+
+@pytest.mark.unit
+async def test_run_scheduler_start_with_run_loop_true():
+    """run_scheduler_start with run_loop=True calls scheduler.start()."""
+    from trader_off.scheduler.cli import run_scheduler_start
+    from trader_off.scheduler.core import SchedulerConfig
+
+    config = SchedulerConfig()
+    start_task = asyncio.create_task(
+        run_scheduler_start(config=config, stdout=StringIO(), run_loop=True)
+    )
+    await asyncio.sleep(0.05)
+    start_task.cancel()
+
+
+@pytest.mark.unit
+def test_placeholder_port_getattr_raises():
+    """_placeholder_port raises RuntimeError on any attribute access."""
+    from trader_off.scheduler.cli import _placeholder_port
+
+    placeholder = _placeholder_port("test port")
+    with pytest.raises(RuntimeError, match="Placeholder port"):
+        _ = placeholder.any_attribute
+
+
+@pytest.mark.unit
+def test_placeholder_port_getattr_name_in_error():
+    """_placeholder_port error message includes the port name."""
+    from trader_off.scheduler.cli import _placeholder_port
+
+    placeholder = _placeholder_port("my-model-registry")
+    with pytest.raises(RuntimeError, match="my-model-registry"):
+        _ = placeholder.foo
+
+
+# ---------------------------------------------------------------------------
+# run_scheduler_status: optional fields and task history (lines 275-296)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+async def test_run_scheduler_status_with_task_history():
+    """Lines 285-296: task history is printed when _task_history exists."""
+    from datetime import UTC, datetime
+    from unittest.mock import AsyncMock, MagicMock
+
+    from trader_off.scheduler.cli import run_scheduler_status
+    from trader_off.scheduler.core import RetrainTask, SchedulerStatus
+    from trader_off.scheduler.ports import TriggerReason
+
+    scheduler = MagicMock()
+
+    status = SchedulerStatus(
+        running=False,
+        active_tasks=0,
+        pending_tasks=0,
+        next_trigger_time=None,
+        next_trigger_mode=None,
+        last_full_retrain_date=None,
+        last_incremental_retrain_date=None,
+    )
+    scheduler.get_status = AsyncMock(return_value=status)
+
+    task = RetrainTask(
+        task_id="T-TEST-001",
+        mode="full",
+        reason=TriggerReason.MANUAL,
+        status="success",
+        start_time=datetime(2026, 7, 17, 16, 0, 0, tzinfo=UTC),
+        end_time=datetime(2026, 7, 17, 16, 5, 0, tzinfo=UTC),
+        new_version="v0.2.0.5",
+        metrics={"ic_mean": 0.025},
+    )
+    scheduler._task_history = [task]
+
+    captured_stdout = StringIO()
+    exit_code = await run_scheduler_status(scheduler=scheduler, stdout=captured_stdout)
+
+    assert exit_code == 0
+    output = captured_stdout.getvalue()
+    assert "task_id=T-TEST-001" in output
+    assert "mode=full" in output
+    assert "reason=manual" in output
+    assert "status=success" in output
+    assert "new_version=v0.2.0.5" in output
+
+
+# ---------------------------------------------------------------------------
+# main function (lines 428-431, 463)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.unit
+def test_main_retrain_trigger_returns_0():
+    """Lines 428-431: main with retrain trigger subcommand returns 0."""
+    from trader_off.scheduler.cli import main
+
+    exit_code = main(["trigger", "--mode", "full", "--reason", "test"])
+    assert exit_code == 0
