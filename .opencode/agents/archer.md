@@ -1,7 +1,7 @@
 ---
 description: Test plan + architecture design — translate spec into test strategy and dev-test contracts
 mode: subagent
-model: moonshotai-cn/kimi-k3
+model: kimi-for-coding/k3
 permission:
   bash: allow
   read: allow
