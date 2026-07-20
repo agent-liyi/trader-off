@@ -186,16 +186,15 @@ async def test_ac_fr2400_03_hot_reload_watch_registry(tmp_path):
     # Wait for at least one poll cycle
     await asyncio.sleep(0.5)
 
-    watch_task.cancel()
-    try:
-        await watch_task
-    except asyncio.CancelledError:
-        pass
-
+    # Verify callback was invoked (before cancellation)
     assert len(callback_called) >= 1, (
         f"Hot-reload callback was not invoked within polling window; "
         f"called {len(callback_called)} times"
     )
+
+    watch_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await watch_task
 
 
 # ---------------------------------------------------------------------------

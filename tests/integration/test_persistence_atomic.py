@@ -146,8 +146,8 @@ def test_ac_fr4000_03_portfolio_results_interrupted(tmp_path, monkeypatch):
             constraint_report=None,
         )
     except OSError:
-        # Expected: write was interrupted
-        pass
+        # Expected: write was interrupted (AC-FR4000-03)
+        assert write_count[0] > 0, "OSError raised before any write completed"
 
     # After interrupted write, verify partial state:
     # The save_weights call (which uses atomic temp+rename) may have

@@ -267,6 +267,7 @@ def test_ac_nfr1000_01_load_v010_model(tmp_path):
 
     # Verify it's a valid ModelArtifact
     assert isinstance(artifact, ModelArtifact), f"Expected ModelArtifact, got {type(artifact)}"
+    # AC-NFR1000-01: loaded v0.1.0 artifact must have non-null booster
     assert artifact.booster is not None
     assert isinstance(artifact.booster, lgb.Booster), (
         f"Expected lgb.Booster, got {type(artifact.booster)}"
@@ -622,6 +623,7 @@ async def test_ac_nfr1000_04_weights_loaded_when_valid(tmp_path, fake_broker):
     await strategy.init()
 
     assert not strategy._fallback, "Should NOT be in fallback mode when weights.csv is fresh"
+    # AC-NFR1000-04: valid weights.csv must produce non-null strategy.weights
     assert strategy.weights is not None, "Weights should be loaded"
     assert len(strategy.weights) == 20
 

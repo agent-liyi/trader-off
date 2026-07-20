@@ -119,6 +119,7 @@ class TestOptimizeE2E:
             tolerance=1e-6,
         )
 
+        # AC-FR4000-02: solver returns non-null weights on valid input
         assert solver_result.weights is not None, (
             f"Solver failed: status={solver_result.solver_status}"
         )
@@ -240,7 +241,7 @@ class TestOptimizeE2E:
         cov_input = recent.select(["date"] + available)
 
         if len(available) < 5:
-            pytest.skip(f"Need ≥5 assets, got {len(available)}")
+            pytest.skip(f"AC-FR4000-02: Need ≥5 assets, got {len(available)}")
 
         mu = build_expected_returns(predictions_df, mode="raw")
         mu_filt = {a: mu.get(a, 0.0) for a in available}
@@ -265,7 +266,7 @@ class TestOptimizeE2E:
         )
 
         if result.weights is None:
-            pytest.skip(f"Solver returned None: {result.solver_status}")
+            pytest.skip(f"AC-FR4000-02: Solver returned None: {result.solver_status}")
 
         w = result.weights
         # Sum ≈ 1

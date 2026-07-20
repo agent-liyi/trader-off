@@ -27,7 +27,7 @@ FIXTURES_DIR = Path(__file__).parents[2] / "tests" / "fixtures" / "v0.2.0"
 def _fixture_path(name: str) -> Path:
     p = FIXTURES_DIR / name
     if not p.exists():
-        pytest.skip(f"Fixture {name} not found at {FIXTURES_DIR}")
+        pytest.skip(f"AC-FR4100-01: Fixture {name} not found at {FIXTURES_DIR}")
     return p
 
 
@@ -118,6 +118,7 @@ def test_ac_fr4100_01_stdout_sharpe(tmp_path, predictions_file, industry_map_fil
 
     # Check for Sharpe= pattern
     sharpe_match = re.search(r"Sharpe=([\d.]+)", captured.out)
+    # AC-FR4100-01: Sharpe= pattern must appear in stdout
     assert sharpe_match is not None, f"No 'Sharpe=' found in stdout. Got: {captured.out}"
     sharpe_val = float(sharpe_match.group(1))
     # Sharpe should be a finite number

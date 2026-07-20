@@ -129,6 +129,7 @@ class TestCLIFullPipeline:
 
         # Verify selected count >= N
         match_sel = re.search(r"精选 (\d+) 个因子", captured.out)
+        # AC-FR0800-01: selected count must appear in stdout after pipeline
         assert match_sel is not None, f"No selected count in stdout: {captured.out}"
         assert int(match_sel.group(1)) >= 1
 
@@ -313,6 +314,7 @@ class TestCLIFewSelected:
         captured = capsys.readouterr()
         assert "精选" in captured.out, f"stdout missing selected: {captured.out}"
         match = re.search(r"精选 (\d+) 个因子", captured.out)
+        # AC-FR0800-04: selected count must appear in stdout
         assert match is not None
         selected_count = int(match.group(1))
         assert selected_count == 5
@@ -399,6 +401,7 @@ class TestCLIFewSelected:
         assert result == 3, f"Expected exit 3 with 1 candidate, got {result}"
         captured = capsys.readouterr()
         match = re.search(r"精选 (\d+) 个因子", captured.out)
+        # AC-FR0800-04: selected count must appear in stdout
         assert match is not None
         selected_count = int(match.group(1))
         assert selected_count < 10

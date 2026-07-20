@@ -191,7 +191,7 @@ class TestSchedulerRetrainE2E:
             try:
                 await scheduler.start()
             except asyncio.CancelledError:
-                pass
+                return  # cancellation expected — scheduler was stopped intentionally
 
         task = asyncio.create_task(_run_scheduler())
         await asyncio.sleep(0.3)  # Let loop start
@@ -238,7 +238,7 @@ class TestSchedulerRetrainE2E:
         try:
             await task
         except (asyncio.CancelledError, RuntimeError):
-            pass
+            return  # cancellation/destruction expected — task was stopped intentionally
 
         # AC-NFR0100-01: wall time
         elapsed = time.perf_counter() - t0
@@ -276,7 +276,7 @@ class TestSchedulerRetrainE2E:
             try:
                 await scheduler.start()
             except asyncio.CancelledError:
-                pass
+                return  # cancellation expected — scheduler was stopped intentionally
 
         task = asyncio.create_task(_run())
         await asyncio.sleep(0.2)
@@ -307,4 +307,4 @@ class TestSchedulerRetrainE2E:
         try:
             await task
         except (asyncio.CancelledError, RuntimeError):
-            pass
+            return  # cancellation/destruction expected — task was stopped intentionally

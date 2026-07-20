@@ -178,6 +178,7 @@ async def test_ac_fr2200_02_refit_called_not_fit(tmp_path):
 
     # Verify artifact metadata indicates refit was used
     artifact = trainer.last_artifact
+    # AC-FR2200-02: incremental training must produce a non-null artifact
     assert artifact is not None, "No artifact from incremental training"
     metadata = artifact.metadata
     # _train_incremental stores refit_iterations = booster.num_trees()
@@ -232,6 +233,7 @@ async def test_ac_fr2200_03_incremental_window_metadata(tmp_path):
     await start_task
 
     artifact = trainer.last_artifact
+    # AC-FR2200-03: incremental retrain must produce a non-null artifact
     assert artifact is not None
     metadata = artifact.metadata
     assert metadata.get("mode") == "incremental"
@@ -294,6 +296,7 @@ async def test_ac_fr2200_04_version_chain_linking(tmp_path):
     incr2_md = json.loads((incr_paths[1] / "metadata.json").read_text())
     incr3_md = json.loads((incr_paths[2] / "metadata.json").read_text())
 
+    # AC-FR2200-04: each incremental version must have a parent_version link
     assert incr1_md.get("parent_version") is not None
     assert incr2_md.get("parent_version") is not None
-    assert incr3_md.get("parent_version") is not None
+    assert incr3_md.get("parent_version") is not None  # AC-FR2200-04

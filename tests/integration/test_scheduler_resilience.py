@@ -437,7 +437,8 @@ asyncio.run(main())
 
 @pytest.mark.integration
 @pytest.mark.skipif(
-    sys.platform == "win32", reason="SIGKILL subprocess testing not supported on Windows"
+    sys.platform == "win32",
+    reason="AC-NFR0900-02: SIGKILL subprocess testing not supported on Windows",
 )
 def test_ac_nfr0900_02_subprocess_sigkill_state_not_corrupt(tmp_path, monkeypatch):
     """AC-NFR0900-02: After SIGKILL mid-write, state file loads without
@@ -469,7 +470,9 @@ def test_ac_nfr0900_02_subprocess_sigkill_state_not_corrupt(tmp_path, monkeypatc
     if not ready_file.exists():
         proc.kill()
         proc.wait(timeout=5)
-        pytest.skip("Subprocess did not reach ready state in time — env/import issue")
+        pytest.skip(
+            "AC-NFR0900-02: Subprocess did not reach ready state in time — env/import issue"
+        )
 
     # SIGKILL the subprocess
     os.kill(proc.pid, signal.SIGKILL)

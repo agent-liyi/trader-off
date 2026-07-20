@@ -275,7 +275,7 @@ class TestFactorMiningE2E:
                 continue
 
         if len(evals) < 3:
-            pytest.skip("Not enough evaluable factors for report test")
+            pytest.skip("AC-FR0700-02: Not enough evaluable factors for report test")
 
         report_dir = tmp_path / "reports" / "fm_report"
         report_paths = render_evaluation_report(evals, valid_specs, report_dir)

@@ -541,6 +541,7 @@ class TestPerfIncrementalRetrainBudget:
         elapsed = time.perf_counter() - start
 
         # Verify it produced a valid artifact
+        # AC-NFR0100-05: incremental retrain must produce non-null booster artifact
         assert incr_artifact.booster is not None
         assert incr_artifact.booster.num_trees() > 0
         assert incr_version is not None

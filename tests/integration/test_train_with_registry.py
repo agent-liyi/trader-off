@@ -189,6 +189,7 @@ class TestTrainWithRegistry:
         )
 
         # Step 5: Verify model trains successfully
+        # AC-FR0900-01: train_model must return a non-null booster
         assert booster is not None
         assert booster.num_trees() > 0, f"Expected at least 1 tree, got {booster.num_trees()}"
 
@@ -239,6 +240,7 @@ class TestTrainWithRegistry:
             params={"n_estimators": 10, "early_stopping_rounds": 3},
         )
 
+        # AC-FR0900-01: train_model must return non-null booster with template features
         assert booster is not None
         assert booster.num_trees() > 0
 
@@ -393,6 +395,7 @@ class TestLegacyFallback:
             params={"n_estimators": 10, "early_stopping_rounds": 3},
         )
 
+        # AC-FR0900-03: train_model must return non-null booster with raw features
         assert booster is not None
         assert booster.num_trees() > 0
 

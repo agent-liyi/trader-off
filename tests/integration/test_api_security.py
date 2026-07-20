@@ -100,6 +100,7 @@ def _get_non_loopback_ips() -> list[str]:
     """Return a list of non-loopback IP addresses available on this machine.
 
     Skip this test if no non-loopback IP is configured (common in CI).
+    AC-NFR0700-04: socket.gaierror means hostname resolution failed (CI/restricted env).
     """
     ips = []
     try:
@@ -109,7 +110,7 @@ def _get_non_loopback_ips() -> list[str]:
             if ip != "127.0.0.1" and not ip.startswith("127.") and ip != "::1":
                 ips.append(ip)
     except socket.gaierror:
-        pass
+        pytest.skip("AC-NFR0700-04: hostname resolution failed, no network available")
     return ips
 
 
@@ -242,7 +243,7 @@ async def test_ac_nfr0700_04_public_ip_connection_fails(tmp_path):
         result = _tcp_connect_test("192.0.2.1", port, timeout=1.5)
         if result:
             pytest.skip(
-                f"Connection to TEST-NET-1 192.0.2.1:{port} unexpectedly succeeded. "
+                f"AC-NFR0700-04: Connection to TEST-NET-1 192.0.2.1:{port} unexpectedly succeeded. "
                 f"Likely a local proxy/VPN intercepting traffic. "
                 f"Cannot reliably test external rejection in this environment."
             )
@@ -267,6 +268,6 @@ async def test_ac_nfr0700_04_explicit_non_localhost_bind_accepted(tmp_path):
     except OSError as e:
         # On heavily restricted environments (e.g. CI with no network),
         # binding to 0.0.0.0 may be denied by OS. That's okay.
-        pytest.skip(f"OS denied 0.0.0.0 bind: {e}")
+        pytest.skip(f"AC-NFR0700-04: OS denied 0.0.0.0 bind: {e}")
     else:
         await runner.cleanup()

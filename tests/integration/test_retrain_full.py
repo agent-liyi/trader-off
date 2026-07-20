@@ -287,6 +287,7 @@ async def test_ac_fr2100_04_train_window_years_metadata(tmp_path):
     await start_task
 
     # Check metadata from last artifact
+    # AC-FR2100-04: full retrain must produce a non-null artifact
     assert trainer.last_artifact is not None, "No artifact produced"
     metadata = trainer.last_artifact.metadata
     # DefaultTrainerPort._train_full stores train_window_years in metadata
@@ -328,6 +329,7 @@ async def test_ac_fr2100_ic_metrics_produced(tmp_path):
     await scheduler.stop()
     await start_task
 
+    # AC-FR2100-01: full retrain produces non-null artifact with IC metrics
     assert trainer.last_artifact is not None
     metrics = trainer.last_artifact.metadata
     assert "test_ic_mean" in metrics, f"Missing test_ic_mean in {metrics.keys()}"

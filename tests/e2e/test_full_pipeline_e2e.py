@@ -208,6 +208,7 @@ class TestFullPipelineE2E:
             industry_map=ind,
         )
 
+        # AC-FR4200-01: solve_max_sharpe returns non-null weights on valid input
         assert result.weights is not None, f"Solver failed: {result.solver_status}"
 
         # Save weights
@@ -243,7 +244,7 @@ class TestFullPipelineE2E:
         # AC-FR4200-02: strategy loads weights from file
         loaded = strategy._load_weights()
         assert loaded is True, f"Strategy failed to load weights from {portfolio_dir}"
-        assert strategy.weights is not None
+        assert strategy.weights is not None, "AC-FR4200-02: strategy weights must load from file"
         assert len(strategy.weights) >= 1, "Weights dict is empty"
         assert strategy.top_k == 20
 
@@ -323,4 +324,4 @@ class TestFullPipelineE2E:
                 f"Memory {mem_after / 1024**3:.1f} GB exceeds 16 GB budget"
             )
         except ImportError:
-            pass
+            pytest.skip("AC-NFR0100-04: psutil not available, cannot verify memory budget")
