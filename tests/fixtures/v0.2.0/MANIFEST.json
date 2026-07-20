@@ -1,0 +1,17 @@
+{
+  "ohlcv_50x252.parquet": {
+    "sha256": "dd564031493c85564995f67aa6f6962b213890164b65f5a238a135697651c387",
+    "size_bytes": 760665,
+    "rows": 12600
+  },
+  "industry_map.csv": {
+    "sha256": "3014dd39a766e915b7ac91e7380c8c2e63dce47ea31cfdda57f71516df7c76e2",
+    "size_bytes": 1000,
+    "rows": 50
+  },
+  "predictions_fixture.csv": {
+    "sha256": "fc8b9070284241becad2dbab93d12a503247fed19f4fb40e5164271bf9a0d8fd",
+    "size_bytes": 1712,
+    "rows": 50
+  }
+}
