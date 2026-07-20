@@ -4,6 +4,7 @@ Provides an async predict function that loads a trained model, fetches
 historical data for a watchlist, computes features, and returns ranked scores.
 """
 
+import asyncio
 import json
 from datetime import date
 from pathlib import Path
@@ -58,72 +59,104 @@ async def predict(
     feature_names = artifact.feature_names
     lookback = artifact.metadata.get("max_lookback", DEFAULT_LOOKBACK)
 
-    results: list[dict] = []
-    skipped: list[dict] = []
+    # -------------------------------------------------------------------------
+    # Step 1: Batch-fetch all histories concurrently
+    # -------------------------------------------------------------------------
+    fetched: list[tuple[str, pl.DataFrame | None, str | None]] = []
+    histories_raw: list[pl.DataFrame] = []
+    valid_assets: list[str] = []
 
-    for asset in watchlist:
-        try:
-            hist = await data_loader.get_history(
-                asset=asset,
-                end_date=asof_date,
-                count=lookback,
-            )
-        except Exception as e:
-            logger.warning(f"Skipping {asset}: data fetch failed ({e})")
-            skipped.append({"asset": asset, "reason": f"fetch_failed: {e}"})
+    fetch_tasks = [
+        data_loader.get_history(asset=asset, end_date=asof_date, count=lookback)
+        for asset in watchlist
+    ]
+    results_fetch = await asyncio.gather(*fetch_tasks, return_exceptions=True)
+
+    for asset, result in zip(watchlist, results_fetch):
+        if isinstance(result, Exception):
+            logger.warning(f"Skipping {asset}: data fetch failed ({result})")
+            fetched.append((asset, None, f"fetch_failed: {result}"))
             continue
 
+        hist: pl.DataFrame = result  # type: ignore[assignment]
         if hist is None or len(hist) < lookback:
             logger.warning(
                 f"Skipping {asset}: insufficient history "
                 f"({len(hist) if hist is not None else 0} < {lookback})"
             )
-            skipped.append({
-                "asset": asset,
-                "reason": "insufficient_history",
-                "available_days": len(hist) if hist is not None else 0,
-            })
+            fetched.append(
+                (
+                    asset,
+                    None,
+                    "insufficient_history",
+                )
+            )
             continue
 
-        # Compute features (chain all three feature functions)
-        hist = compute_momentum_features(hist)
-        hist = compute_volatility_features(hist)
-        hist = compute_volume_features(hist)
+        histories_raw.append(hist)
+        valid_assets.append(asset)
 
-        # Take the latest row
-        latest = hist.sort("date").tail(1)
+    # -------------------------------------------------------------------------
+    # Step 2: Batch feature computation on concatenated DataFrame
+    # -------------------------------------------------------------------------
+    if histories_raw:
+        combined = pl.concat(histories_raw, rechunk=True)
+        combined = compute_momentum_features(combined)
+        combined = compute_volatility_features(combined)
+        combined = compute_volume_features(combined)
 
-        # Extract features and apply scaler: z = (x - mean) / std
-        feat_values = []
-        for fname in feature_names:
-            if fname in latest.columns:
-                raw = latest[fname][0]
-                if raw is None or np.isnan(raw):
+        # Extract latest row per asset (one pass, vectorized)
+        latest_df = combined.sort(["asset", "date"]).group_by("asset", maintain_order=True).last()
+
+        # Build feature matrix for all valid assets in one shot
+        feat_matrix = np.zeros((len(valid_assets), len(feature_names)), dtype=np.float64)
+        scaler_means: list[float] = []
+        scaler_stds: list[float] = []
+
+        for i, fname in enumerate(feature_names):
+            scaler_means.append(scaler.mean_.get(fname, 0.0))
+            std = scaler.std_.get(fname, 1.0)
+            scaler_stds.append(1.0 if std == 0.0 else std)
+
+        for i, asset in enumerate(valid_assets):
+            asset_row = latest_df.filter(pl.col("asset") == asset).to_dicts()
+            if not asset_row:
+                feat_matrix[i, :] = 0.0
+                continue
+
+            row = asset_row[0]
+            for j, fname in enumerate(feature_names):
+                raw = row.get(fname)
+                if raw is None or (isinstance(raw, float) and np.isnan(raw)):
                     raw = 0.0
-                mean = scaler.mean_.get(fname, 0.0)
-                std = scaler.std_.get(fname, 1.0)
-                if std == 0.0:
-                    std = 1.0
-                z = (raw - mean) / std
-                feat_values.append(z)
-            else:
-                logger.warning(f"Feature '{fname}' missing for {asset}")
-                feat_values.append(0.0)
+                    logger.warning(f"Feature '{fname}' missing for {asset}")
+                z = (raw - scaler_means[j]) / scaler_stds[j]
+                feat_matrix[i, j] = z
 
-        feat_row = np.array(feat_values, dtype=np.float64).reshape(1, -1)
+        # -------------------------------------------------------------------------
+        # Step 3: Batch prediction (single booster.predict call)
+        # -------------------------------------------------------------------------
+        scores = booster.predict(feat_matrix)
+        results = [
+            {"asset": asset, "score": float(score)} for asset, score in zip(valid_assets, scores)
+        ]
+    else:
+        results = []
 
-        # Predict
-        score = float(booster.predict(feat_row)[0])
-        results.append({"asset": asset, "score": score})
+    # -------------------------------------------------------------------------
+    # Collect skipped assets
+    # -------------------------------------------------------------------------
+    skipped = [{"asset": asset, "reason": reason} for asset, _, reason in fetched]
 
-    # Write skipped assets
     if skipped and skipped_path:
         skipped_path = Path(skipped_path)
         skipped_path.parent.mkdir(parents=True, exist_ok=True)
         skipped_path.write_text(json.dumps(skipped, indent=2))
         logger.info(f"Skipped assets written to {skipped_path}")
 
+    # -------------------------------------------------------------------------
     # Build result DataFrame
+    # -------------------------------------------------------------------------
     if not results:
         return pl.DataFrame(
             {"asset": [], "score": [], "rank": []},
