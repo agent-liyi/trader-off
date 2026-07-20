@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-ARCH",
+  "kind": "author-result",
+  "role": "Archer",
+  "verdict": "pass",
+  "reviewed_targets": [
+    ".louke/project/specs/v0.2.0-001-factor-mining-retrain-optimizer/test-plan.md",
+    ".louke/project/specs/v0.2.0-001-factor-mining-retrain-optimizer/architecture.md",
+    ".louke/project/specs/v0.2.0-001-factor-mining-retrain-optimizer/interfaces.md",
+    ".louke/project/project.toml"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-17T08:05:02Z",
+  "contract_bundle_hash": "10286feb11872defd6ec933f2b15ca04801093639306764de13d8e46e8b8e591",
+  "metadata": {},
+  "output_hash": "cca90ea1d2827bbd1caaf1988bdc5c1ef93227c4e77a51ef7f0e532b049e450c"
+}

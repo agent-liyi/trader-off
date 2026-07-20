@@ -1,0 +1,46 @@
+{
+  "stage": "M-SECURITY",
+  "milestone": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "release": "releases/v0.2.0",
+  "baseline": "main",
+  "auditor": "judge (S-class, stage-2 semantic review)",
+  "date": "2026-07-20",
+  "tool_report": ".louke/raw/security-audit-20260720-134606.json",
+  "stage1_raw": {"critical": 6, "high": 0, "medium": 1, "low": 0, "verdict": "REJECT"},
+  "stage2_semantic": {
+    "critical": 0,
+    "high": 0,
+    "medium": 1,
+    "low": 2,
+    "false_positives_refuted": 7
+  },
+  "findings": [
+    {
+      "severity": "medium",
+      "location": "src/trader_off/scheduler/cli.py:118 + src/trader_off/scheduler/api.py:34",
+      "title": "Unauthenticated retrain API can be bound to non-loopback host",
+      "detail": "api_host is configurable via CLI/config (default 127.0.0.1). The API has no authentication; binding to 0.0.0.0 exposes unauthenticated POST /retrain/trigger (resource exhaustion via expensive full retrains) and /retrain/cancel.",
+      "recommendation": "Warn or require an explicit --allow-remote flag when api_host is non-loopback; optionally add a shared-token check for non-loopback binds. Non-blocking (default is loopback per NFR-0700)."
+    },
+    {
+      "severity": "low",
+      "location": "src/trader_off/scheduler/api.py:142",
+      "title": "Status endpoint returns task.error verbatim",
+      "detail": "May leak internal exception details/paths. Loopback-only by default mitigates.",
+      "recommendation": "Sanitize/truncate error text in API responses."
+    },
+    {
+      "severity": "low",
+      "location": "src/trader_off/training/serialize.py:144",
+      "title": "joblib.load on local model files (pre-existing, not in this diff)",
+      "detail": "joblib/pickle deserialization can execute code on tampered model files. Models dir is locally trusted; note supply-chain caveat if models are ever shared/imported.",
+      "recommendation": "Document trust boundary; consider checksum/signature if models are distributed."
+    }
+  ],
+  "false_positives": [
+    "registry.py:25,29,32 + tests (re.compile flagged as eval/exec) - regex compilation, not code execution",
+    "tests/unit/utils/test_logging.py:127 (fake token string is a test fixture asserting PII-key absence)"
+  ],
+  "decision": "PASS",
+  "blocking_findings": 0
+}

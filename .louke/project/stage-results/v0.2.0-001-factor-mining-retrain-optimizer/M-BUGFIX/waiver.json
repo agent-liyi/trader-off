@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-BUGFIX",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "No open bug issues; nothing to fix. Keeper regression compared full milestone diff main..HEAD (111 code files + pyproject.toml) which is the release content, not a bugfix. User explicitly approved skipping M-BUGFIX to M-SECURITY on 2026-07-20."
+  ],
+  "accepted_risks": [
+    "No open bug issues; nothing to fix. Keeper regression compared full milestone diff main..HEAD (111 code files + pyproject.toml) which is the release content, not a bugfix. User explicitly approved skipping M-BUGFIX to M-SECURITY on 2026-07-20."
+  ],
+  "created_at": "2026-07-20T04:02:25Z",
+  "contract_bundle_hash": "81f5214ac33320474951525926fabed6434a1ea8539b3429a613dda927dfef82",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "e41d54d8e35ab181ceacef0b9659a942a0701000c19fa4d717da9dfa9c37fc0d"
+}

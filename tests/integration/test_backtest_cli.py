@@ -17,26 +17,29 @@ from trader_off.backtest.runner import BacktestResult, run_backtest
 class TestBacktestIntegration:
     """Integration: CLI backtest → runner → metrics → file output."""
 
-    def test_ac_fr1100_01_cli_exit_zero(self, capsys):
-        """AC-FR1100-01: CLI backtest exits 0, prints 'Backtest finished'."""
+    def test_cli_exit_zero(self, capsys):
+        """CLI backtest exits 0, prints 'Backtest finished'."""
         import sys
-        from unittest.mock import patch
         from pathlib import Path
+        from unittest.mock import patch
 
         from trader_off.cli.backtest import main as backtest_main
 
         test_args = [
             "backtest",
-            "--model", "v1",
-            "--strategy", "lgbm_top20",
-            "--start", "2023-01-01",
-            "--end", "2023-12-31",
-            "--capital", "1000000",
+            "--model",
+            "v1",
+            "--strategy",
+            "lgbm_top20",
+            "--start",
+            "2023-01-01",
+            "--end",
+            "2023-12-31",
+            "--capital",
+            "1000000",
         ]
         with patch.object(sys, "argv", test_args):
-            with patch(
-                "trader_off.cli.backtest.run_backtest"
-            ) as mock_run:
+            with patch("trader_off.cli.backtest.run_backtest") as mock_run:
                 mock_run.return_value = BacktestResult(
                     summary={},
                     positions=pl.DataFrame(),
@@ -48,8 +51,8 @@ class TestBacktestIntegration:
 
         assert exit_code == 0
 
-    def test_ac_fr1100_02_output_files(self):
-        """AC-FR1100-02: run_backtest creates all required output files."""
+    def test_output_files(self):
+        """run_backtest creates all required output files."""
         result = run_backtest(
             model_version="v1",
             strategy_name="lgbm_top20",
@@ -81,15 +84,19 @@ class TestBacktestIntegration:
         # Verify summary.json has required keys
         summary = json.loads((report_dir / "summary.json").read_text())
         required = {
-            "annualized_return", "sharpe_ratio", "max_drawdown",
-            "win_rate", "total_trades", "avg_turnover",
+            "annualized_return",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "total_trades",
+            "avg_turnover",
         }
         assert required.issubset(set(summary.keys())), (
             f"Missing keys: {required - set(summary.keys())}"
         )
 
-    def test_ac_fr1100_03_missing_capital(self):
-        """AC-FR1100-03: missing --capital exits non-zero."""
+    def test_missing_capital(self):
+        """missing --capital exits non-zero."""
         import sys
         from unittest.mock import patch
 
@@ -97,18 +104,22 @@ class TestBacktestIntegration:
 
         test_args = [
             "backtest",
-            "--model", "v1",
-            "--strategy", "lgbm_top20",
-            "--start", "2023-01-01",
-            "--end", "2023-12-31",
+            "--model",
+            "v1",
+            "--strategy",
+            "lgbm_top20",
+            "--start",
+            "2023-01-01",
+            "--end",
+            "2023-12-31",
             # --capital is intentionally missing
         ]
         with patch.object(sys, "argv", test_args):
             with pytest.raises(SystemExit):
                 backtest_main()
 
-    def test_ac_fr1200_01_metrics_integration(self):
-        """AC-FR1200-01: compute_performance_metrics produces valid summary.
+    def test_metrics_integration(self):
+        """compute_performance_metrics produces valid summary.
 
         Verifies that run_backtest → compute_performance_metrics chain
         produces a summary with all required fields and valid types.

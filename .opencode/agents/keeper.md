@@ -1,7 +1,7 @@
 ---
 description: Quality gate — verifies R-G-R order / commit message format / AC trace / anti-pattern scanning
 mode: subagent
-model: deepseek/deepseek-v4-flash
+model: deepseek/deepseek-v4-pro
 permission:
   bash: allow
   read: allow

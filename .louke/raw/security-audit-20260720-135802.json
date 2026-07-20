@@ -1,0 +1,109 @@
+{
+  "audit_id": "releases/v0.2.0-2026-07-20T13:58:02",
+  "stage1_findings": [
+    {
+      "file": "/Users/liyi/Workspace/trader-off/src/trader_off/scheduler/registry.py",
+      "line": 25,
+      "severity": "critical",
+      "pattern_id": "eval-exec",
+      "description": "using eval/exec to dynamically execute code",
+      "matched": "compile() call (potential exec)",
+      "snippet": "_RE_V010 = re.compile(r\"^\\d{8}_\\d{6}$\")"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/src/trader_off/scheduler/registry.py",
+      "line": 29,
+      "severity": "critical",
+      "pattern_id": "eval-exec",
+      "description": "using eval/exec to dynamically execute code",
+      "matched": "compile() call (potential exec)",
+      "snippet": "_RE_V020 = re.compile(r\"^v(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)(?:\\.incr(\\d+))?$\")"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/src/trader_off/scheduler/registry.py",
+      "line": 32,
+      "severity": "critical",
+      "pattern_id": "eval-exec",
+      "description": "using eval/exec to dynamically execute code",
+      "matched": "compile() call (potential exec)",
+      "snippet": "_RE_V020_SHORT = re.compile(r\"^v(\\d+)\\.(\\d+)\\.(\\d+)$\")"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/integration/test_log_files.py",
+      "line": 28,
+      "severity": "critical",
+      "pattern_id": "eval-exec",
+      "description": "using eval/exec to dynamically execute code",
+      "matched": "compile() call (potential exec)",
+      "snippet": "pattern = re.compile(rf\"^{re.escape(module)}_\\d{{4}}-\\d{{2}}-\\d{{2}}\\.log$\")"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/integration/test_log_files.py",
+      "line": 86,
+      "severity": "critical",
+      "pattern_id": "eval-exec",
+      "description": "using eval/exec to dynamically execute code",
+      "matched": "compile() call (potential exec)",
+      "snippet": "log_pattern = re.compile("
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/unit/utils/test_logging.py",
+      "line": 47,
+      "severity": "critical",
+      "pattern_id": "eval-exec",
+      "description": "using eval/exec to dynamically execute code",
+      "matched": "compile() call (potential exec)",
+      "snippet": "pattern = re.compile("
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/unit/utils/test_logging.py",
+      "line": 127,
+      "severity": "medium",
+      "pattern_id": "logging-sensitive",
+      "description": "logging sensitive fields",
+      "matched": "log call contains sensitive field",
+      "snippet": "logger.info(\"login attempt for user=admin token=secret123\")"
+    }
+  ],
+  "stage2_findings": null,
+  "blockers": [
+    {
+      "file": "/Users/liyi/Workspace/trader-off/src/trader_off/scheduler/registry.py",
+      "line": 25,
+      "description": "using eval/exec to dynamically execute code"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/src/trader_off/scheduler/registry.py",
+      "line": 29,
+      "description": "using eval/exec to dynamically execute code"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/src/trader_off/scheduler/registry.py",
+      "line": 32,
+      "description": "using eval/exec to dynamically execute code"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/integration/test_log_files.py",
+      "line": 28,
+      "description": "using eval/exec to dynamically execute code"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/integration/test_log_files.py",
+      "line": 86,
+      "description": "using eval/exec to dynamically execute code"
+    },
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/unit/utils/test_logging.py",
+      "line": 47,
+      "description": "using eval/exec to dynamically execute code"
+    }
+  ],
+  "warnings": [
+    {
+      "file": "/Users/liyi/Workspace/trader-off/tests/unit/utils/test_logging.py",
+      "line": 127,
+      "description": "logging sensitive fields"
+    }
+  ],
+  "verdict": "fail"
+}

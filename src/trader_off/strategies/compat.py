@@ -13,7 +13,8 @@ try:
     from quantide.core.strategy import BaseStrategy  # type: ignore[import-untyped]
     from quantide.service.base_broker import Broker  # type: ignore[import-untyped]
 except ImportError:
-    class BaseStrategy(ABC):
+
+    class BaseStrategy(ABC):  # type: ignore[no-redef]
         """Stub BaseStrategy matching millionaire's interface.
 
         When millionaire is installed, the real quantide.core.strategy.BaseStrategy
@@ -50,7 +51,7 @@ except ImportError:
             """Called when backtest/trading ends for cleanup."""
             pass
 
-    class Broker(ABC):
+    class Broker(ABC):  # type: ignore[no-redef]
         """Stub Broker matching millionaire's interface."""
 
         @abstractmethod

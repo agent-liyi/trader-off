@@ -2,7 +2,6 @@
 
 import json
 from datetime import date, timedelta
-from pathlib import Path
 
 import polars as pl
 import pytest
@@ -21,16 +20,21 @@ class TestBuildLabels:
         data = []
         for i, close_val in enumerate(close_values):
             d = start_date + timedelta(days=i)
-            data.append({
-                "asset": "A",
-                "date": d,
-                "close": close_val,
-            })
-        return pl.DataFrame(data, schema={
-            "asset": pl.Utf8,
-            "date": pl.Date,
-            "close": pl.Float64,
-        })
+            data.append(
+                {
+                    "asset": "A",
+                    "date": d,
+                    "close": close_val,
+                }
+            )
+        return pl.DataFrame(
+            data,
+            schema={
+                "asset": pl.Utf8,
+                "date": pl.Date,
+                "close": pl.Float64,
+            },
+        )
 
     # AC-FR0500-01: Label formula correctness
     def test_ac_fr0500_01_label_formula(self, ten_close_asset_a):
@@ -54,9 +58,7 @@ class TestBuildLabels:
 
         labels = result["label"].to_list()
         tail = labels[5:]
-        assert tail == [None, None, None, None, None], (
-            f"Expected last 5 NaN, got {tail}"
-        )
+        assert tail == [None, None, None, None, None], f"Expected last 5 NaN, got {tail}"
 
     # AC-FR0500-03: NaN close causes NaN label
     def test_ac_fr0500_03_halt_nan(self):
@@ -66,25 +68,30 @@ class TestBuildLabels:
         data = []
         for i, close_val in enumerate(close_values):
             d = start_date + timedelta(days=i)
-            data.append({
-                "asset": "A",
-                "date": d,
-                "close": close_val,
-            })
-        ohlcv = pl.DataFrame(data, schema={
-            "asset": pl.Utf8,
-            "date": pl.Date,
-            "close": pl.Float64,
-        })
+            data.append(
+                {
+                    "asset": "A",
+                    "date": d,
+                    "close": close_val,
+                }
+            )
+        ohlcv = pl.DataFrame(
+            data,
+            schema={
+                "asset": pl.Utf8,
+                "date": pl.Date,
+                "close": pl.Float64,
+            },
+        )
 
         result = build_labels(ohlcv, horizon=5)
 
         labels = result["label"].to_list()
         assert labels[2] is None, f"label[2]={labels[2]}, expected None (halt)"
 
-    # AC-FR0500-04: limit_up filter
-    def test_ac_fr0500_04_limit_up_filter(self, tmp_path):
-        """AC-FR0500-04: limit_up=True at t=3 → label[3] NaN + file record."""
+    # limit_up filter
+    def test_limit_up_filter(self, tmp_path):
+        """limit_up=True at t=3 → label[3] NaN + file record."""
         close_values = [10.0 + i for i in range(10)]
         limit_up_values = [False] * 10
         limit_up_values[3] = True  # 4th day has limit_up
@@ -93,25 +100,31 @@ class TestBuildLabels:
         data = []
         for i, close_val in enumerate(close_values):
             d = start_date + timedelta(days=i)
-            data.append({
-                "asset": "A",
-                "date": d,
-                "close": close_val,
-                "limit_up": limit_up_values[i],
-            })
-        ohlcv = pl.DataFrame(data, schema={
-            "asset": pl.Utf8,
-            "date": pl.Date,
-            "close": pl.Float64,
-            "limit_up": pl.Boolean,
-        })
+            data.append(
+                {
+                    "asset": "A",
+                    "date": d,
+                    "close": close_val,
+                    "limit_up": limit_up_values[i],
+                }
+            )
+        ohlcv = pl.DataFrame(
+            data,
+            schema={
+                "asset": pl.Utf8,
+                "date": pl.Date,
+                "close": pl.Float64,
+                "limit_up": pl.Boolean,
+            },
+        )
 
         output_dir = tmp_path / "label_output"
         output_dir.mkdir()
         filter_path = output_dir / "limit_up_down_filter.json"
 
-        result = build_labels(ohlcv, horizon=5, filter_limit_up_down=True,
-                              filter_output_path=filter_path)
+        result = build_labels(
+            ohlcv, horizon=5, filter_limit_up_down=True, filter_output_path=filter_path
+        )
 
         # label[3] should be NaN (limit_up filter applied)
         labels = result["label"].to_list()
@@ -124,9 +137,9 @@ class TestBuildLabels:
         assert records[0]["asset"] == "A"
         assert records[0]["reason"] == "limit_up"
 
-    # AC-FR0500-05: Label statistics
-    def test_ac_fr0500_05_label_stats(self, tmp_path):
-        """AC-FR0500-05: compute_label_stats returns {mean, std, min, p1, p99, max}."""
+    # Label statistics
+    def test_label_stats(self, tmp_path):
+        """compute_label_stats returns {mean, std, min, p1, p99, max}."""
         # Simple labels with known stats
         label_values = [0.01, 0.02, -0.01, 0.03, 0.0, -0.02, 0.015, 0.025, -0.005, 0.01]
         start_date = date(2024, 1, 1)
@@ -134,11 +147,14 @@ class TestBuildLabels:
         for i, label in enumerate(label_values):
             d = start_date + timedelta(days=i)
             data.append({"asset": "A", "date": d, "label": label})
-        labels_df = pl.DataFrame(data, schema={
-            "asset": pl.Utf8,
-            "date": pl.Date,
-            "label": pl.Float64,
-        })
+        labels_df = pl.DataFrame(
+            data,
+            schema={
+                "asset": pl.Utf8,
+                "date": pl.Date,
+                "label": pl.Float64,
+            },
+        )
 
         stats_path = tmp_path / "label_stats.json"
         result = compute_label_stats(labels_df, output_path=stats_path)
@@ -166,18 +182,21 @@ class TestLabelSkippedFilter:
     """Test that limit_up/down filter is skipped when columns are missing."""
 
     def test_skip_filter_when_columns_missing(self, tmp_path):
-        """AC-FR0500-04: Limit filter skipped when limit_up/limit_down columns missing."""
+        """Limit filter skipped when limit_up/limit_down columns missing."""
         close_values = [10.0 + i for i in range(10)]
         start_date = date(2024, 1, 1)
         data = []
         for i, close_val in enumerate(close_values):
             d = start_date + timedelta(days=i)
             data.append({"asset": "A", "date": d, "close": close_val})
-        ohlcv = pl.DataFrame(data, schema={
-            "asset": pl.Utf8,
-            "date": pl.Date,
-            "close": pl.Float64,
-        })
+        ohlcv = pl.DataFrame(
+            data,
+            schema={
+                "asset": pl.Utf8,
+                "date": pl.Date,
+                "close": pl.Float64,
+            },
+        )
 
         result = build_labels(ohlcv, horizon=5, filter_limit_up_down=True)
 

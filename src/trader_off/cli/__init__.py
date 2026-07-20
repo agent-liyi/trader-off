@@ -1,1 +1,1 @@
-"""CLI entry points: train, predict, backtest, feature-importance."""
+"""CLI entry points: train, predict, backtest, feature-importance, retrain."""

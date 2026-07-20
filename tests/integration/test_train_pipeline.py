@@ -7,7 +7,6 @@ Uses fixture-backed DataLoader stand-ins; no real market data.
 """
 
 from datetime import date, timedelta
-from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -40,19 +39,21 @@ def _make_ohlcv_data(
             d = start + timedelta(days=i)
             ret = rng.randn() * 0.02
             close = price * (1.0 + ret)
-            rows.append({
-                "asset": asset,
-                "date": d,
-                "open": close * 0.99,
-                "high": close * 1.02,
-                "low": close * 0.98,
-                "close": close,
-                "volume": float(1_000_000 + i * 10_000),
-                "turnover": 0.02 + rng.rand() * 0.01,
-                "adj_factor": 1.0,
-                "limit_up": False,
-                "limit_down": False,
-            })
+            rows.append(
+                {
+                    "asset": asset,
+                    "date": d,
+                    "open": close * 0.99,
+                    "high": close * 1.02,
+                    "low": close * 0.98,
+                    "close": close,
+                    "volume": float(1_000_000 + i * 10_000),
+                    "turnover": 0.02 + rng.rand() * 0.01,
+                    "adj_factor": 1.0,
+                    "limit_up": False,
+                    "limit_down": False,
+                }
+            )
             price = close
     return pl.DataFrame(rows)
 
@@ -61,8 +62,8 @@ def _make_ohlcv_data(
 class TestTrainPipeline:
     """Integration: feature engineering → labels → scaling → training → save."""
 
-    def test_ac_fr0700_05_full_train_pipeline(self, tmp_path):
-        """AC-FR0700-05: Full training pipeline produces valid model files.
+    def test_full_train_pipeline(self, tmp_path):
+        """Full training pipeline produces valid model files.
 
         Verifies the cross-module contract:
           features → data.preprocess → labels → training.trainer → model_io
@@ -79,9 +80,7 @@ class TestTrainPipeline:
         assert "turnover_5" in data.columns, "Missing volume features"
 
         # ---- Labels ----
-        label_df = build_labels(
-            data.select(["asset", "date", "close"]), horizon=5
-        )
+        label_df = build_labels(data.select(["asset", "date", "close"]), horizon=5)
         data = data.join(label_df, on=["asset", "date"], how="left")
         data = data.filter(pl.col("label").is_not_null())
 
@@ -90,10 +89,19 @@ class TestTrainPipeline:
 
         # ---- Train/valid split ----
         feature_cols = [
-            "ret_5", "ret_10", "ret_20", "ret_60",
-            "vol_10", "vol_20", "vol_60",
-            "turnover_5", "turnover_10", "turnover_20",
-            "vp_corr_5", "vp_corr_10", "vp_corr_20",
+            "ret_5",
+            "ret_10",
+            "ret_20",
+            "ret_60",
+            "vol_10",
+            "vol_20",
+            "vol_60",
+            "turnover_5",
+            "turnover_10",
+            "turnover_20",
+            "vp_corr_5",
+            "vp_corr_10",
+            "vp_corr_20",
         ]
         X = data.select(["asset", "date"] + feature_cols)
         y = data.select(["asset", "date", "label"])
@@ -112,9 +120,7 @@ class TestTrainPipeline:
         from trader_off.data.preprocess import StandardScaler
 
         X_scaled, scaler, dropped = fit_scaler_and_impute(X_train)
-        assert isinstance(scaler, StandardScaler), (
-            f"Expected StandardScaler, got {type(scaler)}"
-        )
+        assert isinstance(scaler, StandardScaler), f"Expected StandardScaler, got {type(scaler)}"
         assert len(scaler.feature_names) > 0, "No feature names in scaler"
         # ret_60 and vol_60 may be dropped if data is insufficient
         assert isinstance(dropped, list)
@@ -136,15 +142,9 @@ class TestTrainPipeline:
 
         booster = train_model(
             X_train=X_scaled.head(common_train).select(scaler.feature_names),
-            y_train=pl.Series(
-                "label", y_train_vals.head(common_train).to_list()
-            ),
-            X_valid=X_valid_feat.head(common_valid).select(
-                scaler.feature_names
-            ),
-            y_valid=pl.Series(
-                "label", y_valid_vals.head(common_valid).to_list()
-            ),
+            y_train=pl.Series("label", y_train_vals.head(common_train).to_list()),
+            X_valid=X_valid_feat.head(common_valid).select(scaler.feature_names),
+            y_valid=pl.Series("label", y_valid_vals.head(common_valid).to_list()),
             params=params,
         )
 
@@ -165,14 +165,18 @@ class TestTrainPipeline:
 
         # Verify all 5 files
         required = [
-            "model.pkl", "scaler.json", "dropped_features.json",
-            "feature_names.json", "metadata.json",
+            "model.pkl",
+            "scaler.json",
+            "dropped_features.json",
+            "feature_names.json",
+            "metadata.json",
         ]
         for fname in required:
             assert (model_dir / fname).exists(), f"Missing {fname}"
 
         # Verify round-trip load
         import lightgbm as lgb
+
         from trader_off.data.preprocess import StandardScaler
 
         artifact = load_model(version=version, models_dir=models_dir)
@@ -185,9 +189,7 @@ class TestTrainPipeline:
         assert len(artifact.feature_names) > 0
         assert isinstance(artifact.metadata, dict)
 
-    def test_ac_fr0800_03_version_exists_error(
-        self, tmp_path
-    ):
+    def test_ac_fr0800_03_version_exists_error(self, tmp_path):
         """AC-FR0800-03: Duplicate version raises ModelVersionExistsError."""
         from trader_off.utils.exceptions import ModelVersionExistsError
 
@@ -195,17 +197,24 @@ class TestTrainPipeline:
         data = compute_momentum_features(data)
         data = compute_volatility_features(data)
         data = compute_volume_features(data)
-        label_df = build_labels(
-            data.select(["asset", "date", "close"]), horizon=5
-        )
+        label_df = build_labels(data.select(["asset", "date", "close"]), horizon=5)
         data = data.join(label_df, on=["asset", "date"], how="left")
         data = data.filter(pl.col("label").is_not_null())
 
         feature_cols = [
-            "ret_5", "ret_10", "ret_20", "ret_60",
-            "vol_10", "vol_20", "vol_60",
-            "turnover_5", "turnover_10", "turnover_20",
-            "vp_corr_5", "vp_corr_10", "vp_corr_20",
+            "ret_5",
+            "ret_10",
+            "ret_20",
+            "ret_60",
+            "vol_10",
+            "vol_20",
+            "vol_60",
+            "turnover_5",
+            "turnover_10",
+            "turnover_20",
+            "vp_corr_5",
+            "vp_corr_10",
+            "vp_corr_20",
         ]
         X = data.select(["asset", "date"] + feature_cols)
 
@@ -226,8 +235,11 @@ class TestTrainPipeline:
 
         # First save succeeds
         save_model(
-            booster=booster, scaler=scaler, metadata={},
-            version=version, models_dir=models_dir,
+            booster=booster,
+            scaler=scaler,
+            metadata={},
+            version=version,
+            models_dir=models_dir,
             dropped_features=dropped,
             feature_names=scaler.feature_names,
         )
@@ -235,8 +247,11 @@ class TestTrainPipeline:
         # Second save with same version must fail
         with pytest.raises(ModelVersionExistsError, match="already exists"):
             save_model(
-                booster=booster, scaler=scaler, metadata={},
-                version=version, models_dir=models_dir,
+                booster=booster,
+                scaler=scaler,
+                metadata={},
+                version=version,
+                models_dir=models_dir,
                 dropped_features=dropped,
                 feature_names=scaler.feature_names,
             )

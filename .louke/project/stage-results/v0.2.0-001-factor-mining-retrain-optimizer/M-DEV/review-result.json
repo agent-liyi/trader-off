@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-DEV",
+  "kind": "review-result",
+  "role": "Prism",
+  "verdict": "pass",
+  "reviewed_targets": [
+    "tests/unit/portfolio/test_solver.py",
+    "tests/unit/scheduler/test_registry.py"
+  ],
+  "blocking_findings": [],
+  "accepted_risks": [],
+  "created_at": "2026-07-18T07:50:11Z",
+  "contract_bundle_hash": "81f5214ac33320474951525926fabed6434a1ea8539b3429a613dda927dfef82",
+  "metadata": {
+    "commit_range": "9d1f480..HEAD",
+    "source_command": "review",
+    "diff": "HEAD"
+  },
+  "output_hash": "a47dc170d75d4a5823362a26e1ba01a5905164731a9806d75ec1bad5df9841fb"
+}

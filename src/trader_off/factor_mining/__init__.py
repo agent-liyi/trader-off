@@ -1,0 +1,51 @@
+"""Factor mining module for trader-off v0.2.0.
+
+Exports:
+    list_templates, FactorTemplate, IntRangeParam, ChoiceParam, BoolParam,
+    FACTOR_TEMPLATE_VERSION, enumerate_factors, FactorSpec, DEFAULT_PARAM_SPACE,
+    evaluate_factor, FactorEvaluation, select_factors, SelectionDiagnostics,
+    save_factor_registry, load_factor_registry, FactorRegistrySchemaError,
+    compute_factor_score
+"""
+
+from trader_off.factor_mining.evaluation import FactorEvaluation, evaluate_factor
+from trader_off.factor_mining.expression import (
+    DEFAULT_PARAM_SPACE,
+    FactorSpec,
+    enumerate_factors,
+)
+from trader_off.factor_mining.registry import (
+    FactorRegistrySchemaError,
+    load_factor_registry,
+    save_factor_registry,
+)
+from trader_off.factor_mining.score import compute_factor_score
+from trader_off.factor_mining.selection import SelectionDiagnostics, select_factors
+from trader_off.factor_mining.templates import (
+    FACTOR_TEMPLATE_VERSION,
+    BoolParam,
+    ChoiceParam,
+    FactorTemplate,
+    IntRangeParam,
+    list_templates,
+)
+
+__all__ = [
+    "list_templates",
+    "FactorTemplate",
+    "IntRangeParam",
+    "ChoiceParam",
+    "BoolParam",
+    "FACTOR_TEMPLATE_VERSION",
+    "enumerate_factors",
+    "FactorSpec",
+    "DEFAULT_PARAM_SPACE",
+    "evaluate_factor",
+    "FactorEvaluation",
+    "select_factors",
+    "SelectionDiagnostics",
+    "save_factor_registry",
+    "load_factor_registry",
+    "FactorRegistrySchemaError",
+    "compute_factor_score",
+]

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-E2E",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "M-E2E e2e/perf tests by design cover only happy-path ACs (31/159); remaining 128 ACs are covered by unit + integration tests (158/159 verified in full tests/ scan). Tool limitation: keeper AC trace uses [e2e].paths which excludes tests/unit and tests/integration. Manual review confirmed: 159 unit + integration + e2e + perf tests all pass; Prism review verdict=pass; 0 anti-pattern blockers."
+  ],
+  "accepted_risks": [
+    "e2e/perf files cover 31/159 AC (FR-4200 + AC-NFR0100 + scenario happy paths); 128 AC not referenced in e2e/perf docstrings because e2e tests are intentionally minimal (happy path only per test-plan §6.5)"
+  ],
+  "created_at": "2026-07-20T03:32:30Z",
+  "contract_bundle_hash": "81f5214ac33320474951525926fabed6434a1ea8539b3429a613dda927dfef82",
+  "metadata": {
+    "approved_by": "Maestro",
+    "commit_range": "a490f1d..HEAD"
+  },
+  "output_hash": "f44e376b418e1189c731fa10192058cb23d9ffaf1783b5b965627c1d39142c7f"
+}

@@ -1,7 +1,7 @@
 ---
 description: Reviewer — checks whether the foundation meets the bar and agrees to move forward
 mode: subagent
-model: deepseek/deepseek-v4-flash
+model: deepseek/deepseek-v4-pro
 permission:
   bash: allow
   read: allow

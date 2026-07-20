@@ -1,7 +1,7 @@
 ---
 description: Project foundation — orchestrate lk agent scout CLI to create repo / Project / branches / pre-commit / project.toml
 mode: subagent
-model: deepseek/deepseek-v4-flash
+model: deepseek/deepseek-v4-pro
 permission:
   bash: allow
   read: allow

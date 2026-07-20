@@ -1,7 +1,7 @@
 ---
 description: Knowledge distillation — reads raw bundle and rewrites wiki pages/ as a whole
 mode: subagent
-model: minimax-cn-coding-plan/MiniMax-M2.7
+model: deepseek/deepseek-v4-pro
 permission:
   bash: allow
   read: allow

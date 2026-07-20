@@ -2,7 +2,6 @@
 
 import json
 from datetime import date, timedelta
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -30,17 +29,19 @@ def _make_ohlcv_history(
     for i in range(n_days):
         d = end_date - timedelta(days=n_days - 1 - i)
         base = 10.0 + rng.randn() * 2
-        rows.append({
-            "asset": asset,
-            "date": d,
-            "open": base * 0.99,
-            "high": base * 1.02,
-            "low": base * 0.98,
-            "close": base,
-            "volume": float(1_000_000 + i * 10_000),
-            "turnover": 0.02 + rng.rand() * 0.01,
-            "adj_factor": 1.0,
-        })
+        rows.append(
+            {
+                "asset": asset,
+                "date": d,
+                "open": base * 0.99,
+                "high": base * 1.02,
+                "low": base * 0.98,
+                "close": base,
+                "volume": float(1_000_000 + i * 10_000),
+                "turnover": 0.02 + rng.rand() * 0.01,
+                "adj_factor": 1.0,
+            }
+        )
     return pl.DataFrame(rows)
 
 
@@ -63,10 +64,19 @@ def _fake_booster_predict(x: np.ndarray) -> np.ndarray:
 def scaler() -> StandardScaler:
     """A scaler matching the 15 feature columns."""
     feature_names = [
-        "ret_5", "ret_10", "ret_20", "ret_60",
-        "vol_10", "vol_20", "vol_60",
-        "turnover_5", "turnover_10", "turnover_20",
-        "vp_corr_5", "vp_corr_10", "vp_corr_20",
+        "ret_5",
+        "ret_10",
+        "ret_20",
+        "ret_60",
+        "vol_10",
+        "vol_20",
+        "vol_60",
+        "turnover_5",
+        "turnover_10",
+        "turnover_20",
+        "vp_corr_5",
+        "vp_corr_10",
+        "vp_corr_20",
     ]
     mean_ = {f: 0.0 for f in feature_names}
     std_ = {f: 1.0 for f in feature_names}
@@ -107,8 +117,10 @@ class TestPredict:
         with patch(
             "trader_off.prediction.service.load_model",
             return_value=MagicMock(
-                booster=mock_booster, scaler=scaler,
-                feature_names=scaler.feature_names, metadata={},
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={},
             ),
         ):
             result = await predict(
@@ -133,8 +145,10 @@ class TestPredict:
         with patch(
             "trader_off.prediction.service.load_model",
             return_value=MagicMock(
-                booster=mock_booster, scaler=scaler,
-                feature_names=scaler.feature_names, metadata={},
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={},
             ),
         ):
             result = await predict(
@@ -154,7 +168,10 @@ class TestPredict:
     # AC-FR0900-03: insufficient history → skip + WARNING + predict_skipped.json
     @pytest.mark.asyncio
     async def test_ac_fr0900_03_skip_insufficient(
-        self, scaler, mock_booster, tmp_path,
+        self,
+        scaler,
+        mock_booster,
+        tmp_path,
     ):
         """AC-FR0900-03: assets with <120 days history are skipped."""
         watchlist = ["000001.SZ", "000003.SZ"]
@@ -174,8 +191,10 @@ class TestPredict:
         with patch(
             "trader_off.prediction.service.load_model",
             return_value=MagicMock(
-                booster=mock_booster, scaler=scaler,
-                feature_names=scaler.feature_names, metadata={"max_lookback": 120},
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={"max_lookback": 120},
             ),
         ):
             result = await predict(
@@ -197,10 +216,10 @@ class TestPredict:
         assert any(r["asset"] == "000003.SZ" for r in skipped)
         assert any("insufficient_history" in r["reason"] for r in skipped)
 
-    # AC-FR0900-04: mock DataLoader call_count == len(watchlist), count=120
+    # DataLoader call_count == len(watchlist), count=120
     @pytest.mark.asyncio
-    async def test_ac_fr0900_04_lookback_120(self, scaler, mock_booster):
-        """AC-FR0900-04: DataLoader.get_history called once per asset with count=120."""
+    async def test_lookback_120(self, scaler, mock_booster):
+        """DataLoader.get_history called once per asset with count=120."""
         watchlist = ["000001.SZ", "000002.SZ"]
         asof = date(2024, 12, 31)
 
@@ -210,8 +229,10 @@ class TestPredict:
         with patch(
             "trader_off.prediction.service.load_model",
             return_value=MagicMock(
-                booster=mock_booster, scaler=scaler,
-                feature_names=scaler.feature_names, metadata={},
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={},
             ),
         ):
             await predict(
@@ -227,3 +248,236 @@ class TestPredict:
         for call_args in mock_loader.get_history.call_args_list:
             kwargs = call_args.kwargs
             assert kwargs.get("count") == 120, f"Expected count=120, got {kwargs}"
+
+    # Additional edge case tests
+    @pytest.mark.asyncio
+    async def test_data_loader_default_creation(self, scaler, mock_booster, mocker):
+        """predict creates default DataLoader when data_loader is None."""
+        from trader_off.prediction.service import predict
+
+        watchlist = ["000001.SZ"]
+        asof = date(2024, 12, 31)
+
+        mock_dataloader = MagicMock()
+        mock_dataloader.get_history = MagicMock(side_effect=_fake_get_history)
+        mocker.patch("trader_off.data.loader.DataLoader", return_value=mock_dataloader)
+
+        with patch(
+            "trader_off.prediction.service.load_model",
+            return_value=MagicMock(
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={},
+            ),
+        ):
+            result = await predict(
+                model_version="v1",
+                watchlist=watchlist,
+                asof_date=asof,
+                data_loader=None,  # None triggers default creation
+            )
+
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_fetch_exception_skips_asset(self, scaler, mock_booster, tmp_path):
+        """Data fetch exception skips asset and records in skipped.json."""
+        watchlist = ["000001.SZ", "000002.SZ"]
+        asof = date(2024, 12, 31)
+
+        mock_loader = MagicMock()
+
+        async def failing_history(asset, end_date, count=120):
+            raise RuntimeError("Connection refused")
+
+        mock_loader.get_history = failing_history
+        skipped_path = tmp_path / "skipped.json"
+
+        with patch(
+            "trader_off.prediction.service.load_model",
+            return_value=MagicMock(
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={},
+            ),
+        ):
+            result = await predict(
+                model_version="v1",
+                watchlist=watchlist,
+                asof_date=asof,
+                data_loader=mock_loader,
+                skipped_path=skipped_path,
+            )
+
+        assert len(result) == 0
+        assert skipped_path.exists()
+        skipped = json.loads(skipped_path.read_text())
+        assert len(skipped) == 2
+        assert all("fetch_failed" in s["reason"] for s in skipped)
+
+    @pytest.mark.asyncio
+    async def test_feature_raw_none_uses_zero(self, scaler, mock_booster, tmp_path):
+        """Feature with None value is replaced with 0.0."""
+        watchlist = ["000001.SZ"]
+        asof = date(2024, 12, 31)
+
+        # Create history with None in a feature column
+        mock_loader = MagicMock()
+
+        async def history_with_none(asset, end_date, count=120):
+            rows = _make_ohlcv_history(asset, end_date, count)
+            # Add a feature column with None
+            rows = rows.with_columns(pl.lit(None).cast(pl.Float64).alias("ret_5"))
+            return rows
+
+        mock_loader.get_history = history_with_none
+        skipped_path = tmp_path / "skipped.json"
+
+        with patch(
+            "trader_off.prediction.service.load_model",
+            return_value=MagicMock(
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={},
+            ),
+        ):
+            result = await predict(
+                model_version="v1",
+                watchlist=watchlist,
+                asof_date=asof,
+                data_loader=mock_loader,
+                skipped_path=skipped_path,
+            )
+
+        assert len(result) == 1
+
+    @pytest.mark.asyncio
+    async def test_feature_missing_from_columns(self, scaler, mock_booster, tmp_path):
+        """Feature not in latest row logs warning and uses 0.0 (handled gracefully)."""
+        watchlist = ["000001.SZ"]
+        asof = date(2024, 12, 31)
+
+        mock_loader = MagicMock()
+
+        # The feature columns ARE computed, but we mock load_model to return
+        # a feature name that won't be in the result
+        async def incomplete_history(asset, end_date, count=120):
+            rows = _make_ohlcv_history(asset, end_date, count)
+            return rows
+
+        mock_loader.get_history = incomplete_history
+
+        # Use a feature name that won't be computed by the feature functions
+        exotic_feature_names = [
+            "ret_5",
+            "ret_10",
+            "ret_20",
+            "ret_60",
+            "vol_10",
+            "vol_20",
+            "vol_60",
+            "nonexistent_feature_xyz",
+        ]
+
+        import io
+
+        from loguru import logger
+
+        stream = io.StringIO()
+        handler_id = logger.add(stream, level="WARNING", format="{message}")
+
+        with patch(
+            "trader_off.prediction.service.load_model",
+            return_value=MagicMock(
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=exotic_feature_names,
+                metadata={},
+            ),
+        ):
+            result = await predict(
+                model_version="v1",
+                watchlist=watchlist,
+                asof_date=asof,
+                data_loader=mock_loader,
+            )
+
+        logger.remove(handler_id)
+        # The result should still have one row
+        assert len(result) == 1
+        # Warning should mention the missing feature
+        log_output = stream.getvalue()
+        assert "nonexistent_feature_xyz" in log_output or "missing" in log_output.lower()
+
+    @pytest.mark.asyncio
+    async def test_all_assets_skipped_returns_empty_df(self, scaler, mock_booster, tmp_path):
+        """When all assets are skipped, returns empty DataFrame with correct schema."""
+        watchlist = ["000001.SZ", "000002.SZ"]
+        asof = date(2024, 12, 31)
+
+        mock_loader = MagicMock()
+
+        # All assets fail to load
+        async def failing_history(asset, end_date, count=120):
+            raise RuntimeError("No data")
+
+        mock_loader.get_history = failing_history
+        skipped_path = tmp_path / "skipped.json"
+
+        with patch(
+            "trader_off.prediction.service.load_model",
+            return_value=MagicMock(
+                booster=mock_booster,
+                scaler=scaler,
+                feature_names=scaler.feature_names,
+                metadata={},
+            ),
+        ):
+            result = await predict(
+                model_version="v1",
+                watchlist=watchlist,
+                asof_date=asof,
+                data_loader=mock_loader,
+                skipped_path=skipped_path,
+            )
+
+        assert len(result) == 0
+        assert set(result.columns) == {"asset", "score", "rank"}
+
+    @pytest.mark.asyncio
+    async def test_scaler_std_zero_uses_one(self, scaler, mock_booster, tmp_path):
+        """Scaler with std=0 is replaced with 1.0 to avoid division by zero."""
+        watchlist = ["000001.SZ"]
+        asof = date(2024, 12, 31)
+
+        # Create scaler with zero std
+        feature_names = ["ret_5"]
+        zero_std_scaler = MagicMock()
+        zero_std_scaler.mean_ = {"ret_5": 0.0}
+        zero_std_scaler.std_ = {"ret_5": 0.0}  # Zero!
+        zero_std_scaler.feature_names = feature_names
+
+        mock_loader = MagicMock()
+        mock_loader.get_history = MagicMock(side_effect=_fake_get_history)
+
+        with patch(
+            "trader_off.prediction.service.load_model",
+            return_value=MagicMock(
+                booster=mock_booster,
+                scaler=zero_std_scaler,
+                feature_names=feature_names,
+                metadata={},
+            ),
+        ):
+            result = await predict(
+                model_version="v1",
+                watchlist=watchlist,
+                asof_date=asof,
+                data_loader=mock_loader,
+            )
+
+        # Should handle std=0 gracefully without division by zero
+        assert len(result) == 1

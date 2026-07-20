@@ -1,0 +1,1028 @@
+[
+  {
+    "template": "momentum_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 5"
+  },
+  {
+    "template": "momentum_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 5"
+  },
+  {
+    "template": "momentum_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 5"
+  },
+  {
+    "template": "momentum_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 5"
+  },
+  {
+    "template": "excess_momentum_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 5"
+  },
+  {
+    "template": "excess_momentum_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 5"
+  },
+  {
+    "template": "excess_momentum_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 5"
+  },
+  {
+    "template": "excess_momentum_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 5"
+  },
+  {
+    "template": "momentum_accel_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 5"
+  },
+  {
+    "template": "momentum_accel_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 5"
+  },
+  {
+    "template": "momentum_accel_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 5"
+  },
+  {
+    "template": "momentum_accel_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 5"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 5,
+    "reason": "value 5 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 6,
+    "reason": "value 6 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 7,
+    "reason": "value 7 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 8,
+    "reason": "value 8 < min 10"
+  },
+  {
+    "template": "vol_N",
+    "param": "N",
+    "value": 9,
+    "reason": "value 9 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 5,
+    "reason": "value 5 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 6,
+    "reason": "value 6 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 7,
+    "reason": "value 7 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 8,
+    "reason": "value 8 < min 10"
+  },
+  {
+    "template": "amplitude_N",
+    "param": "N",
+    "value": 9,
+    "reason": "value 9 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 5,
+    "reason": "value 5 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 6,
+    "reason": "value 6 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 7,
+    "reason": "value 7 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 8,
+    "reason": "value 8 < min 10"
+  },
+  {
+    "template": "atr_N",
+    "param": "N",
+    "value": 9,
+    "reason": "value 9 < min 10"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 5"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 5"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 5"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 5"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 21,
+    "reason": "value 21 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 22,
+    "reason": "value 22 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 23,
+    "reason": "value 23 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 24,
+    "reason": "value 24 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 25,
+    "reason": "value 25 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 26,
+    "reason": "value 26 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 27,
+    "reason": "value 27 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 28,
+    "reason": "value 28 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 29,
+    "reason": "value 29 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 30,
+    "reason": "value 30 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 31,
+    "reason": "value 31 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 32,
+    "reason": "value 32 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 33,
+    "reason": "value 33 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 34,
+    "reason": "value 34 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 35,
+    "reason": "value 35 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 36,
+    "reason": "value 36 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 37,
+    "reason": "value 37 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 38,
+    "reason": "value 38 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 39,
+    "reason": "value 39 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 40,
+    "reason": "value 40 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 41,
+    "reason": "value 41 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 42,
+    "reason": "value 42 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 43,
+    "reason": "value 43 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 44,
+    "reason": "value 44 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 45,
+    "reason": "value 45 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 46,
+    "reason": "value 46 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 47,
+    "reason": "value 47 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 48,
+    "reason": "value 48 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 49,
+    "reason": "value 49 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 50,
+    "reason": "value 50 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 51,
+    "reason": "value 51 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 52,
+    "reason": "value 52 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 53,
+    "reason": "value 53 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 54,
+    "reason": "value 54 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 55,
+    "reason": "value 55 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 56,
+    "reason": "value 56 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 57,
+    "reason": "value 57 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 58,
+    "reason": "value 58 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 59,
+    "reason": "value 59 > max 20"
+  },
+  {
+    "template": "volume_change_N",
+    "param": "N",
+    "value": 60,
+    "reason": "value 60 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 5"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 5"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 5"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 5"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 21,
+    "reason": "value 21 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 22,
+    "reason": "value 22 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 23,
+    "reason": "value 23 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 24,
+    "reason": "value 24 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 25,
+    "reason": "value 25 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 26,
+    "reason": "value 26 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 27,
+    "reason": "value 27 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 28,
+    "reason": "value 28 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 29,
+    "reason": "value 29 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 30,
+    "reason": "value 30 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 31,
+    "reason": "value 31 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 32,
+    "reason": "value 32 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 33,
+    "reason": "value 33 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 34,
+    "reason": "value 34 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 35,
+    "reason": "value 35 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 36,
+    "reason": "value 36 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 37,
+    "reason": "value 37 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 38,
+    "reason": "value 38 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 39,
+    "reason": "value 39 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 40,
+    "reason": "value 40 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 41,
+    "reason": "value 41 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 42,
+    "reason": "value 42 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 43,
+    "reason": "value 43 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 44,
+    "reason": "value 44 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 45,
+    "reason": "value 45 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 46,
+    "reason": "value 46 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 47,
+    "reason": "value 47 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 48,
+    "reason": "value 48 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 49,
+    "reason": "value 49 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 50,
+    "reason": "value 50 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 51,
+    "reason": "value 51 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 52,
+    "reason": "value 52 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 53,
+    "reason": "value 53 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 54,
+    "reason": "value 54 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 55,
+    "reason": "value 55 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 56,
+    "reason": "value 56 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 57,
+    "reason": "value 57 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 58,
+    "reason": "value 58 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 59,
+    "reason": "value 59 > max 20"
+  },
+  {
+    "template": "turnover_N",
+    "param": "N",
+    "value": 60,
+    "reason": "value 60 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 1,
+    "reason": "value 1 < min 5"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 2,
+    "reason": "value 2 < min 5"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 3,
+    "reason": "value 3 < min 5"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 4,
+    "reason": "value 4 < min 5"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 21,
+    "reason": "value 21 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 22,
+    "reason": "value 22 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 23,
+    "reason": "value 23 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 24,
+    "reason": "value 24 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 25,
+    "reason": "value 25 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 26,
+    "reason": "value 26 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 27,
+    "reason": "value 27 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 28,
+    "reason": "value 28 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 29,
+    "reason": "value 29 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 30,
+    "reason": "value 30 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 31,
+    "reason": "value 31 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 32,
+    "reason": "value 32 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 33,
+    "reason": "value 33 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 34,
+    "reason": "value 34 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 35,
+    "reason": "value 35 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 36,
+    "reason": "value 36 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 37,
+    "reason": "value 37 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 38,
+    "reason": "value 38 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 39,
+    "reason": "value 39 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 40,
+    "reason": "value 40 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 41,
+    "reason": "value 41 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 42,
+    "reason": "value 42 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 43,
+    "reason": "value 43 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 44,
+    "reason": "value 44 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 45,
+    "reason": "value 45 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 46,
+    "reason": "value 46 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 47,
+    "reason": "value 47 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 48,
+    "reason": "value 48 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 49,
+    "reason": "value 49 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 50,
+    "reason": "value 50 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 51,
+    "reason": "value 51 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 52,
+    "reason": "value 52 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 53,
+    "reason": "value 53 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 54,
+    "reason": "value 54 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 55,
+    "reason": "value 55 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 56,
+    "reason": "value 56 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 57,
+    "reason": "value 57 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 58,
+    "reason": "value 58 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 59,
+    "reason": "value 59 > max 20"
+  },
+  {
+    "template": "vp_corr_N",
+    "param": "N",
+    "value": 60,
+    "reason": "value 60 > max 20"
+  }
+]

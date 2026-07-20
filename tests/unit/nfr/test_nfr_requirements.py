@@ -29,17 +29,17 @@ class TestICThresholds:
         assert isinstance(metadata["test_ic_mean"], float)
         assert isinstance(metadata["test_rank_ic_mean"], float)
 
-    # AC-NFR0200-03: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True
+    # IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True
     def test_ic_pass_soft_target_true(self):
-        """AC-NFR0200-03: IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True."""
+        """IC > 0.02 and Rank IC > 0.03 → ic_pass_soft_target=True."""
         test_ic = 0.025
         test_rank_ic = 0.035
         ic_pass = test_ic > 0.02 and test_rank_ic > 0.03
         assert ic_pass is True
 
-    # AC-NFR0200-03: IC below threshold → ic_pass_soft_target=False
+    # IC below threshold → ic_pass_soft_target=False
     def test_ic_pass_soft_target_false(self):
-        """AC-NFR0200-03: IC below threshold → ic_pass_soft_target=False."""
+        """IC below threshold → ic_pass_soft_target=False."""
         test_ic = 0.01
         test_rank_ic = 0.02
         ic_pass = test_ic > 0.02 and test_rank_ic > 0.03
@@ -62,9 +62,7 @@ class TestAsyncSignatures:
         async_methods = ["init", "on_day_open", "on_bar", "on_day_close", "on_stop"]
         for method_name in async_methods:
             method = getattr(LGBMTop20Strategy, method_name)
-            assert inspect.iscoroutinefunction(method), (
-                f"{method_name} is not async def"
-            )
+            assert inspect.iscoroutinefunction(method), f"{method_name} is not async def"
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +84,7 @@ class TestLoggingNFR:
         setup_logger(module="test_nfr", log_dir=log_dir)
 
         from loguru import logger
+
         logger.info("format test")
 
         log_files = list(log_dir.glob("test_nfr_*.log"))
@@ -135,14 +134,11 @@ class TestSecurity:
         import subprocess
 
         result = subprocess.run(
-            ["grep", "-rE",
-             r"(api_key|password|token|secret)\s*=\s*['\"/]",
-             "src/trader_off/"],
-            capture_output=True, text=True,
+            ["grep", "-rE", r"(api_key|password|token|secret)\s*=\s*['\"/]", "src/trader_off/"],
+            capture_output=True,
+            text=True,
         )
-        assert result.returncode != 0, (
-            f"Hard-coded credentials found:\n{result.stdout}"
-        )
+        assert result.returncode != 0, f"Hard-coded credentials found:\n{result.stdout}"
 
     # AC-NFR0600-03: model loading uses joblib, not pickle
     def test_model_serialization_uses_joblib(self):
@@ -160,6 +156,7 @@ class TestSecurity:
 
         with pytest.raises((FileNotFoundError, PathTraversalError)):
             from trader_off.training.serialize import load_model
+
             load_model("../escape", models_dir="/tmp")
 
 
@@ -226,7 +223,8 @@ class TestReproducibility:
         y_data = np.random.RandomState(42).randn(10)
         booster = lgb.train(
             {"objective": "regression", "verbose": -1, "num_leaves": 4},
-            lgb.Dataset(x_data, label=y_data), num_boost_round=3,
+            lgb.Dataset(x_data, label=y_data),
+            num_boost_round=3,
         )
         scaler = StandardScaler(mean_={"f1": 0.0}, std_={"f1": 1.0}, feature_names=["f1"])
         metadata = {
@@ -267,13 +265,21 @@ class TestDataScale:
             "date": dates * n_assets,
             "close": [10.0] * (n_assets * n_days),
         }
-        df = pl.DataFrame(data_dict, schema={
-            "asset": pl.Utf8, "date": pl.Date, "close": pl.Float64,
-        })
+        df = pl.DataFrame(
+            data_dict,
+            schema={
+                "asset": pl.Utf8,
+                "date": pl.Date,
+                "close": pl.Float64,
+            },
+        )
 
         output_dir = tmp_path / "splits"
         splits = prepare_walk_forward_splits(
-            df, start_year=2018, end_year=2018, train_window_years=1,
+            df,
+            start_year=2018,
+            end_year=2018,
+            train_window_years=1,
             output_dir=output_dir,
         )
         assert len(splits) == 1

@@ -1,27 +1,30 @@
 [project]
-version = "v0.1.0"
+version = "v0.2.0"
 repo = "github.com/agent-liyi/trader-off"
-project = "trader-off-v0.1.0"
-project_id = "https://github.com/users/agent-liyi/projects/3"
-spec_id = "v0.1.0-001-lgbm-asset-pricing"
-release_branch = "releases/v0.1.0"
+project = "trader-off-v0.2.0"
+project_id = "https://github.com/users/agent-liyi/projects/5"
+spec_id = "v0.2.0-001-factor-mining-retrain-optimizer"
+release_branch = "releases/v0.2.0"
 
 [meta]
-pre_commit = "installed (base)"
-created = "2026-07-16"
+pre_commit = "installed (python + base)"
+created = "2026-07-17"
 current_stage = "M-MILESTONE"
 security_audit = "enabled"
-smoke_test_issue = "#3 (closed)"
-smoke_test_pr = "#4 (closed)"
-dod = "All e2e tests pass; Unit test coverage >=95%; Security review (M-SECURITY)"
+smoke_test_issue = "#33 (closed)"
+smoke_test_pr = "#32 (closed)"
+dod = "All e2e tests pass; Unit test coverage >=97%; Mutation testing score >=80% (mutmut); Performance budgets met (train<=300s predict<=5s backtest<=600s mem<=16GB); Documentation sync (architecture/API/ADRs); Security review (M-SECURITY)"
 test_framework = "pytest"
 backlog_project = "https://github.com/users/agent-liyi/projects/4"
 
 [e2e]
 # Host-project paths that Shield writes / Prism reviews / commit-e2e stages
-paths = ["tests/e2e"]
+# tests/perf holds NFR-0100 budget tests (marked e2e) + baselines.json
+paths = ["tests/e2e", "tests/perf"]
 # Run the host project's own e2e command
-run = "uv run pytest tests/e2e -m e2e -v --timeout=90"
+# No global --timeout: full-pipeline e2e budget is 600s; per-test timeouts
+# are declared via @pytest.mark.timeout on each e2e/perf case (see test-plan §6.5)
+run = "uv run pytest tests/e2e tests/perf -m e2e -v"
 # e2e runs from repo root (cwd omitted = repo root)
 
 [integration]
