@@ -37,3 +37,24 @@
 - M-DEV: 48 source files, 50 test files, 97% coverage
 - M-E2E: 3 e2e tests + 17 integration tests
 - M-SECURITY: 0 findings (Judge audit pass)
+
+## v0.2.0 — 2026-07-20
+
+**Spec**: v0.2.0-001-factor-mining-retrain-optimizer
+**Branch**: releases/v0.2.0 → merged to main
+**Tag**: v0.2.0
+
+### Summary
+因子挖掘 + 定时重训练 + 组合优化器。LightGBM 因子挖掘流水线、scheduler 增量重训练（croniter 调度 + 并发安全）、cvxpy 组合优化（long-only / 满仓 / 行业中性 / 个股上限 10% / Max Sharpe），OptimizedTopKStrategy 作为 v0.1.0 策略输入，向后兼容 v0.1.0 模型与策略。
+
+### Stats
+- 159 AC (FR-0100~FR-4200 + NFR-0100~NFR-1000)
+- 21 e2e/perf tests passing (runtime ~31s); 单元+集成测试全覆盖（158/159 AC 验证，waiver 记录）
+- 性能预算达标：train≤300s / predict(4000资产)≤5s / backtest≤600s / 内存≤16GB
+- 安全审计：0 blocking（stage-1 六处 re.compile 误报经语义复审驳回；1 medium + 2 low 记入 backlog）
+
+### Stage artifacts
+- M-E2E: 21 e2e/perf tests（6 批次），AC-trace 31/159 人工豁免（e2e 设计仅覆盖 happy path）
+- M-BUGFIX: 无 bug，豁免跳过
+- M-SECURITY: Judge S 级审计 pass（人工确认）
+- Agent 模型统一：kimi-for-coding/k3 ×5 + deepseek/deepseek-v4-pro ×8（MiniMax 不可用已移除）
