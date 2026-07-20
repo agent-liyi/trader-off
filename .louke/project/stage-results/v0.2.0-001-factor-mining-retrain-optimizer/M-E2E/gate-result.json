@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-E2E",
+  "kind": "gate-result",
+  "role": "Keeper",
+  "verdict": "fail",
+  "reviewed_targets": [
+    "tests/e2e",
+    "tests/perf"
+  ],
+  "blocking_findings": [
+    "archer ci-scan failed (spec=v0.2.0-001-factor-mining-retrain-optimizer, tests=['tests/e2e', 'tests/perf'])"
+  ],
+  "accepted_risks": [],
+  "created_at": "2026-07-20T03:57:04Z",
+  "contract_bundle_hash": "81f5214ac33320474951525926fabed6434a1ea8539b3429a613dda927dfef82",
+  "metadata": {
+    "commit_range": "a490f1d..HEAD",
+    "tests_roots": [
+      "tests/e2e",
+      "tests/perf"
+    ]
+  },
+  "output_hash": "ab79f851fb009d4dd64db514a5a1b6c3f66a08d0fa0e0aab203dacd635398573"
+}

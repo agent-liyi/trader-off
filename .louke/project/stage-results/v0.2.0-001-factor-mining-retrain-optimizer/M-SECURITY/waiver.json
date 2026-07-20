@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.2.0-001-factor-mining-retrain-optimizer",
+  "stage": "M-SECURITY",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "Stage-1 regex scan flagged 6 critical eval/exec hits; all are re.compile() false positives (scheduler/registry.py:25,29,32; tests/integration/test_log_files.py:28,86; tests/unit/utils/test_logging.py:47), refuted by Judge stage-2 semantic review. Real findings: 1 medium (unauthenticated retrain API bindable to non-loopback; default loopback, backlog for next milestone) + 2 low. Zero blocking findings. Human reviewer accepted on 2026-07-20."
+  ],
+  "accepted_risks": [
+    "Stage-1 regex scan flagged 6 critical eval/exec hits; all are re.compile() false positives (scheduler/registry.py:25,29,32; tests/integration/test_log_files.py:28,86; tests/unit/utils/test_logging.py:47), refuted by Judge stage-2 semantic review. Real findings: 1 medium (unauthenticated retrain API bindable to non-loopback; default loopback, backlog for next milestone) + 2 low. Zero blocking findings. Human reviewer accepted on 2026-07-20."
+  ],
+  "created_at": "2026-07-20T05:58:23Z",
+  "contract_bundle_hash": "81f5214ac33320474951525926fabed6434a1ea8539b3429a613dda927dfef82",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "5fdcbfe75933ed774e6244e82dfbace8c2b2087ca8bf8f029e19d461e6ffedeb"
+}
