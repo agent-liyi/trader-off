@@ -707,10 +707,10 @@ AC-NFR0400-03
 
 AC-NFR0400-04
 
-- 给定:v0.1.0 159 AC 与 v0.2.0 180 AC(含 e2e/perf)的总数。
-- 当:v0.3.0 升级后。
-- 那么:≥ 339 个旧断言全保留(v0.3.0 新增断言增量添加,不删旧断言)。
-- 断言:`result.stdout.count("PASSED") + result.stdout.count("passed") >= 339`。
+- 给定:v0.1.0 acceptance.md 共 79 AC(`grep -c "^### AC-[0-9]\+" .louke/project/specs/v0.1.0-001-lgbm-asset-pricing/acceptance.md` 验证),v0.2.0 acceptance.md 共 159 AC(同上验证 `v0.2.0-001-factor-mining-retrain-optimizer/acceptance.md`)。v0.2.0 的 21 个 e2e/perf 测试是 159 AC 的子集(每 AC 可被单元/集成/e2e/perf 多层测试覆盖),不构成独立计数。
+- 当:v0.3.0 升级后运行 `uv run pytest tests/unit tests/integration tests/e2e tests/perf -v`。
+- 那么:≥ 238 个旧断言(v0.1.0 79 + v0.2.0 159)全保留(v0.3.0 新增断言增量添加,不删旧断言);21 个 e2e/perf 测试子集必须全部通过。
+- 断言:`(result.stdout.count("PASSED") + result.stdout.count("passed")) >= 238 and result.stdout.count("PASSED") >= 21`。
 
 ---
 

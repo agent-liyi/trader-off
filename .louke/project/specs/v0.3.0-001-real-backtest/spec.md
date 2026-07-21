@@ -334,11 +334,16 @@ priority: P0
 
 - v0.1.0 FR-1100 AC-1/2/3(CLI exit 0 + 输出文件 + `--capital` 缺失报错)继续通过。
 - v0.1.0 FR-1200 AC-1/2/3(compute_performance_metrics 6 键 + max_drawdown 计算 + `<30` 天 `InsufficientDataError`)继续通过。
-- v0.2.0 全部 21 个 e2e/perf 测试继续通过(含 `tests/perf/test_perf_budget.py::TestBacktestPerf::test_backtest_under_600s`)。
+- v0.2.0 全部 21 个 e2e/perf 测试(子集自 v0.2.0 159 AC)继续通过(含 `tests/perf/test_perf_budget.py::TestBacktestPerf::test_backtest_under_600s`)。
 - v0.2.0 AC-FR1500-04(调度器隔离)继续通过(见 NFR-0100)。
 - v0.2.0 weights.csv 解耦(AC-FR4200-02/04/05)继续工作(见 NFR-0300)。
 - 验证命令:`uv run pytest tests/unit tests/integration tests/e2e -v` 全绿,无 `FAILED` 或 `ERROR`。
-- v0.1.0 的 159 AC + v0.2.0 的 21 e2e/perf 测试 = 180 个断言全保留(v0.3.0 新增断言增量添加,不删旧断言)。
+- **向后兼容断言计数(Ground Truth,核对于 v0.3.0 spec 起草时)**:
+  - v0.1.0 acceptance.md:`grep -c "^### AC-[0-9]\+" acceptance.md` = **79 AC**(FR-0100~1600 + NFR-0100~0700,每 FR/NFR 平均 3-4 AC)
+  - v0.2.0 acceptance.md:`grep -c "^### AC-[0-9]\+" acceptance.md` = **159 AC**(FR-0100~0900 模块 A + FR-1500~2700 模块 B + FR-3000~4200 模块 C + NFR-0100~0900)
+  - v0.2.0 的 21 个 e2e/perf 测试是 159 AC 的**子集**(不是独立于 AC 的另一组断言),其中部分 AC 既属单元/集成测试又覆盖 e2e/perf 路径
+  - **总保留断言**:v0.1.0 79 AC + v0.2.0 159 AC = **238 个旧断言**必须全保留,v0.3.0 新增断言增量添加,不删旧断言。
+
 
 ---
 
