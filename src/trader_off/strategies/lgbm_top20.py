@@ -4,6 +4,7 @@ A long-only Top-K equal-weight strategy driven by lightGBM model predictions.
 Inherits from BaseStrategy (millionaire framework or compat shim).
 """
 
+import math
 from datetime import datetime
 
 import polars as pl
@@ -99,39 +100,79 @@ class LGBMTop20Strategy(BaseStrategy):
         target_assets = set(targets["asset"].to_list())
         weight = 1.0 / self.top_k if self.top_k > 0 else 0.0
 
-        # Step 1: Clear positions not in target list first.
-        # Selling first frees cash before rebalancing targets, avoiding
-        # transient cash depletion when buys precede sells.
-        for asset in list(self._position_cache.keys()):
-            if asset not in target_assets:
+        # Snapshot pre-sell values BEFORE any trades.
+        # Fix #2: cash_factor must use pre-sell snapshot to avoid drift.
+        initial_total = self.broker.total_asset()
+        initial_market_value = self.broker.market_value()
+
+        try:
+            # Step 1: Clear positions not in target list first.
+            # Selling first frees cash before rebalancing targets, avoiding
+            # transient cash depletion when buys precede sells.
+            for asset in list(self._position_cache.keys()):
+                if asset not in target_assets:
+                    await self.broker.trade_target_pct(
+                        asset=asset,
+                        target_pct=0.0,
+                        order_time=tm,
+                    )
+                    del self._position_cache[asset]
+
+            # Step 2: Compute cash_factor from pre-sell snapshot with validation.
+            cash_factor = self._compute_cash_factor(initial_market_value, initial_total)
+            adjusted_weight = weight * cash_factor
+
+            # Step 3: Place orders for target positions
+            for row in targets.iter_rows(named=True):
                 await self.broker.trade_target_pct(
-                    asset=asset,
-                    target_pct=0.0,
+                    asset=row["asset"],
+                    target_pct=adjusted_weight,
                     order_time=tm,
                 )
-                del self._position_cache[asset]
+                self._position_cache[row["asset"]] = weight
 
-        # Step 2: Adjust target weights for residual cash.
-        # trade_target_pct uses total_asset() (cash + market_value) as its
-        # denominator. When cash > 0, the sum of position weights is less
-        # than the intended total, causing perpetual buying pressure that
-        # drains cash over consecutive trading days.  Scaling by
-        # market_value/total anchors the allocation to the invested portion.
-        total = self.broker.total_asset()
-        market_value = self.broker.market_value()
-        cash_factor = market_value / total if total > 0 and market_value > 0 else 1.0
-        adjusted_weight = weight * cash_factor
+            logger.info(f"on_day_open {tm.date()}: targets={len(targets)}, weight={weight:.4f}")
+        finally:
+            # Fix #1: Reconcile _position_cache with broker.positions after
+            # each rebalance cycle. Full atomicity deferred to v0.4.x.
+            self._reconcile_position_cache()
 
-        # Step 3: Place orders for target positions
-        for row in targets.iter_rows(named=True):
-            await self.broker.trade_target_pct(
-                asset=row["asset"],
-                target_pct=adjusted_weight,
-                order_time=tm,
+    def _compute_cash_factor(self, market_value: float, total: float) -> float:
+        """Compute cash factor with range validation.
+
+        Args:
+            market_value: Total market value of all positions.
+            total: Total portfolio value (cash + market_value).
+
+        Returns:
+            cash_factor in range [0, 1]; falls back to 1.0 if invalid.
+        """
+        if total > 0 and market_value > 0:
+            raw = market_value / total
+            if math.isfinite(raw) and 0.0 <= raw <= 1.0:
+                return raw
+            logger.warning(
+                f"Invalid cash_factor={raw:.6f} (mv={market_value:.2f}, total={total:.2f}), "
+                "falling back to 1.0"
             )
-            self._position_cache[row["asset"]] = weight
+        return 1.0
 
-        logger.info(f"on_day_open {tm.date()}: targets={len(targets)}, weight={weight:.4f}")
+    def _reconcile_position_cache(self) -> None:
+        """Reconcile _position_cache with broker.positions after rebalance.
+
+        Removes entries from cache that are not present in broker.positions,
+        logging discrepancies as warnings. Full atomicity deferred to v0.4.x.
+        """
+        broker_positions = self.broker.positions
+        if not isinstance(broker_positions, dict):
+            return
+        for asset in list(self._position_cache.keys()):
+            if asset not in broker_positions:
+                logger.warning(
+                    f"Position cache discrepancy: '{asset}' in cache but not in "
+                    "broker.positions, removing from cache"
+                )
+                del self._position_cache[asset]
 
     async def on_bar(self, tm: datetime, quote: dict | None = None, frame_type=None) -> None:
         """No-op for daily strategy."""
