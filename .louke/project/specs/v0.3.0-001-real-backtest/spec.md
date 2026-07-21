@@ -279,6 +279,8 @@ priority: P0
 - v0.2.0 AC-FR1500-04 仍通过(原断言文件 `tests/integration/test_retrain_full.py` 或 `test_scheduler_resilience.py` 中的 scheduler 隔离测试零修改即可继续通过)。
 - v0.3.0 仅修改 `src/trader_off/backtest/{runner,metrics}.py` 与新增 `scripts/convert_fixture_to_quantide.py`,scheduler 模块零改动(交易日历已合并入 FR-0500,无独立脚本)。
 
+> Backlog (面向 v0.4.0 复审): v0.3.0 完成真实接入后, 技术风险已降低(quantide 上游重构通过 compat shim 隔离, 不影响 trader-off 资产)。v0.4.0 起将单独 spec 评估 cron 触发器是否迁移到 `quantide.core.scheduler.SchedulerManager`, 不在 v0.3.0 范围。
+
 ---
 
 <a id="nfr-0200"></a>
@@ -363,3 +365,14 @@ priority: P0
 | 待 M-FOUND | quantide.service.metrics 真实接口 | 在 M-FOUND 阶段读 `quantide.service.metrics` 源码确认;若函数名/参数/返回值与本 FR-0800 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | Calendar.load() 真实 API | 在 M-FOUND 阶段读 `quantide.service.calendar.Calendar` 源码确认;若 `load()` 签名/参数/返回值与本 FR-0500 Step B 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | BacktestBroker.bills() 真实 schema | 在 M-FOUND 阶段读 `quantide.service.broker.BacktestBroker.bills()` 源码确认返回列定义 | ⚠️ [M-FOUND 锁定] |
+
+> **Lex [RESOLVED]:** Issue #84 cleanup incomplete.
+
+spec.md 和 acceptance.md 中 FR-0400 已正确删除，63 行 AC (AC-FR0400-01~05) 也已移除。但 GitHub Issue #84 仍然存在，其 Spec Link 和 AC 字段引用已删除的锚点:
+
+- L5 anchor "fr-0400" not found in spec.md
+- L7 anchor "ac-fr-0400" not found in acceptance.md
+
+Clarification Log line 360 写 "Issue #84 关闭"，但 `verify-issue` 的 L8 双向覆盖检查要求 issue 锚点可解析——仅关闭 (close) 不够，需删除 (delete) issue 或更新其字段指向新的 FR-0500 锚点。
+
+建议：直接删除 Issue #84（内容已完全合并入 FR-0500 Issue #85），或将其 Spec Link 更新为 FR-0500。

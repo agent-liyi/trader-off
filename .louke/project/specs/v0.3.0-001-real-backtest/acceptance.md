@@ -588,6 +588,8 @@ AC-NFR0100-03
 - 那么:仅修改 `src/trader_off/backtest/{runner,metrics}.py` 与新增 `scripts/convert_fixture_to_quantide.py`(FR-0400 已合并入 FR-0500,无独立 `generate_calendar.py`),scheduler 路径零修改。
 - 断言:`subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"]).stdout.splitlines()` 与上述列表一致(或子集)。
 
+> Backlog cross-reference (面向 v0.4.0 复审): 与 spec.md NFR-0100 Backlog 段对齐 — v0.3.0 不评估 cron 触发器迁移到 `quantide.core.scheduler.SchedulerManager`,该议题留给 v0.4.0 单独 spec 评估。本 AC-1/2/3 仅验证 v0.3.0 当前状态下 scheduler 模块不直接 import quantide 业务符号的隔离承诺;v0.4.0 起若引入新耦合路径,需新建 NFR 或扩展本 NFR 范围。
+
 ---
 
 <a id="ac-nfr-0200"></a>
