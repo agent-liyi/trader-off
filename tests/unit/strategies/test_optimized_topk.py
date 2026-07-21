@@ -5,6 +5,11 @@ AC-FR4200-02: weights.csv exists → strategy.weights non-empty dict, len >= 20,
 AC-FR4200-03: on_day_open calls broker.trade_target_pct for each weighted asset + extra dict
 AC-FR4200-04: weights.csv missing → WARNING log + falls back to LGBMTop20Strategy
 AC-FR4200-05: weights.csv stale (mtime > 5 days) → WARNING log + fallback
+
+Issue #115 — Rebalance logic risk fixes:
+  - Fix 1: Non-atomic rebalance → reconcile _position_cache with broker.positions
+  - Fix 2: cash_factor drift → snapshot total/market_value BEFORE sells
+  - Fix 3: cash_factor range validation → NaN/negative/overflow fallback to 1.0
 """
 
 import time
@@ -38,6 +43,100 @@ class MockBroker:
     def positions(self) -> dict:
         """Return current positions dict."""
         return {}
+
+
+# ---------------------------------------------------------------------------
+# Issue #115 — test brokers for rebalance logic risk fixes
+# ---------------------------------------------------------------------------
+
+
+class FailOnBuyBroker:
+    """Broker that raises on a specific buy, used for atomic rebalance test."""
+
+    def __init__(self, fail_asset: str = "stock_010"):
+        self.calls: list[dict] = []
+        self.fail_asset = fail_asset
+        self._positions: dict[str, float] = {}
+        self._total_val = 1_000_000.0
+        self._mv_val = 800_000.0
+
+    async def trade_target_pct(self, asset, target_pct, **kwargs):
+        self.calls.append({"asset": asset, "pct": target_pct})
+        if target_pct > 0:
+            # Buy: record position
+            self._positions[asset] = target_pct
+            if asset == self.fail_asset:
+                # Simulate partial failure: the position was NOT actually set
+                del self._positions[asset]
+                raise RuntimeError(f"Buy failed for {asset}")
+        else:
+            # Sell: remove from positions
+            self._positions.pop(asset, None)
+
+    def total_asset(self) -> float:
+        return self._total_val
+
+    def market_value(self) -> float:
+        return self._mv_val
+
+    @property
+    def positions(self) -> dict:
+        return self._positions
+
+
+class TracingBroker:
+    """Broker that traces call order for cash_factor pre-sell snapshot test."""
+
+    def __init__(self, total: float = 1_000_000.0, market_value: float = 800_000.0):
+        self.calls: list[dict] = []
+        self.trace: list[str] = []  # ordered method call trace
+        self._total_val = total
+        self._mv_val = market_value
+        self._positions: dict[str, float] = {}
+
+    async def trade_target_pct(self, asset, target_pct, **kwargs):
+        self.calls.append({"asset": asset, "pct": target_pct})
+        self.trace.append("trade")
+
+    def total_asset(self) -> float:
+        self.trace.append("total")
+        return self._total_val
+
+    def market_value(self) -> float:
+        self.trace.append("mv")
+        return self._mv_val
+
+    @property
+    def positions(self) -> dict:
+        return self._positions
+
+
+class ValidationBroker:
+    """Broker with configurable total_asset / market_value for cash_factor validation."""
+
+    def __init__(self, total: float = 1_000_000.0, market_value: float = 800_000.0):
+        self.calls: list[dict] = []
+        self._total = total
+        self._mv = market_value
+        self._positions: dict[str, float] = {}
+
+    async def trade_target_pct(self, asset, target_pct, **kwargs):
+        self.calls.append({"asset": asset, "pct": target_pct})
+
+    def total_asset(self) -> float:
+        return self._total
+
+    def market_value(self) -> float:
+        return self._mv
+
+    @property
+    def positions(self) -> dict:
+        return self._positions
+
+
+# ---------------------------------------------------------------------------
+# Test classes
+# ---------------------------------------------------------------------------
 
 
 class TestOptimizedTopKStrategyInheritance:
@@ -228,6 +327,172 @@ class TestOptimizedTopKStrategyOnDayOpen:
         # stock_old should have been cleared (pct=0)
         cleared_assets = [c["asset"] for c in broker.calls if c["pct"] == 0.0]
         assert "stock_old" in cleared_assets or len(strategy._position_cache) >= 0
+
+
+# ---------------------------------------------------------------------------
+# Issue #115 — Rebalance logic risk fixes
+# ---------------------------------------------------------------------------
+
+
+class TestOptimizedTopKStrategyRebalanceFixes:
+    """Tests for Issue #115: rebalance logic risk fixes in optimized_topk."""
+
+    @staticmethod
+    def _make_weights_csv(tmp_path: Path) -> Path:
+        """Create a valid weights.csv with 25 tickers."""
+        path = tmp_path / "weights.csv"
+        rows = []
+        for i in range(25):
+            w = 0.04 if i < 20 else 0.0
+            rows.append(f"stock_{i:03d},{w},banking,{0.001 + i * 0.0001},true")
+        path.write_text("asset,weight,sector,mu,in_universe\n" + "\n".join(rows))
+        return path
+
+    # --- Fix 1: atomic rebalance ---
+
+    async def test_atomic_rebalance_position_cache_reconciled(self, tmp_path) -> None:
+        """Fix #1: after rebalance cycle, _position_cache matches broker.positions."""
+        self._make_weights_csv(tmp_path)
+        broker = FailOnBuyBroker(fail_asset="stock_010")
+
+        strategy = OptimizedTopKStrategy(
+            broker=broker,
+            config={"weights_dir": str(tmp_path), "top_k": 20},
+        )
+        await strategy.init()
+        # Inject stale positions into cache that should be cleared
+        strategy._position_cache["STALE_ASSET"] = 0.10
+
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        with pytest.raises(RuntimeError, match="Buy failed"):
+            await strategy.on_day_open(tm)
+
+        # After exception, cache should be reconciled with broker.positions.
+        # stock_010 is NOT in broker.positions because the buy failed.
+        # STALE_ASSET was sold and removed from broker.positions.
+        assert "stock_010" not in strategy._position_cache, (
+            "stock_010 should be removed from cache after failed buy"
+        )
+        assert "STALE_ASSET" not in strategy._position_cache, (
+            "STALE_ASSET should be removed because it was sold"
+        )
+        # Keys should match: successfully bought assets present in both
+        assert set(strategy._position_cache.keys()) == set(broker.positions.keys()), (
+            "_position_cache keys should match broker.positions keys after reconciliation"
+        )
+
+    # --- Fix 2: cash_factor pre-sell snapshot ---
+
+    async def test_cash_factor_uses_pre_sell_snapshot(self, tmp_path) -> None:
+        """Fix #2: cash_factor computed from pre-sell total_asset/market_value snapshot."""
+        self._make_weights_csv(tmp_path)
+        # 1M total, 800K market → cash_factor = 0.8
+        broker = TracingBroker(total=1_000_000.0, market_value=800_000.0)
+
+        strategy = OptimizedTopKStrategy(
+            broker=broker,
+            config={"weights_dir": str(tmp_path), "top_k": 20},
+        )
+        await strategy.init()
+        # Inject stale positions so sells happen BEFORE cash_factor is computed.
+        # This reproduces the drift bug: in old code, total_asset/market_value
+        # are called AFTER sells, causing stale values.
+        strategy._position_cache = {"STALE_A": 0.1, "STALE_B": 0.05}
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        await strategy.on_day_open(tm)
+
+        # Verify total_asset() and market_value() were called before any trade
+        trace = broker.trace
+        assert "total" in trace, "total_asset() should be called"
+        assert "mv" in trace, "market_value() should be called"
+
+        first_trade = trace.index("trade")
+        first_total = trace.index("total")
+        first_mv = trace.index("mv")
+
+        assert first_total < first_trade, (
+            "total_asset() must be called before any trade_target_pct (pre-sell snapshot)"
+        )
+        assert first_mv < first_trade, (
+            "market_value() must be called before any trade_target_pct (pre-sell snapshot)"
+        )
+
+        # Verify adjusted weights reflect pre-sell cash_factor = 0.8
+        # Each target gets weight=0.04 * 0.8 = 0.032
+        expected_adjusted = 0.04 * 0.8  # 0.032
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(expected_adjusted, rel=1e-6), (
+                f"Adjusted weight for {call['asset']} should be {expected_adjusted}, "
+                f"got {call['pct']}"
+            )
+
+    # --- Fix 3: cash_factor range validation ---
+
+    async def test_cash_factor_range_validation_nan(self, tmp_path) -> None:
+        """Fix #3: NaN cash_factor → fallback to 1.0."""
+        self._make_weights_csv(tmp_path)
+        broker = ValidationBroker(total=float("nan"), market_value=800_000.0)
+
+        strategy = OptimizedTopKStrategy(
+            broker=broker,
+            config={"weights_dir": str(tmp_path), "top_k": 20},
+        )
+        await strategy.init()
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        await strategy.on_day_open(tm)
+
+        # cash_factor should be 1.0, so adjusted_weight = raw weight
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(0.04, rel=1e-6), (
+                f"With NaN total, cash_factor should fallback to 1.0, got {call['pct']}"
+            )
+
+    async def test_cash_factor_range_validation_negative(self, tmp_path) -> None:
+        """Fix #3: negative cash_factor → fallback to 1.0."""
+        self._make_weights_csv(tmp_path)
+        broker = ValidationBroker(total=-100_000.0, market_value=800_000.0)
+
+        strategy = OptimizedTopKStrategy(
+            broker=broker,
+            config={"weights_dir": str(tmp_path), "top_k": 20},
+        )
+        await strategy.init()
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        await strategy.on_day_open(tm)
+
+        # cash_factor should be 1.0 (negative total → fallback)
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(0.04, rel=1e-6), (
+                "With negative total, cash_factor should fallback to 1.0"
+            )
+
+    async def test_cash_factor_range_validation_overflow(self, tmp_path) -> None:
+        """Fix #3: cash_factor > 1.0 (market_value > total) → fallback to 1.0."""
+        self._make_weights_csv(tmp_path)
+        broker = ValidationBroker(total=500_000.0, market_value=800_000.0)
+
+        strategy = OptimizedTopKStrategy(
+            broker=broker,
+            config={"weights_dir": str(tmp_path), "top_k": 20},
+        )
+        await strategy.init()
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        await strategy.on_day_open(tm)
+
+        # cash_factor should be 1.0 (>1.0 → fallback)
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(0.04, rel=1e-6), (
+                "With cash_factor > 1.0, should fallback to 1.0"
+            )
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ for each asset in the optimized portfolio.
 
 from __future__ import annotations
 
+import math
 import time
 from datetime import datetime
 from pathlib import Path
@@ -155,42 +156,91 @@ class OptimizedTopKStrategy(BaseStrategy):
         target_assets = {asset for asset, _ in sorted_assets}
         weight_total = sum(w for _, w in sorted_assets)
 
-        # Step 1: Clear positions not in target list first.
-        # Selling first frees cash before rebalancing targets, avoiding
-        # transient cash depletion when buys precede sells.
-        for asset in list(self._position_cache.keys()):
-            if asset not in target_assets:
+        # Snapshot pre-sell values BEFORE any trades.
+        # Fix #2: cash_factor must use pre-sell snapshot to avoid drift
+        # caused by sold assets converting to cash and reducing market_value.
+        initial_total = self.broker.total_asset()
+        initial_market_value = self.broker.market_value()
+
+        try:
+            # Step 1: Clear positions not in target list first.
+            # Selling first frees cash before rebalancing targets, avoiding
+            # transient cash depletion when buys precede sells.
+            for asset in list(self._position_cache.keys()):
+                if asset not in target_assets:
+                    await self.broker.trade_target_pct(
+                        asset=asset,
+                        target_pct=0.0,
+                        order_time=tm,
+                    )
+                    del self._position_cache[asset]
+
+            # Step 2: Compute cash_factor from pre-sell snapshot with validation.
+            # trade_target_pct uses total_asset() (cash + market_value) as its
+            # denominator. When cash > 0, the sum of position weights is less
+            # than total_weight, causing perpetual buying pressure that drains
+            # cash over consecutive trading days.  Scaling by market_value/total
+            # anchors the allocation to the invested portion only.
+            cash_factor = self._compute_cash_factor(initial_market_value, initial_total)
+
+            # Step 3: Place orders for target positions
+            for asset, weight in sorted_assets:
+                adjusted_weight = float(weight) * cash_factor
                 await self.broker.trade_target_pct(
                     asset=asset,
-                    target_pct=0.0,
+                    target_pct=adjusted_weight,
                     order_time=tm,
                 )
-                del self._position_cache[asset]
+                self._position_cache[asset] = float(weight)
 
-        # Step 2: Adjust target weights for residual cash.
-        # trade_target_pct uses total_asset() (cash + market_value) as its
-        # denominator. When cash > 0, the sum of position weights is less
-        # than total_weight, causing perpetual buying pressure that drains
-        # cash over consecutive trading days.  Scaling by market_value/total
-        # anchors the allocation to the invested portion only.
-        total = self.broker.total_asset()
-        market_value = self.broker.market_value()
-        cash_factor = market_value / total if total > 0 and market_value > 0 else 1.0
-
-        # Step 3: Place orders for target positions
-        for asset, weight in sorted_assets:
-            adjusted_weight = float(weight) * cash_factor
-            await self.broker.trade_target_pct(
-                asset=asset,
-                target_pct=adjusted_weight,
-                order_time=tm,
+            logger.info(
+                f"on_day_open {tm.date()}: targets={len(sorted_assets)}, "
+                f"total_weight={weight_total:.4f}"
             )
-            self._position_cache[asset] = float(weight)
+        finally:
+            # Fix #1: Reconcile _position_cache with broker.positions after
+            # each rebalance cycle. If buy fails mid-loop, cache may diverge
+            # from actual positions; reconciliation detects and corrects this.
+            # Full atomicity (pre-validate or snapshot/restore) is planned for v0.4.x.
+            self._reconcile_position_cache()
 
-        logger.info(
-            f"on_day_open {tm.date()}: targets={len(sorted_assets)}, "
-            f"total_weight={weight_total:.4f}"
-        )
+    def _compute_cash_factor(self, market_value: float, total: float) -> float:
+        """Compute cash factor with range validation.
+
+        Args:
+            market_value: Total market value of all positions.
+            total: Total portfolio value (cash + market_value).
+
+        Returns:
+            cash_factor in range [0, 1]; falls back to 1.0 if invalid.
+        """
+        if total > 0 and market_value > 0:
+            raw = market_value / total
+            if math.isfinite(raw) and 0.0 <= raw <= 1.0:
+                return raw
+            logger.warning(
+                f"Invalid cash_factor={raw:.6f} (mv={market_value:.2f}, total={total:.2f}), "
+                "falling back to 1.0"
+            )
+        return 1.0
+
+    def _reconcile_position_cache(self) -> None:
+        """Reconcile _position_cache with broker.positions after rebalance.
+
+        Removes entries from cache that are not present in broker.positions,
+        logging discrepancies as warnings. This is a best-effort safety net;
+        full atomicity (pre-validate or snapshot/restore) is deferred to v0.4.x.
+        """
+        broker_positions = self.broker.positions
+        if not isinstance(broker_positions, dict):
+            return
+        for asset in list(self._position_cache.keys()):
+            if asset not in broker_positions:
+                logger.warning(
+                    f"Position cache discrepancy: '{asset}' in cache but not in "
+                    "broker.positions, removing from cache"
+                )
+                del self._position_cache[asset]
 
     async def on_bar(self, tm: datetime, quote: dict | None = None, frame_type=None) -> None:
         """No-op for daily strategy."""

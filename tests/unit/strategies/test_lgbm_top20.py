@@ -2,11 +2,17 @@
 
 Uses FakeBroker from conftest.py instead of MagicMock for broker,
 addressing Prism mock-overuse findings.
+
+Issue #115 — Rebalance logic risk fixes:
+  - Fix 1: Non-atomic rebalance → reconcile _position_cache with broker.positions
+  - Fix 2: cash_factor drift → snapshot total/market_value BEFORE sells
+  - Fix 3: cash_factor range validation → NaN/negative/overflow fallback to 1.0
 """
 
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import polars as pl
 import pytest
 import yaml
 
@@ -254,3 +260,261 @@ async def test_on_day_open_clears_stale_positions(
 
     stale_clears = [c for c in fake_broker.calls if c["asset"] == "STALE_ASSET" and c["pct"] == 0.0]
     assert len(stale_clears) == 1
+
+
+# ---------------------------------------------------------------------------
+# Issue #115 — Rebalance logic risk fix tests for LGBMTop20Strategy
+# ---------------------------------------------------------------------------
+
+
+class FailOnBuyBroker:
+    """Broker that raises on a specific buy, used for atomic rebalance test."""
+
+    def __init__(self, fail_asset: str = "ASSET_B"):
+        self.calls: list[dict] = []
+        self.fail_asset = fail_asset
+        self._positions: dict[str, float] = {}
+        self._total_val = 1_000_000.0
+        self._mv_val = 800_000.0
+
+    async def trade_target_pct(self, asset, target_pct, **kwargs):
+        self.calls.append({"asset": asset, "pct": target_pct})
+        if target_pct > 0:
+            self._positions[asset] = target_pct
+            if asset == self.fail_asset:
+                del self._positions[asset]
+                raise RuntimeError(f"Buy failed for {asset}")
+        else:
+            self._positions.pop(asset, None)
+
+    def total_asset(self) -> float:
+        return self._total_val
+
+    def market_value(self) -> float:
+        return self._mv_val
+
+    @property
+    def positions(self) -> dict:
+        return self._positions
+
+
+class TracingBroker:
+    """Broker that traces call order for cash_factor pre-sell snapshot test."""
+
+    def __init__(self, total: float = 1_000_000.0, market_value: float = 800_000.0):
+        self.calls: list[dict] = []
+        self.trace: list[str] = []
+        self._total_val = total
+        self._mv_val = market_value
+        self._positions: dict[str, float] = {}
+
+    async def trade_target_pct(self, asset, target_pct, **kwargs):
+        self.calls.append({"asset": asset, "pct": target_pct})
+        self.trace.append("trade")
+
+    def total_asset(self) -> float:
+        self.trace.append("total")
+        return self._total_val
+
+    def market_value(self) -> float:
+        self.trace.append("mv")
+        return self._mv_val
+
+    @property
+    def positions(self) -> dict:
+        return self._positions
+
+
+class ValidationBroker:
+    """Broker with configurable total_asset / market_value for cash_factor validation."""
+
+    def __init__(self, total: float = 1_000_000.0, market_value: float = 800_000.0):
+        self.calls: list[dict] = []
+        self._total = total
+        self._mv = market_value
+        self._positions: dict[str, float] = {}
+
+    async def trade_target_pct(self, asset, target_pct, **kwargs):
+        self.calls.append({"asset": asset, "pct": target_pct})
+
+    def total_asset(self) -> float:
+        return self._total
+
+    def market_value(self) -> float:
+        return self._mv
+
+    @property
+    def positions(self) -> dict:
+        return self._positions
+
+
+class TestLGBMTop20RebalanceFixes:
+    """Tests for Issue #115: rebalance logic risk fixes in lgbm_top20."""
+
+    @staticmethod
+    def _make_predictions(assets: list[str]) -> pl.DataFrame:
+        """Create a predictions DataFrame with scored assets."""
+        data = {
+            "asset": assets,
+            "score": [0.10 - i * 0.01 for i in range(len(assets))],
+            "rank": list(range(1, len(assets) + 1)),
+        }
+        return pl.DataFrame(data)
+
+    @staticmethod
+    def _make_strategy(broker, top_k: int = 3) -> LGBMTop20Strategy:
+        """Create a strategy instance with pre-set state (no init needed)."""
+        strategy = LGBMTop20Strategy(
+            broker=broker,
+            config={"model_version": "v1", "top_k": top_k},
+        )
+        strategy.model = MagicMock()
+        strategy.model_version = "v1"
+        strategy.top_k = top_k
+        strategy.min_score = -float("inf")
+        strategy.watchlist = ["ASSET_A", "ASSET_B", "ASSET_C", "ASSET_D"]
+        return strategy
+
+    # --- Fix 1: atomic rebalance ---
+
+    @pytest.mark.asyncio
+    async def test_atomic_rebalance_position_cache_reconciled(self) -> None:
+        """Fix #1: after rebalance, _position_cache matches broker.positions."""
+        broker = FailOnBuyBroker(fail_asset="ASSET_B")
+        strategy = self._make_strategy(broker, top_k=3)
+        # Inject stale position
+        strategy._position_cache = {"STALE_ASSET": 0.5}
+
+        predictions = self._make_predictions(["ASSET_A", "ASSET_B", "ASSET_C"])
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        with patch(
+            "trader_off.prediction.service.predict",
+            new_callable=AsyncMock,
+            return_value=predictions,
+        ):
+            with pytest.raises(RuntimeError, match="Buy failed"):
+                await strategy.on_day_open(tm)
+
+        # After exception, cache reconciled with broker.positions
+        assert "ASSET_B" not in strategy._position_cache, (
+            "ASSET_B should be removed from cache after failed buy"
+        )
+        assert "STALE_ASSET" not in strategy._position_cache, (
+            "STALE_ASSET should be removed because it was sold"
+        )
+        assert set(strategy._position_cache.keys()) == set(broker.positions.keys()), (
+            "_position_cache keys should match broker.positions keys after reconciliation"
+        )
+
+    # --- Fix 2: cash_factor pre-sell snapshot ---
+
+    @pytest.mark.asyncio
+    async def test_cash_factor_uses_pre_sell_snapshot(self) -> None:
+        """Fix #2: cash_factor computed from pre-sell total_asset/market_value."""
+        broker = TracingBroker(total=1_000_000.0, market_value=800_000.0)
+        strategy = self._make_strategy(broker, top_k=3)
+        # Inject stale positions so sells happen FIRST, triggering the drift bug
+        strategy._position_cache = {"STALE_X": 0.1, "STALE_Y": 0.05}
+
+        predictions = self._make_predictions(["ASSET_A", "ASSET_B", "ASSET_C"])
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        with patch(
+            "trader_off.prediction.service.predict",
+            new_callable=AsyncMock,
+            return_value=predictions,
+        ):
+            await strategy.on_day_open(tm)
+
+        trace = broker.trace
+        first_trade = trace.index("trade")
+        first_total = trace.index("total")
+        first_mv = trace.index("mv")
+
+        assert first_total < first_trade, (
+            "total_asset() before any trade_target_pct (pre-sell snapshot)"
+        )
+        assert first_mv < first_trade, (
+            "market_value() before any trade_target_pct (pre-sell snapshot)"
+        )
+
+        # With top_k=3, equal weight = 1/3 ≈ 0.3333
+        # cash_factor = 800K/1M = 0.8, adjusted_weight = 0.3333 * 0.8 ≈ 0.266667
+        expected_weight = (1.0 / 3) * 0.8
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(expected_weight, rel=1e-6), (
+                f"Adjusted weight should be {expected_weight}, got {call['pct']}"
+            )
+
+    # --- Fix 3: cash_factor range validation ---
+
+    @pytest.mark.asyncio
+    async def test_cash_factor_range_validation_nan(self) -> None:
+        """Fix #3: NaN cash_factor → fallback to 1.0."""
+        broker = ValidationBroker(total=float("nan"), market_value=800_000.0)
+        strategy = self._make_strategy(broker, top_k=3)
+
+        predictions = self._make_predictions(["ASSET_A", "ASSET_B", "ASSET_C"])
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        with patch(
+            "trader_off.prediction.service.predict",
+            new_callable=AsyncMock,
+            return_value=predictions,
+        ):
+            await strategy.on_day_open(tm)
+
+        expected_weight = 1.0 / 3  # cash_factor=1.0
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(expected_weight, rel=1e-6), (
+                f"NaN: should fallback to 1.0, got {call['pct']}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_cash_factor_range_validation_negative(self) -> None:
+        """Fix #3: negative cash_factor → fallback to 1.0."""
+        broker = ValidationBroker(total=-100_000.0, market_value=800_000.0)
+        strategy = self._make_strategy(broker, top_k=3)
+
+        predictions = self._make_predictions(["ASSET_A", "ASSET_B", "ASSET_C"])
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        with patch(
+            "trader_off.prediction.service.predict",
+            new_callable=AsyncMock,
+            return_value=predictions,
+        ):
+            await strategy.on_day_open(tm)
+
+        expected_weight = 1.0 / 3
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(expected_weight, rel=1e-6), (
+                "Negative: should fallback to 1.0"
+            )
+
+    @pytest.mark.asyncio
+    async def test_cash_factor_range_validation_overflow(self) -> None:
+        """Fix #3: cash_factor > 1.0 → fallback to 1.0."""
+        broker = ValidationBroker(total=500_000.0, market_value=800_000.0)
+        strategy = self._make_strategy(broker, top_k=3)
+
+        predictions = self._make_predictions(["ASSET_A", "ASSET_B", "ASSET_C"])
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        with patch(
+            "trader_off.prediction.service.predict",
+            new_callable=AsyncMock,
+            return_value=predictions,
+        ):
+            await strategy.on_day_open(tm)
+
+        expected_weight = 1.0 / 3
+        buy_calls = [c for c in broker.calls if c["pct"] > 0]
+        for call in buy_calls:
+            assert call["pct"] == pytest.approx(expected_weight, rel=1e-6), (
+                "Overflow: should fallback to 1.0"
+            )
