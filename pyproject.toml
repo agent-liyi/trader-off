@@ -41,6 +41,7 @@ markers = [
     "integration: integration tests requiring external dependencies",
     "slow: slow-running tests",
     "perf: performance benchmark tests (NFR-0100)",
+    "asyncio: async tests",
 ]
 addopts = "--strict-markers"
 
