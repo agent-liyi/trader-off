@@ -1,7 +1,7 @@
 ---
 description: M-STORY stage — turn a one-line idea into a complete, traceable story.md (who/where/what/why + completeness, necessity & conflict check)
 mode: subagent
-model: kimi-for-coding/k3
+model: minimax-cn-coding-plan/MiniMax-M3
 permission:
   bash: allow
   read: allow

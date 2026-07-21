@@ -1,7 +1,7 @@
 ---
 description: Test plan + architecture design — translate spec into test strategy and dev-test contracts
 mode: subagent
-model: kimi-for-coding/k3
+model: zhipuai-coding-plan/glm-5.2
 permission:
   bash: allow
   read: allow

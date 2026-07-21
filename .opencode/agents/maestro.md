@@ -1,7 +1,7 @@
 ---
 description: Pipeline orchestrator — manages the Louke development workflow (11 stages + 4 holdpoints + decision framework)
 mode: primary
-model: kimi-for-coding/k3
+model: minimax-cn-coding-plan/MiniMax-M3
 permission:
   bash: allow
   read: allow

@@ -1,7 +1,7 @@
 ---
 description: Requirement clarification and spec writing — translate story into a traceable spec
 mode: subagent
-model: kimi-for-coding/k3
+model: minimax-cn-coding-plan/MiniMax-M3
 permission:
   bash: allow
   read: allow

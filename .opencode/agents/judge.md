@@ -1,7 +1,7 @@
 ---
 description: Security audit — deep vulnerability identification (S-class, per-milestone)
 mode: subagent
-model: kimi-for-coding/k3
+model: zhipuai-coding-plan/glm-5.2
 permission:
   bash: allow
   read: allow
