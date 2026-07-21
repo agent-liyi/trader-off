@@ -39,9 +39,9 @@ priority: P0
 ### scenario-0010 端到端真实回测
 
 1. 开发者执行 `uv sync` 安装 quantide(自动升级到 Python ≥ 3.13)。
-2. 开发者执行 `python scripts/convert_fixture_to_quantide.py` —— 把 `tests/fixtures/v0.2.0/ohlcv_50x252.parquet` 转成 `tests/fixtures/v0.3.0/daily_bars_store/` (年分区 parquet) + `calendar_store/` (交易日历 parquet)。
+2. 开发者执行 `python scripts/convert_fixture_to_quantide.py` —— 把 `tests/fixtures/v0.2.0/ohlcv_50x252.parquet` 转成 `tests/fixtures/v0.3.0/daily_bars_store/`(年分区 parquet)。
 3. 开发者执行 `trader-off backtest --model v1 --strategy lgbm_top20 --start 2023-01-01 --end 2023-12-31 --capital 1000000`。
-4. `run_backtest` 在 `daily_bars.connect(store_path, calendar_store_path)` 之后委托给 `quantide.service.runner.BacktestRunner.run(strategy_cls=BaseStrategy_compat, config={...}, start_date, end_date, initial_cash)`。
+4. `run_backtest` 内联生成 calendar parquet 到 `tmp_path/calendar_<ts>.parquet`(schema `{date, is_open=1, prev}`,从 ohlcv fixture 的 `trade_date` / `date` 列去重排序生成)→ `quantide.service.calendar.Calendar.load(tmp_path)` 加载 → `daily_bars.connect(store_path)` 接入 → 委托给 `quantide.service.runner.BacktestRunner.run(strategy_cls=BaseStrategy_compat, config={...}, start_date, end_date, initial_cash)`。
 5. 回测完成后,`reports/backtest_<ts>/` 下产出 `summary.json` (含真实 `total_trades > 0` / `avg_turnover > 0` / `sortino` / `drawdown_duration_days` 等) + 4 个真实 parquet (`nav_<ts>.parquet, positions_<ts>.parquet, trades_<ts>.parquet`)。
 6. v0.1.0 / v0.2.0 的 e2e 测试 (`tests/e2e/test_full_pipeline_e2e.py::test_full_pipeline_*`) 继续通过,下游 `evaluation/`、`visualization/`、`tests/integration/test_backtest_cli.py` 零改动。
 
@@ -49,7 +49,7 @@ priority: P0
 
 1. 开发者未运行 `convert_fixture_to_quantide.py` (即 `daily_bars_store/` 不存在)。
 2. 开发者执行 `trader-off backtest ...`。
-3. `daily_bars.connect(store_path, calendar_store_path)` 抛 `FileNotFoundError`(store 路径不存在)或 quantide 内部抛 "no bars in range" 异常。
+3. `daily_bars.connect(store_path)` 抛 `FileNotFoundError`(store 路径不存在)或 quantide 内部抛 "no bars in range" 异常。
 4. CLI 退出码非 0(默认 5 = 引擎失败),stderr 含明确 message 如 `daily_bars store not found at <path>; run scripts/convert_fixture_to_quantide.py first`。
 5. **不出现** 静默退化为合成 NAV 的失败模式(原 v0.1.0 兜底分支在 v0.3.0 已删除)。
 
@@ -106,9 +106,9 @@ priority: P0
 - 默认输入 fixtures:
   - `tests/fixtures/v0.2.0/ohlcv_50x252.parquet`(50 资产 × 252 日)
   - `tests/e2e/fixtures/ohlcv_10x60.parquet`(10 资产 × 60 日)
-- 默认输出根目录:`tests/fixtures/v0.3.0/`,包含两个子目录:
+- 默认输出根目录:`tests/fixtures/v0.3.0/`,只含一个子目录:
   - `daily_bars_store/`:按年分区的 OHLCV parquet 文件,列定义 `{date, asset, ohlc, volume, adj_factor}`(其中 `ohlc` 为 struct 列含 `open/high/low/close` 子字段)。分区目录命名:`year=YYYY/`,每个分区文件命名为 `part-0.parquet`(quantide 约定)。`[M-FOUND 锁定]` 列顺序、分区键名、struct 子字段命名以 `quantide.data.daily_bars` 源码为准。
-  - `calendar_store/`:交易日历 parquet,列定义 `{date, is_trading_day}`,从原 ohlcv 的 `date` 列去重生成(隐含 `is_trading_day=True`)。
+  - **不**输出 `calendar_store/` 子目录(交易日历已合并入 FR-0500,由 runner.py 内联生成,见 FR-0500 Step A)。
 - 列映射规则(原 ohlcv → 目标 DailyBarsStore):
   - `date` (Date) → `date` (Date)
   - `asset` (Utf8) → `asset` (Utf8)
@@ -128,43 +128,28 @@ priority: P0
 
 ---
 
-<a id="fr-0400"></a>
-### FR-0400 交易日历生成脚本
-
-| Valid | Testable | Decided |
-|---|---|---|
-| ✅ | ⚠️ [M-FOUND 锁定] quantide calendar 真实 schema | ✅ |
-
-- 脚本路径:`scripts/generate_calendar.py`(与 FR-0300 独立,支持单独重跑)。
-- 默认输入:`tests/fixtures/v0.2.0/ohlcv_50x252.parquet` 的 `date` 列(去重排序)。
-- 默认输出:`tests/fixtures/v0.3.0/calendar_store/calendar.parquet`,列定义 `{date, is_trading_day}`,所有行 `is_trading_day=True`。
-- `[M-FOUND 锁定]` quantide `BacktestRunner.run(start_date, end_date, ...)` 实际如何读交易日历(单文件 vs 分区 vs store 子目录)以源码为准;若 quantide 期望 `calendar_store/calendar.parquet` 之外的结构,本 FR 在 M-FOUND 阶段修正输出 schema。
-- CLI:`python scripts/generate_calendar.py [--source <ohlcv_parquet>] [--output <calendar_store_path>] [--start <YYYY-MM-DD>] [--end <YYYY-MM-DD>]`。
-- 退出码:0 = 成功,2 = 输入文件缺失,3 = 输出目录无法创建。
-- **自动联动**:若在 FR-0300 之后未运行本脚本,`convert_fixture_to_quantide.py --fixture all` 会自动调用 `generate_calendar.py`(避免漏步骤)。
-
----
-
 <a id="fr-0500"></a>
-### FR-0500 重写 runner.py — 删除假数据分支 + 委托 quantide
+### FR-0500 重写 runner.py — 删除假数据分支 + 委托 quantide (含内联 calendar 生成)
 
 | Valid | Testable | Decided |
 |---|---|---|
-| ✅ | ⚠️ [M-FOUND 锁定] BacktestRunner.run 真实签名 | ✅ |
+| ✅ | ⚠️ [M-FOUND 锁定] BacktestRunner.run 真实签名 + Calendar 真实 API | ✅ |
 
 - 模块路径:`src/trader_off/backtest/runner.py`。
 - **删除**原 72-100 行 `np.random.RandomState(42)` 合成 NAV / positions / trades 分支(完全移除,不留兜底)。
 - **新增**委托逻辑:
-  - 通过 `daily_bars.connect(store_path, calendar_store_path)` 在 run 之前接入 daily_bars 单例,`store_path` 与 `calendar_store_path` 默认指向 `tests/fixtures/v0.3.0/daily_bars_store/` 与 `tests/fixtures/v0.3.0/calendar_store/`(可通过 `run_backtest(..., config={"store_path": ..., "calendar_store_path": ...})` 覆盖)。
-  - 调用 `quantide.service.runner.BacktestRunner.run(strategy_cls=BaseStrategy_compat, config={...}, start_date=start, end_date=end, initial_cash=capital)`。
-  - `[M-FOUND 锁定]` 真实 `BacktestRunner.run` 的参数顺序、关键字参数名、返回值类型 (`BacktestResult` dataclass 字段) 以 `quantide.service.runner` 源码为准;若签名不一致,在 M-FOUND 阶段更新本 FR 描述。
+  - **Step A — 内联 calendar 生成**:`run_backtest` 启动时,从 ohlcv fixture(`config["calendar_source"]` 或默认 `tests/fixtures/v0.2.0/ohlcv_50x252.parquet`)的 `trade_date` / `date` 列去重排序,生成临时 calendar parquet 到 `tmp_path/calendar_<ts>.parquet`,schema 固定为 `{date, is_open=1, prev}`(日期、是否交易日标记为 1、前一交易日索引 `prev` 由 runner 计算填入)。
+  - **Step B — Calendar 加载**:调用 `quantide.service.calendar.Calendar.load(tmp_calendar_path)`(或 quantide 等价 API;以源码为准)将 calendar 注入引擎,**不**在磁盘上留下持久 `calendar_store/` 目录。
+  - **Step C — daily_bars 接入**:通过 `daily_bars.connect(store_path)`(参数签名按 quantide 实际接口调整)接入 daily_bars 单例,`store_path` 默认指向 `tests/fixtures/v0.3.0/daily_bars_store/`(可通过 `run_backtest(..., config={"store_path": ...})` 覆盖;calendar 不再作为 `connect` 的第二参数,改由 Step B 单独加载)。
+  - **Step D — 委托运行**:调用 `quantide.service.runner.BacktestRunner.run(strategy_cls=BaseStrategy_compat, config={...}, start_date=start, end_date=end, initial_cash=capital)`。
+  - `[M-FOUND 锁定]` 真实 `BacktestRunner.run` 的参数顺序、关键字参数名、返回值类型 (`BacktestResult` dataclass 字段) 以 `quantide.service.runner` 源码为准;`Calendar.load()` 真实签名以 `quantide.service.calendar` 源码为准;若任一签名不一致,在 M-FOUND 阶段更新本 FR 描述。
   - 解析策略类:`BaseStrategy_compat = trader_off.strategies.compat.BaseStrategy`(经 compat shim 解析,trader-off 自身不直接 import quantide,见 NFR-0200)。
   - 解析 strategy_name:`lgbm_top20` → `LGBMTop20Strategy`;`optimized_topk` → `OptimizedTopKStrategy`(策略名到类的映射由 `trader_off.strategies.registry` 提供,继承 v0.2.0)。
   - `config` 透传:从 `run_backtest(..., config=...)` 传入的 dict 原样作为 `BacktestRunner.run` 的 `config` 参数。
 - **保留** `BacktestResult` dataclass 字段签名:`{summary: dict, positions: pl.DataFrame, trades: pl.DataFrame, nav: pl.DataFrame, report_dir: Path}`(与 v0.2.0 一致,供 `BacktestResult(...)` 返回)。
 - **保留** 公开 API:`run_backtest(model_version: str, strategy_name: str, start: date, end: date, capital: float, config: dict | None = None) -> BacktestResult` 签名不变(下游 `cli/backtest.py` 与 e2e 测试零改动)。
-- **新增** `store_path` / `calendar_store_path` 配置项:默认从 v0.3.0 fixtures 路径加载,可通过 `run_backtest(..., config={...})` 覆盖为自定义路径(单元测试可用 tmp dir)。
-- 日志:`loguru.logger.info("Connecting daily_bars to {store_path}")` → `"Running BacktestRunner with strategy={strategy_name}, capital={capital}"` → `"Backtest finished. Reports saved to {report_dir}"`。
+- **新增** `store_path` 配置项:默认从 v0.3.0 fixtures 路径加载,可通过 `run_backtest(..., config={...})` 覆盖为自定义路径(单元测试可用 tmp dir)。
+- 日志:`loguru.logger.info("Generated inline calendar ({n_dates} dates) to {tmp_calendar_path}")` → `"Connecting daily_bars to {store_path}"` → `"Running BacktestRunner with strategy={strategy_name}, capital={capital}"` → `"Backtest finished. Reports saved to {report_dir}"`。
 
 ---
 
@@ -292,7 +277,7 @@ priority: P0
 - `src/trader_off/scheduler/` 路径下不出现 `quantide.*` 或 `millionaire` 业务 import。
 - 验证命令:`grep -rn "quantide\|millionaire" src/trader_off/scheduler/` 仅返回 `pyproject.toml` 的依赖声明(不在 `src/trader_off/scheduler/` 目录下)。
 - v0.2.0 AC-FR1500-04 仍通过(原断言文件 `tests/integration/test_retrain_full.py` 或 `test_scheduler_resilience.py` 中的 scheduler 隔离测试零修改即可继续通过)。
-- v0.3.0 仅修改 `src/trader_off/backtest/{runner,metrics}.py` 与新增 `scripts/{convert_fixture_to_quantide,generate_calendar}.py`,scheduler 模块零改动。
+- v0.3.0 仅修改 `src/trader_off/backtest/{runner,metrics}.py` 与新增 `scripts/convert_fixture_to_quantide.py`,scheduler 模块零改动(交易日历已合并入 FR-0500,无独立脚本)。
 
 ---
 
@@ -372,8 +357,9 @@ priority: P0
 | 0 (Story M-STORY) | 不修改 quantide fork | 任何接口不足走升级依赖版本路径,不在 fork 上 monkey-patch | ✅ (Story §3.1 Avoid 已确认) |
 | 0 (Task) | MVP 工作量 | 控制在 1-2 个 issue 工作量(FR-1 BacktestRunner 接入 + FR-2 metrics 委托 可并行) | ✅ (用户 Task 描述已确认) |
 | 0 (Task) | FR 编号 | 使用 FR-0100 ~ FR-0900 (与 v0.2.0 同范围,不同 spec-id,独立命名空间) | ✅ (Sage 决策,文档中已说明) |
+| 1 (User 2026-07-21) | **FR-0400 合并入 FR-0500** | 用户决策:交易日历不再独立成脚本,改为 `runner.py` 启动时内联生成临时 calendar parquet(schema `{date, is_open=1, prev}`,从 ohlcv fixture `trade_date` / `date` 列去重排序)→ `quantide.service.calendar.Calendar.load(tmp_path)` 注入。`scripts/generate_calendar.py` 取消;`tests/fixtures/v0.3.0/calendar_store/` 目录不再产生。FR 数量由 9 → **8**(FR-0400 删除,FR-0500 扩充含 inline calendar)。Issue #84 关闭,FR-0500 (Issue #85) 加 comment 记录此变更。 | ✅ |
 | 待 M-FOUND | BacktestRunner.run 真实签名 | 在 M-FOUND 阶段读 `quantide.service.runner` 源码确认;若签名与本 FR-0500 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | DailyBarsStore 真实 schema | 在 M-FOUND 阶段读 `quantide.data.daily_bars` 源码确认;若列/分区与本 FR-0300 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | quantide.service.metrics 真实接口 | 在 M-FOUND 阶段读 `quantide.service.metrics` 源码确认;若函数名/参数/返回值与本 FR-0800 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
-| 待 M-FOUND | calendar store 真实 schema | 在 M-FOUND 阶段读 quantide 源码确认 calendar 路径与列定义 | ⚠️ [M-FOUND 锁定] |
+| 待 M-FOUND | Calendar.load() 真实 API | 在 M-FOUND 阶段读 `quantide.service.calendar.Calendar` 源码确认;若 `load()` 签名/参数/返回值与本 FR-0500 Step B 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | BacktestBroker.bills() 真实 schema | 在 M-FOUND 阶段读 `quantide.service.broker.BacktestBroker.bills()` 源码确认返回列定义 | ⚠️ [M-FOUND 锁定] |

@@ -192,58 +192,8 @@ AC-FR0300-08
 
 ---
 
-<a id="ac-fr-0400"></a>
-## FR-0400 交易日历生成脚本
-
-### AC-1
-
-AC-FR0400-01
-
-- 给定:脚本 `scripts/generate_calendar.py`。
-- 当:执行 `python scripts/generate_calendar.py`(默认参数)。
-- 那么:退出码 0,`tests/fixtures/v0.3.0/calendar_store/calendar.parquet` 生成。
-- 断言:`subprocess.run(["python", "scripts/generate_calendar.py"]).returncode == 0 and Path("tests/fixtures/v0.3.0/calendar_store/calendar.parquet").exists()`。
-
-### AC-2
-
-AC-FR0400-02
-
-- 给定:生成的 `calendar.parquet`。
-- 当:用 polars 读取。
-- 那么:列定义含 `{date, is_trading_day}`,所有行 `is_trading_day == True`。
-- 断言:`set(df.columns) == {"date", "is_trading_day"} and df["is_trading_day"].all() == True`。
-
-### AC-3
-
-AC-FR0400-03
-
-- 给定:原 ohlcv_50x252.parquet 的 `date` 列(252 个交易日,可能含周末已过滤)。
-- 当:读取 calendar.parquet。
-- 那么:行数 ≤ 252(calendar 是去重后的交易日集合),`date` 范围 = 原 parquet 的 date 范围。
-- 断言:`len(df) <= 252 and df["date"].min() == source["date"].min() and df["date"].max() == source["date"].max()`。
-
-### AC-4
-
-AC-FR0400-04
-
-- 给定:CLI `--source /nonexistent.parquet`。
-- 当:执行。
-- 那么:退出码 2,stderr 含 "source not found"。
-- 断言:`result.returncode == 2 and "source not found" in result.stderr`。
-
-### AC-5
-
-AC-FR0400-05
-
-- 给定:仅运行 `convert_fixture_to_quantide.py --fixture all` 而**未**单独运行 `generate_calendar.py`。
-- 当:执行。
-- 那么:convert 脚本自动调用 generate_calendar.py(联动),`calendar_store/calendar.parquet` 与 `daily_bars_store/` 同时生成。
-- 断言:`Path("tests/fixtures/v0.3.0/calendar_store/calendar.parquet").exists() and any(Path("tests/fixtures/v0.3.0/daily_bars_store/").rglob("*.parquet"))`。
-
----
-
 <a id="ac-fr-0500"></a>
-## FR-0500 重写 runner.py — 删除假数据分支 + 委托 quantide
+## FR-0500 重写 runner.py — 删除假数据分支 + 委托 quantide (含内联 calendar 生成)
 
 ### AC-1
 
@@ -260,8 +210,8 @@ AC-FR0500-02
 
 - 给定:重写后的 `runner.py`。
 - 当:用 `grep` 检查。
-- 那么:含 `daily_bars.connect(` 调用语句,传入 `store_path` 与 `calendar_store_path`。
-- 断言:`"daily_bars.connect(" in runner_text and "store_path" in runner_text and "calendar_store_path" in runner_text`。
+- 那么:含 `daily_bars.connect(` 调用语句,传入 `store_path`(calendar 已通过 `Calendar.load()` 单独加载,不再作为 `connect` 参数)。
+- 断言:`"daily_bars.connect(" in runner_text and "store_path" in runner_text`。
 
 ### AC-3
 
@@ -303,19 +253,50 @@ AC-FR0500-06
 
 AC-FR0500-07
 
-- 给定:`store_path` / `calendar_store_path` 默认值。
+- 给定:`store_path` 默认值。
 - 当:读取 `run_backtest` 内部默认值定义。
-- 那么:默认指向 `tests/fixtures/v0.3.0/daily_bars_store/` 与 `tests/fixtures/v0.3.0/calendar_store/`。
-- 断言:`"tests/fixtures/v0.3.0/daily_bars_store" in runner_text and "tests/fixtures/v0.3.0/calendar_store" in runner_text`。
+- 那么:默认指向 `tests/fixtures/v0.3.0/daily_bars_store/`(calendar 不再走磁盘 store,内联生成)。
+- 断言:`"tests/fixtures/v0.3.0/daily_bars_store" in runner_text and "tests/fixtures/v0.3.0/calendar_store" not in runner_text`。
 
 ### AC-8
 
 AC-FR0500-08
 
-- 给定:`store_path` / `calendar_store_path` 通过 `config` 覆盖。
-- 当:调用 `run_backtest(..., config={"store_path": "/tmp/x", "calendar_store_path": "/tmp/y"})`。
-- 那么:`BacktestRunner.run` 收到的 store 路径为 `/tmp/x` 与 `/tmp/y`(而非默认 fixture 路径)。
-- 断言:用 mock 验证 `daily_bars.connect.call_args == call("/tmp/x", "/tmp/y")`。
+- 给定:`store_path` 通过 `config` 覆盖。
+- 当:调用 `run_backtest(..., config={"store_path": "/tmp/x"})`。
+- 那么:`daily_bars.connect` 收到 `/tmp/x`(而非默认 fixture 路径)。
+- 断言:用 mock 验证 `daily_bars.connect.call_args == call("/tmp/x")`。
+
+### AC-9
+
+AC-FR0500-09 (Round 1 — FR-0400 → FR-0500 合并)
+
+- 给定:`run_backtest` 被调用(初始化阶段)。
+- 当:`run_backtest` 启动时读取 ohlcv fixture(`config["calendar_source"]` 或默认 `tests/fixtures/v0.2.0/ohlcv_50x252.parquet`)的 `trade_date` / `date` 列。
+- 那么:在 `tmp_path/calendar_<ts>.parquet` 生成内联 calendar parquet,**不**在磁盘上留下持久 `tests/fixtures/v0.3.0/calendar_store/`;schema 严格为 `{date, is_open=1, prev}`(日期、是否交易日标记常量 1、runner 计算的前一交易日索引 `prev`)。
+- 断言:
+  - `Path(tmp_path).joinpath(f"calendar_{ts}.parquet").exists()`
+  - `not Path("tests/fixtures/v0.3.0/calendar_store/").exists()`(或不生成)
+  - `set(pl.read_parquet(tmp_path / f"calendar_{ts}.parquet").columns) == {"date", "is_open", "prev"}`
+  - `(pl.read_parquet(tmp_path / f"calendar_{ts}.parquet")["is_open"] == 1).all()`
+
+### AC-10
+
+AC-FR0500-10
+
+- 给定:`run_backtest` 完成内联 calendar 生成后。
+- 当:调用 `quantide.service.calendar.Calendar.load(tmp_calendar_path)`(或 quantide 等价 API,以源码为准)。
+- 那么:calendar 被注入引擎,`Calendar.load()` 返回非 None 且后续 `BacktestRunner.run()` 能正确读取交易日索引;**调用顺序**严格为 `generate_inline_calendar → Calendar.load → daily_bars.connect → BacktestRunner.run`。
+- 断言:用 mock 验证调用顺序 `mock.Calendar.load.call_args_list` 在 `mock.daily_bars.connect.call_args_list` 之前,且 `mock.BacktestRunner.run.call_args_list` 在 `mock.Calendar.load.call_args_list` 之后。
+
+### AC-11
+
+AC-FR0500-11
+
+- 给定:`run_backtest` 启动阶段临时 calendar parquet 路径不存在父目录(tmp_path 异常)。
+- 当:`generate_inline_calendar` 抛异常(如 `OSError`)。
+- 那么:异常向上传播,`run_backtest` 抛带明确 message 的 `RuntimeError`,stderr 含 "calendar generation failed" 或 "tmp_path" 信息,**不**退化为合成 NAV。
+- 断言:`pytest.raises(RuntimeError, match="calendar generation failed|tmp_path")`。
 
 ---
 
@@ -604,7 +585,7 @@ AC-NFR0100-03
 
 - 给定:v0.3.0 修改的文件列表。
 - 当:git diff 检查。
-- 那么:仅修改 `src/trader_off/backtest/{runner,metrics}.py` 与新增 `scripts/{convert_fixture_to_quantide,generate_calendar}.py`,scheduler 路径零修改。
+- 那么:仅修改 `src/trader_off/backtest/{runner,metrics}.py` 与新增 `scripts/convert_fixture_to_quantide.py`(FR-0400 已合并入 FR-0500,无独立 `generate_calendar.py`),scheduler 路径零修改。
 - 断言:`subprocess.run(["git", "diff", "--name-only", "HEAD~1", "HEAD"]).stdout.splitlines()` 与上述列表一致(或子集)。
 
 ---
