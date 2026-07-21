@@ -107,13 +107,7 @@ class QuantideDataLoader:
 
         raw_dates = calendar.get_frames_by_count(end_date, count, FrameType.DAY)
         # Normalize to date objects
-        result: list[date] = []
-        for d in raw_dates:
-            if isinstance(d, date):
-                result.append(d)
-            else:
-                result.append(d.date())
-        return result
+        return [d if isinstance(d, date) else d.date() for d in raw_dates]
 
     def _to_polars_ohlcv(self, df, asset: str, count: int) -> pl.DataFrame:
         """Convert pandas DataFrame to polars with schema normalization.
