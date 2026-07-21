@@ -4,6 +4,7 @@ Delegates backtest execution to quantide BacktestRunner.
 No synthetic data — real OHLCV bars + actual strategy execution.
 """
 
+import asyncio
 import json
 import tempfile
 from dataclasses import dataclass
@@ -168,6 +169,8 @@ def run_backtest(
             end_date=end,
             initial_cash=capital,
         )
+        if asyncio.iscoroutine(result):
+            result = asyncio.run(result)
 
     portfolio_id = result.get("portfolio_id", "unknown")
     metrics_raw = result.get("metrics", {})
