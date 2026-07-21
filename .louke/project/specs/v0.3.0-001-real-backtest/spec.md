@@ -59,7 +59,7 @@ priority: P0
 >
 > **编号约定 (必读)**: 本 spec 使用 **FR-0100 ~ FR-0900** 范围 (Module A — Real Backtest),与 v0.2.0 同范围但 spec-id 不同 (`v0.3.0-001-real-backtest`),FR 代码独立命名空间。9 条 FR 全部为 P0。
 >
-> **M-FOUND 锁定标记**: 部分 FR 标注 `[M-FOUND 锁定]`,表示真实 quantide API (如 `BacktestRunner.run` 签名) 需在 M-FOUND 阶段读源码确认;若签名与本 spec 描述不符,在 M-FOUND 阶段更新 AC 细节,但总体方案不变 (用户已确认无 A/B 替代)。
+> M-FOUND 锁定标记: 部分 FR 标注 `[M-FOUND 锁定]`,表示真实 quantide API (如 `BacktestRunner.run` 签名) 需在 M-FOUND 阶段读源码确认;若签名与本 spec 描述不符,在 M-FOUND 阶段更新 AC 细节,但总体方案不变 (用户已确认无 A/B 替代)。
 
 ---
 
