@@ -1,35 +1,18 @@
 [project]
-version = "v0.3.1"
+version = "v0.4.0"
 repo = "github.com/agent-liyi/trader-off"
-project = "trader-off-v0.3.1"
-project_id = "https://github.com/users/agent-liyi/projects/7"
-spec_id = "v0.3.1-001-clock-rewind-scheduler-review"
-release_branch = "releases/v0.3.1"
+project = "trader-off-v0.4.0"
+project_id = "TODO"
+spec_id = "v0.4.0-001-quantide-data-adapter"
+release_branch = "releases/v0.4.0"
 
 [meta]
 pre_commit = "installed (python + base)"
-created = "2026-07-21"
-current_stage = "M-MILESTONE"
+created = "TODO"
+current_stage = "M-FOUND"
 security_audit = "enabled"
-smoke_test_issue = "#96 (closed)"
-smoke_test_pr = "#97 (closed)"
-dod = "All e2e tests pass; Unit test coverage >=97%; Mutation testing score >=70% (mutmut); Performance budgets met (train<=300s predict<=5s backtest<=600s mem<=16GB); Documentation sync (architecture/API/ADRs); Security review (M-SECURITY)"
+smoke_test_issue = "#105 (closed)"
+smoke_test_pr = "#TODO (closed)"
+dod = "All e2e tests pass; Unit test coverage >=97%; Mutation testing >=70%; Performance budgets met; Documentation synced; Security review (M-SECURITY)"
 test_framework = "pytest"
-backlog_project = "https://github.com/users/agent-liyi/projects/4"
-
-[e2e]
-# Host-project paths that Shield writes / Prism reviews / commit-e2e stages
-# tests/perf holds NFR-0100 budget tests (marked e2e) + baselines.json
-paths = ["tests/e2e", "tests/perf"]
-# Run the host project's own e2e command
-# No global --timeout: full-pipeline e2e budget is 600s; per-test timeouts
-# are declared via @pytest.mark.timeout on each e2e/perf case (see test-plan §6.5)
-run = "uv run pytest tests/e2e tests/perf -m e2e -v"
-# e2e runs from repo root (cwd omitted = repo root)
-
-[integration]
-# Host-project paths that Shield writes / Prism reviews
-paths = ["tests/integration"]
-# Run the host project's own integration test command
-run = "uv run pytest tests/integration -m integration -v"
-# Integration tests verify module wiring; no service orchestration needed
+backlog_project = "TODO"
