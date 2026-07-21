@@ -1,8 +1,10 @@
-"""Tests for pyproject.toml configuration — FR-0100: Python 3.13 upgrade."""
+"""Tests for pyproject.toml configuration — FR-0100/FR-0200."""
 
 import sys
 import tomllib
 from pathlib import Path
+
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT_PATH = PROJECT_ROOT / "pyproject.toml"
@@ -46,3 +48,38 @@ class TestPyprojectPython313:
         assert (version.major, version.minor) >= (3, 13), (
             f"Python {version.major}.{version.minor} is too old"
         )
+
+
+QUANTIDE_DEP = "quantide @ git+https://github.com/agent-liyi/millionaire.git"
+
+
+class TestPyprojectQuantideDep:
+    """FR-0200: quantide dependency in pyproject.toml."""
+
+    # AC-FR0200-01: quantide @ git+... in dependencies
+    def test_quantide_in_dependencies(self):
+        """pyproject.toml dependencies include quantide @ git URL."""
+        data = _load_pyproject()
+        deps = data["project"]["dependencies"]
+        assert QUANTIDE_DEP in deps, f"quantide git URL not found in dependencies: {deps}"
+
+    # AC-FR0200-04: only compat.py directly imports quantide
+    def test_only_compat_imports_quantide(self):
+        """no other source files directly import quantide."""
+        src = Path("src/trader_off")
+        violators = []
+        for f in src.rglob("*.py"):
+            if f.name == "compat.py":
+                continue
+            text = f.read_text()
+            if "import quantide" in text:
+                violators.append(str(f))
+        assert violators == [], f"Files importing quantide: {violators}"
+
+    # AC-FR0200-05: verify quantide is importable after uv sync
+    def test_quantide_importable(self):
+        """quantide package can be imported."""
+        try:
+            import quantide  # noqa: F401
+        except ImportError as e:
+            pytest.fail(f"quantide not importable: {e}")
