@@ -1,6 +1,8 @@
 ---
 status: draft
-locked: false
+locked: true
+locked-at: 2026-07-21T11:00:37Z
+locked-by: lk agent sage record-lock
 ---
 # v0.4.1 — QuantideDataLoader 真数据接入 + Smoke Test — Spec
 
@@ -10,17 +12,17 @@ locked: false
 - **关联 story**: `.louke/project/specs/v0.4.1-001-real-tushare-integration/story.md`
 - **继承基线**:
   - v0.4.0 FR-0100 (QuantideDataLoader adapter — `fetch_bars` 桥接) — **本 spec 行 19-22 显式反转**:v0.4.0 行 63 "不实例化 TushareFetcher / 不用 TUSHARE_TOKEN / 不发网络 IO" → v0.4.1 兑现
-  - v0.4.0 NFR-0100 (函数级 lazy import + 数据 fetcher 业务符号白名单) — **白名单延伸**:`data.models.calendar.*` 归入 `data.*`,与 `data.fetchers.tushare.*` 同属允许范围
+  - v0.4.0 NFR-0100 (函数级 lazy import + 数据 fetcher 业务符号白名单) — **白名单保持**:仅允许 `quantide.data.fetchers.tushare.*`(`TushareFetcher` / `fetch_bars` / **`fetch_calendar`** / `fetch_adjust_factor` / `fetch_stock_list` 等),**不**额外放行 `quantide.data.models.calendar.*`(Round 1 偏差后维持 v0.4.0 白名单边界,见 Clarification Log)
 
 > **职责切分**: 本文档只描述需求本身 (FR/NFR 描述 + 元数据)。
 > 验收标准 (可观察、可断言的通过条件) 放在 `acceptance.md` 中。
 > 测试计划 (`test-plan.md`) 同时引用本文件与 `acceptance.md` 作为输入。
 >
-> **北极星目标**: 用户本地持有 `TUSHARE_TOKEN` 时,执行 `pytest tests/smoke/test_real_tushare_smoke.py -v` 一次跑通 3 stocks × 60 trading days end-to-end — `QuantideDataLoader` 实例化 `TushareFetcher` 走真实抓取 + `Calendar.get_frames_by_count` 替换 `pandas.bdate_range` → 数据落 v0.3.0 `DailyBarsStore` → `BacktestRunner.run()` 返回 NAV 曲线非空。CI 无 token 时同文件改 mock `TushareFetcher` 跑同一断言,全绿。
+> **北极星目标**: 用户本地持有 `TUSHARE_TOKEN` 时,执行 `pytest tests/smoke/test_real_tushare_smoke.py -v` 一次跑通 3 stocks × 60 trading days end-to-end — `QuantideDataLoader` 实例化 `TushareFetcher` 走真实抓取 + **`fetch_calendar(start_epoch)` 模块级函数**取交易日历 + 截取**最后 `count` 个 ≤ end_date 的真实交易日** → 替换 `pandas.bdate_range` → 数据落 v0.3.0 `DailyBarsStore` → `BacktestRunner.run()` 返回 NAV 曲线非空。CI 无 token 时同文件改 mock `TushareFetcher` 跑同一断言,全绿。
 >
 > **关键约束 (继承 v0.4.0 story)**:
 > - 工作量保持小 (patch ≤ 1 issue,本 spec 仍拆 FR-0100 / FR-0200 / NFR-0100 三段便于追踪)
-> - 隔离承诺:v0.4.0 NFR-0100 函数级 lazy import 模式保留,新增 `quantide.data.models.calendar.*` 归入白名单
+> - 隔离承诺:v0.4.0 NFR-0100 函数级 lazy import 模式保留;**白名单维持** v0.4.0 边界 — 仅放行 `quantide.data.fetchers.tushare.*`,**不**放行 `quantide.data.models.calendar.*` (Round 1 偏差说明见 Clarification Log)
 > - token 永**不**落盘 — smoke 输出落 `tests/smoke/output/` (gitignore),`.env*` gitignore
 > - 不做 CLI / scheduler / 可视化 (Out-of-Scope,见 Story §3.2)
 
@@ -28,7 +30,7 @@ locked: false
 
 ### US-0010
 
-story: 作为一名量化研究员,我希望 `QuantideDataLoader` 在传入 `TUSHARE_TOKEN` 时通过 `quantide.data.fetchers.tushare.TushareFetcher()` 真正实例化并调用,同时用 `quantide.data.models.calendar.Calendar.get_frames_by_count()` 替换 `pandas.bdate_range` 来识别 CN 交易日,从而使 v0.4.0 留尾的"真数据通路"在本 patch 闭环 —— 不再需要 mock `fetch_bars` 才能跑通单测,真实 token 一次能拉到带正确 CN 假期剔除的交易日序列。
+story: 作为一名量化研究员,我希望 `QuantideDataLoader` 在传入 `TUSHARE_TOKEN` 时通过 `quantide.data.fetchers.tushare.TushareFetcher()` 真正实例化并调用,同时用 `quantide.data.fetchers.tushare.fetch_calendar(start_epoch)` 模块级函数取交易日历并截取最后 `count` 个 ≤ end_date 的真实交易日,来替换 `pandas.bdate_range` 的 CN 假期近似 —— 不依赖 `quantide.data.models.calendar.Calendar.get_frames_by_count()`(后者存在内部 bug,见 Clarification Log Round 1),从而使 v0.4.0 留尾的"真数据通路"在本 patch 闭环 —— 不再需要 mock `fetch_bars` 才能跑通单测,真实 token 一次能拉到带正确 CN 假期剔除的交易日序列。
 priority: P0
 
 ### US-0020
@@ -44,7 +46,7 @@ priority: P0
 2. 开发者执行 `pytest tests/smoke/test_real_tushare_smoke.py -v`。
 3. `QuantideDataLoader.__init__(token=None)` 内部读取 `os.environ.get('TUSHARE_TOKEN')` 得到 token;token 缺失则抛 `RuntimeError("TUSHARE_TOKEN environment variable is required for QuantideDataLoader; set it before running smoke tests")`(不静默退化)。
 4. `QuantideDataLoader.get_daily(asset, end_date, count)` 在函数体内 lazy import `quantide.data.fetchers.tushare.TushareFetcher`,实例化 `TushareFetcher(token=<token>)`(NFR-0100 沿用函数级 lazy import)。
-5. 调 `fetcher.fetch_calendar(epoch)` 获取交易日锚点 → `Calendar.get_frames_by_count(end_date, count, FrameType.DAY)` 反推最近 `count` 个真实交易日(CN 假期自动剔除),返回 list[date]。
+5. 调**模块级 `quantide.data.fetchers.tushare.fetch_calendar(start_epoch)`**(已验证可用,替代有内部 bug 的 `Calendar.get_frames_by_count`)获取交易日历 → 取**最后 `count` 个 ≤ end_date 的真实交易日**(CN 假期已剔除),返回 list[date];`start_epoch` 选为早于 `end_date - count*2` 的日期以确保截取窗口足够覆盖 `count` 个交易日。
 6. 调 `fetcher.fetch_bars(dates)`(或模块级 `fetch_bars(dates)`,路径与 v0.4.0 一致)拿到 `(pd.DataFrame, errors)`,沿用 v0.4.0 列重命名(`ts_code → asset` / `trade_date → date` / `vol → volume`),按 `asset` 过滤 + 限制 ≤ count 行,转 `pl.DataFrame` 返回。
 7. smoke test 用 3 个 asset × 60 天循环 fetch → 落 `tests/smoke/output/daily_bars_store/` (v0.3.0 schema) → `BacktestRunner.run(strategy_cls=..., config={...}, start_date, end_date, initial_cash)` → 断言 `result.nav.height > 0` 且至少 1 条 NAV 记录。
 8. `TUSHARE_TOKEN` 未设置时,smoke test `pytest.skip("TUSHARE_TOKEN not set; skipping real Tushare E2E")` 而非抛 `RuntimeError`(smoke 层捕获 loader 抛出的 token 错误并 skip)。
@@ -75,7 +77,7 @@ priority: P0
 ---
 
 <a id="fr-0100"></a>
-### FR-0100 QuantideDataLoader 真数据接入 — TushareFetcher 实例化 + Calendar 替换 pandas.bdate_range
+### FR-0100 QuantideDataLoader 真数据接入 — TushareFetcher 实例化 + `fetch_calendar` 替换 pandas.bdate_range
 
 | Valid | Testable | Decided |
 |---|---|---|
@@ -89,12 +91,14 @@ priority: P0
 - **TushareFetcher 实例化**(**反转 v0.4.0 FR-0100 行 63**):
   - `QuantideDataLoader.get_daily` 内部函数级 lazy import `from quantide.data.fetchers.tushare import TushareFetcher`(NFR-0100 函数级 lazy import 沿用)。
   - 实例化 `fetcher = TushareFetcher(token=self._token)`(v0.4.0 行 63 明确禁止,本 FR 兑现)。
-  - 调 `fetcher.fetch_calendar(epoch)` 获取交易日锚点(epoch 形参按 `TushareFetcher.fetch_calendar` 真实签名传入;若 quantide 实现以 `end_date` 替代 `epoch`,以 quantide 源码为准,记录到 Clarification Log)。
   - **真实路径**:数据通过 `fetcher.fetch_bars(dates)` 抓取(沿用 v0.4.0 `fetch_bars` 调用契约,**不**用 `fetch_bars` 模块级函数)。
-- **Calendar 替换 pandas.bdate_range**(**v0.4.0 行 22 留尾兑现**):
+- **`fetch_calendar` 替换 pandas.bdate_range**(**v0.4.0 行 22 留尾兑现 / Round 1 偏差**):
   - 删除 `_compute_trade_dates` 中 `pd.bdate_range(end_date - timedelta(days=count*2), end_date)` 调用(原 v0.4.0 实现,该近似不识别 CN 假期)。
-  - 函数级 lazy import `from quantide.data.models.calendar import Calendar, FrameType`(新增 import,与 `TushareFetcher` 同函数体内)。
-  - 用 `Calendar.get_frames_by_count(end_date, count, FrameType.DAY)` 反推最近 `count` 个真实交易日,返回 list[date](CN 假期剔除);若 `get_frames_by_count` 签名/返回结构与本 FR 描述不符,以 quantide 源码为准并在 Clarification Log 记录。
+  - 函数级 lazy import `from quantide.data.fetchers.tushare import fetch_calendar`(注:**模块级**函数,非 `TushareFetcher` 实例方法;与 `TushareFetcher` 同属于 `quantide.data.fetchers.tushare` 子树,NFR-0100 白名单内零冲突)。
+  - **不**导入 `quantide.data.models.calendar.Calendar` / `FrameType` —— `Calendar.get_frames_by_count()` 在真实数据上有 pyarrow `pc.sum` TypeError 内部 bug(Round 1 偏差说明),改用 `fetch_calendar(start_epoch)` 模块级函数(已验证可用)。
+  - 调用 `fetch_calendar(start_epoch)` 获取交易日历,其中 `start_epoch` 选择早于 `end_date - count * 2` 的日期(如 `end_date - timedelta(days=count*3)` 或更早),确保返回窗口足够覆盖 `count` 个真实交易日(CN 假期已剔除);返回结构以 quantide 源码为准(若 `fetch_calendar` 返回 `pd.DataFrame` / `list[date]` / 其他,需在实现时断言类型并截取)。
+  - 从返回的交易日历中**截取最后 `count` 个 ≤ end_date 的真实交易日**(允许窗口超出,取末尾);返回 list[date] 用于 `fetch_bars(dates)`。
+  - 若 `fetch_calendar(start_epoch)` 签名/返回结构与本 FR 描述不符,以 quantide 源码为准并在 Clarification Log 记录。
   - **不保留** `pandas.bdate_range` 任何路径(防止双路径漂移),`_compute_trade_dates` 重命名为 `_compute_real_trade_dates`(语义从"近似交易日"变"真实交易日")。
 - **沿用 v0.4.0 契约**:
   - `async def get_daily(self, asset: str, end_date: date, count: int) -> pl.DataFrame` 签名不变。
@@ -149,23 +153,23 @@ priority: P0
 > **必读**: NFR 格式与编号规则同 FR,此处省略。
 
 <a id="nfr-0100"></a>
-### NFR-0100 函数级 lazy import — 白名单延伸至 `quantide.data.models.calendar.*` (继承 v0.4.0 NFR-0100)
+### NFR-0100 函数级 lazy import — 白名单维持 v0.4.0 边界 (Round 1 偏差:不放行 `quantide.data.models.calendar.*`)
 
 | Valid | Testable | Decided |
 |---|---|---|
 | ✅ | ✅ | ✅ |
 
-- **隔离承诺 (继承 v0.4.0 NFR-0100 + 本 spec FR-0100 兑现延伸)**: `src/trader_off/data/quantide_adapter.py` 模块顶层(含 `import` 块、`from ... import` 块、类体、`if TYPE_CHECKING` 块、`__init__` 方法体、模块级 docstring 示例代码)**不**出现 `import quantide` 或 `from quantide ...` 语句。
-- 所有 `quantide` 导入必须位于 `def` / `async def` 函数体内;导入时机为首次调用(如 `QuantideDataLoader.get_daily` 内部 `from quantide.data.fetchers.tushare import TushareFetcher` + `from quantide.data.models.calendar import Calendar, FrameType`)。
-- **业务符号白名单延伸 (本 spec 锁定)**:
-  - 允许 import `quantide.data.fetchers.tushare.*` (沿用 v0.4.0,含 `TushareFetcher` / `fetch_bars` / `fetch_adjust_factor` / `fetch_stock_list`)。
-  - **新增允许** `quantide.data.models.calendar.*` (本 spec FR-0100 兑现:`Calendar` / `FrameType` / `get_frames_by_count` 等)。
-  - **禁止** import `quantide.service.*` / `quantide.portfolio.*` / `quantide.backtest.*` / `quantide.core.scheduler.*` 等非数据 fetcher / 非日历的 quantide 模块(与 v0.3.1 NFR-0101 / v0.4.0 NFR-0100 业务符号白名单范围保持一致;`data.*` 子树在本 data adapter 中允许,其余业务符号继续禁止)。
+- **隔离承诺 (继承 v0.4.0 NFR-0100 边界,Round 1 偏差后维持)**: `src/trader_off/data/quantide_adapter.py` 模块顶层(含 `import` 块、`from ... import` 块、类体、`if TYPE_CHECKING` 块、`__init__` 方法体、模块级 docstring 示例代码)**不**出现 `import quantide` 或 `from quantide ...` 语句。
+- 所有 `quantide` 导入必须位于 `def` / `async def` 函数体内;导入时机为首次调用(如 `QuantideDataLoader.get_daily` 内部 `from quantide.data.fetchers.tushare import TushareFetcher, fetch_calendar` —— **仅** `quantide.data.fetchers.tushare` 子树下的两个符号,**不**导入 `quantide.data.models.calendar.*`)。
+- **业务符号白名单维持 (Round 1 偏差后,本 spec 锁定)**:
+  - 允许 import `quantide.data.fetchers.tushare.*` (沿用 v0.4.0,含 `TushareFetcher` / **`fetch_calendar`** / `fetch_bars` / `fetch_adjust_factor` / `fetch_stock_list`)。
+  - **不放行** `quantide.data.models.calendar.*` (Round 1 偏差:原计划放行 `Calendar` / `FrameType` / `get_frames_by_count`,因 `Calendar.get_frames_by_count()` 真实数据触发 pyarrow `pc.sum` TypeError,改用 `quantide.data.fetchers.tushare.fetch_calendar(start_epoch)` 模块级函数,该符号本就在 v0.4.0 白名单内,无需扩展)。
+  - **禁止** import `quantide.service.*` / `quantide.portfolio.*` / `quantide.backtest.*` / `quantide.core.scheduler.*` 等非数据 fetcher 的 quantide 模块(与 v0.3.1 NFR-0101 / v0.4.0 NFR-0100 业务符号白名单范围保持一致)。
 - **验证 1 (模块顶层)**: `grep -rn "^import quantide\|^from quantide" src/trader_off/data/quantide_adapter.py` 应无匹配。
-- **验证 2 (非白名单业务符号)**: `grep -rnE "quantide\.(service|portfolio|backtest|core\.scheduler)" src/trader_off/data/quantide_adapter.py` 应无匹配。
-- **验证 3 (函数级 import 存在性)**: `grep -rn "from quantide" src/trader_off/data/quantide_adapter.py` 至少 2 个匹配(`TushareFetcher` + `Calendar, FrameType`),证明实际接入了两个 quantide 子模块。
+- **验证 2 (非白名单业务符号)**: `grep -rnE "quantide\.(service|portfolio|backtest|core\.scheduler|models\.calendar)" src/trader_off/data/quantide_adapter.py` 应无匹配。
+- **验证 3 (函数级 import 存在性)**: `grep -rn "from quantide" src/trader_off/data/quantide_adapter.py` 至少 1 个匹配(`from quantide.data.fetchers.tushare import TushareFetcher, fetch_calendar`),证明实际接入了 quantide 子模块。
 - **验证 4 (AST 校验)**: Python AST 解析(`ast.parse` + 遍历 `ast.ImportFrom` / `ast.Import`)`quantide_adapter.py`,所有 `module == "quantide"` 或 `module.startswith("quantide.")` 的导入节点的祖先链必须含 `FunctionDef` / `AsyncFunctionDef`,无模块顶层 / 类体 / `if TYPE_CHECKING` 块的 import。
-- **验证 5 (集成层影响)**: `grep -rn "^import quantide\|^from quantide" src/trader_off/data/` 除本 spec 既有 `quantide_adapter.py` 外应无其他匹配(即 `DataLoader` 模块本身仍零 quantide 顶层 import,隔离承诺延续 v0.3.0 NFR-0200 / v0.3.1 NFR-0101 的 compat shim 模式)。
+- **验证 5 (集成层影响)**: `grep -rn "^import quantide\|^from quantide" src/trader_off/data/` 除本 spec 既有 `quantide_adapter.py` 外应无其他匹配(即 `DataLoader` 模块本身仍零 quantide 顶层 import,隔离承诺延续 v0.3.0 NFR-0200 / v0.3.1 NFR-0101 / v0.4.0 NFR-0100 的 compat shim 模式)。
 - v0.3.0 NFR-0200 / v0.3.1 NFR-0101 / v0.4.0 NFR-0100 对其他模块的隔离承诺保持通过,本 NFR-0100 仅约束 `quantide_adapter.py` 模块。
 
 ---
@@ -177,12 +181,11 @@ priority: P0
 | Round | Source | Question / Decision | Status |
 |---|---|---|---|
 | 0 (Story M-STORY) | v0.4.0 FR-0100 行 63 "不实例化 TushareFetcher / 不用 TUSHARE_TOKEN / 不发网络 IO" | v0.4.1 显式反转兑现,本 spec FR-0100 内记录"反转 v0.4.0 FR-0100 行 63" | ✅ |
-| 0 (Story M-STORY) | v0.4.0 NFR-0100 业务符号白名单 `quantide.data.fetchers.tushare.*` | v0.4.1 延伸至 `quantide.data.models.calendar.*`,本 spec NFR-0100 内记录"白名单延伸" | ✅ |
+| 0 (Story M-STORY) | v0.4.0 NFR-0100 业务符号白名单 `quantide.data.fetchers.tushare.*` | **Round 1 偏差后维持**:不放行 `quantide.data.models.calendar.*`(原计划延伸因 `Calendar.get_frames_by_count` 内部 bug 撤销);仅使用 `quantide.data.fetchers.tushare.fetch_calendar(start_epoch)`(原白名单内符号)。本 spec NFR-0100 内记录"白名单维持" | ✅ |
 | 0 (Story M-STORY) | Out-of-Scope | 不做 CLI / scheduler / 可视化 / token 管理(刷新/轮换/加密落盘) | ✅ |
 | 0 (Story M-STORY) | `TushareFetcher` vs 模块级 `fetch_bars` 二选一 | v0.4.0 spec 已锁定为模块级 `fetch_bars`,本 spec FR-0100 兑现"实例化 TushareFetcher + fetch_bars"为真数据路径,但保留 v0.4.0 模块级 `fetch_bars` 调用契约(列重命名/Schema 不变);真数据经由 `TushareFetcher.fetch_bars(dates)` 实例方法 | ✅ |
 | 0 (User 2026-07-21) | Story §6 Human 确认 | 分流结论 Go / 行 63 反转认同 / NFR-0100 白名单延伸认同 / Out-of-Scope 认同 | ✅ |
 | 0 (M-SPEC) | token 缺失时的 smoke 行为 | `QuantideDataLoader.__init__` 抛 `RuntimeError`(不静默退化);smoke test 在 loader 之前 `pytest.skip`(smoke 层契约);token 门控是 loader 契约,**不**绕过 | ✅ |
 | 0 (M-SPEC) | mock 路径是否绕过 token 门控 | mock 不绕过 token 门控;smoke 入口 skip 后**不**进 mock,或显式注入占位符 token 走 mock(由 smoke 实现决定) | ✅ |
-| 待 M-FOUND | `TushareFetcher.fetch_calendar(epoch)` 真实签名 | 在 M-FOUND 阶段读 `quantide.data.fetchers.tushare.TushareFetcher` 源码确认;若 epoch 形参与本 FR 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
-| 待 M-FOUND | `Calendar.get_frames_by_count(date, count, FrameType)` 真实签名 | 在 M-FOUND 阶段读 `quantide.data.models.calendar.Calendar` 源码确认;若签名/返回值与本 FR-0100 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
-| 待 M-FOUND | `FrameType.DAY` 是否为真实枚举值 | 在 M-FOUND 阶段确认;若 quantide 用字符串或不同枚举名,更新 AC | ⚠️ [M-FOUND 锁定] |
+| **1 (User 2026-07-21)** | **`Calendar.get_frames_by_count()` 内部 bug 偏差** | `quantide.data.models.calendar.Calendar.get_frames_by_count(end_date, count, FrameType.DAY)` 在真实交易日历上触发 pyarrow `pc.sum` TypeError(quantide 上游已知 bug)。**偏差决策**:改用 `quantide.data.fetchers.tushare.fetch_calendar(start_epoch)` 模块级函数(已验证可用)取交易日历 + 截取最后 `count` 个 ≤ end_date 的真实交易日。**影响**:FR-0100 兑现路径不变(替换 pandas.bdate_range → 真交易日),仅实现 API 切换;**NFR-0100 白名单维持 v0.4.0 边界**,**不**放行 `quantide.data.models.calendar.*`。acceptance.md AC-FR0100-02/03/04 + AC-FR0200-02 + AC-NFR0100-02/04 同步更新引用。 | ✅ |
+| 待 M-FOUND | `fetch_calendar(start_epoch)` 真实签名与返回结构 | 在 M-FOUND 阶段读 `quantide.data.fetchers.tushare.fetch_calendar` 源码确认;若签名/返回类型(`pd.DataFrame` / `list[date]` / 其他)与本 FR-0100 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |

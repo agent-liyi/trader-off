@@ -18,7 +18,7 @@
 ---
 
 <a id="ac-fr-0100"></a>
-## FR-0100 QuantideDataLoader 真数据接入 — TushareFetcher 实例化 + Calendar 替换 pandas.bdate_range
+## FR-0100 QuantideDataLoader 真数据接入 — TushareFetcher 实例化 + `fetch_calendar` 替换 pandas.bdate_range
 
 ### AC-1
 
@@ -37,11 +37,14 @@ AC-FR0100-01
 AC-FR0100-02
 
 - **WHEN** env `TUSHARE_TOKEN` 已设置
-- **THEN** 系统 SHALL 在 `get_daily` 函数体内 lazy import `quantide.data.fetchers.tushare.TushareFetcher`,实例化 `TushareFetcher(token=<env_value>)`,调 `fetcher.fetch_calendar(epoch)` 获取交易日锚点,再用 `quantide.data.models.calendar.Calendar.get_frames_by_count(end_date, count, FrameType.DAY)` 反推最近 `count` 个真实交易日(CN 假期自动剔除)
+- **THEN** 系统 SHALL 在 `get_daily` 函数体内 lazy import `quantide.data.fetchers.tushare.TushareFetcher` 与 `quantide.data.fetchers.tushare.fetch_calendar`(同 import 行 / 同函数体内),实例化 `TushareFetcher(token=<env_value>)`,调**模块级 `fetch_calendar(start_epoch)`** 获取交易日历,截取**最后 `count` 个 ≤ end_date 的真实交易日**(CN 假期自动剔除)
 - **断言**:
-  - 给定:`os.environ['TUSHARE_TOKEN'] = "fake-token-for-test"`。
-  - 当:`loader = QuantideDataLoader()` 实例化 → `loader.get_daily("000001.SZ", date(2024, 1, 31), count=60)` 调用,内部 mock `TushareFetcher` / `Calendar.get_frames_by_count`。
-  - 那么:实例化时 `TushareFetcher(token="fake-token-for-test")` 收到调用且**仅**调用一次;`Calendar.get_frames_by_count(date(2024, 1, 31), 60, FrameType.DAY)` 收到调用且**仅**调用一次。
+  - 给定:`os.environ['TUSHARE_TOKEN'] = "fake-token-for-test"`,`fetch_calendar` mock 返回包含 ≥ `count * 3` 个真实交易日(超出 end_date 足够多以测试截取)。
+  - 当:`loader = QuantideDataLoader()` 实例化 → `loader.get_daily("000001.SZ", date(2024, 1, 31), count=60)` 调用。
+  - 那么:
+    - `TushareFetcher(token="fake-token-for-test")` 收到调用且**仅**调用一次;
+    - 模块级 `fetch_calendar(<start_epoch>)` 收到调用且**仅**调用一次,`start_epoch` 严格 `< end_date - count * 2`(确保截取窗口足够);
+    - **不**调 `quantide.data.models.calendar.Calendar.get_frames_by_count`(Round 1 偏差:该 API 有内部 bug,改用 `fetch_calendar`)—— 可用 `unittest.mock.patch("quantide.data.models.calendar.Calendar.get_frames_by_count")` 验证**未**触发。
 - **对应 EARS**: Story §2.4 AC-02。
 
 ### AC-3
@@ -49,12 +52,12 @@ AC-FR0100-02
 AC-FR0100-03
 
 - **WHILE** 反推交易日
-- **THEN** 系统 SHALL 不再调用 `pandas.bdate_range`(完全移除 `_compute_trade_dates` 中的 `pd.bdate_range` 路径,防止双路径漂移)
+- **THEN** 系统 SHALL 不再调用 `pandas.bdate_range`,也**不**调 `quantide.data.models.calendar.Calendar.get_frames_by_count`(完全移除 `_compute_trade_dates` 中的双路径,防止漂移)
 - **断言**:
   - 给定:`quantide_adapter.py` 源码。
-  - 当:`grep -rn "bdate_range" src/trader_off/data/quantide_adapter.py` 执行。
-  - 那么:无匹配(返回码非 0,stdout 为空)。同时 AST 解析该文件,无 `pd.bdate_range` 调用节点。
-  - 函数 `_compute_trade_dates` 应被替换或重命名为 `_compute_real_trade_dates`,内部仅调 `Calendar.get_frames_by_count`。
+  - 当:`grep -rn "bdate_range" src/trader_off/data/quantide_adapter.py` 与 `grep -rn "get_frames_by_count" src/trader_off/data/quantide_adapter.py` 执行。
+  - 那么:**两**个 grep 全部无匹配(返回码非 0,stdout 为空)。同时 AST 解析该文件,无 `pd.bdate_range` 调用节点,**无** `Calendar.get_frames_by_count` 调用节点。
+  - 函数 `_compute_trade_dates` 应被替换或重命名为 `_compute_real_trade_dates`,内部仅调模块级 `fetch_calendar(start_epoch)` + 截取末尾 ≤ end_date 的 `count` 个交易日。
 - **对应 EARS**: Story §2.4 AC-03。
 
 ### AC-4
@@ -64,10 +67,10 @@ AC-FR0100-04
 - **WHEN** 真实交易日列表就绪
 - **THEN** 系统 SHALL 调用 `fetcher.fetch_bars(dates)`(TushareFetcher 实例方法,**非**模块级 `fetch_bars` 单独调用)并返回 polars OHLCV DataFrame,schema 与 v0.4.0 一致(`asset/date/open/high/low/close/volume/turnover/adj_factor`)
 - **断言**:
-  - 给定:`loader.get_daily("000001.SZ", date(2024, 1, 31), count=60)`,内部 mock `TushareFetcher` 返回固定 60 天 OHLCV fixture。
+  - 给定:`loader.get_daily("000001.SZ", date(2024, 1, 31), count=60)`,内部 mock `TushareFetcher` 返回固定 60 天 OHLCV fixture,`fetch_calendar` mock 返回 60 个 ≤ end_date 的真实交易日。
   - 当:调用链走通 `_compute_real_trade_dates` → `fetcher.fetch_bars(dates)` → `_to_polars_ohlcv`。
   - 那么:返回 `pl.DataFrame`,`height <= 60` 且 `height >= 1`;schema 严格为 `{asset: Utf8, date: Date, open: Float64, high: Float64, low: Float64, close: Float64, volume: Float64, turnover: Float64, adj_factor: Float64}`;列重命名 `ts_code → asset` / `trade_date → date` / `vol → volume` / `amount → turnover` 全部生效。
-  - `fetcher.fetch_bars(dates)` 调用**至少** 1 次,参数 `dates` 长度 == `Calendar.get_frames_by_count` 返回交易日数(由 mock 控制)。
+  - `fetcher.fetch_bars(dates)` 调用**至少** 1 次,参数 `dates` 长度 == `fetch_calendar` 截取后交易日数(由 mock 控制,**不**等于 `count` 而等于真实截取结果)。
 - **对应 EARS**: Story §2.4 AC-04。
 
 ### AC-5
@@ -116,7 +119,7 @@ AC-FR0200-02
 - **WHEN** smoke test 启动 AND env `TUSHARE_TOKEN` 存在
 - **THEN** 系统 SHALL 拉 3 stocks (`000001.SZ` / `600519.SH` / `000858.SZ`) × 60 交易日 → 数据按 v0.3.0 `DailyBarsStore` schema 写入 `tmp_path/daily_bars_store/`(年分区 parquet) → `BacktestRunner.run(strategy_cls=BaseStrategy_compat, config={...}, start_date, end_date, initial_cash=100000)` → 断言 `result.nav.height > 0`
 - **断言**:
-  - 给定:`os.environ['TUSHARE_TOKEN']` 已设置,smoke test 用 `monkeypatch` 替换 `quantide.data.fetchers.tushare.TushareFetcher` 为 mock(返回 60 天 × 3 资产 OHLCV fixture),`Calendar.get_frames_by_count` 也 mock 返回 60 个交易日。
+  - 给定:`os.environ['TUSHARE_TOKEN']` 已设置,smoke test 用 `monkeypatch` 替换 `quantide.data.fetchers.tushare.TushareFetcher` 为 mock(返回 60 天 × 3 资产 OHLCV fixture);模块级 `quantide.data.fetchers.tushare.fetch_calendar` 也 mock 返回 60 个 ≤ end_date 的真实交易日(覆盖 3 个资产对应区间)。
   - 当:smoke test 跑完整链路。
   - 那么:
     - 3 个资产的 `pl.DataFrame` 全部 `height >= 1`,schema 与 FR-0100 AC-4 一致;
@@ -167,7 +170,7 @@ AC-FR0200-05
 ---
 
 <a id="ac-nfr-0100"></a>
-## NFR-0100 函数级 lazy import — 白名单延伸至 `quantide.data.models.calendar.*` (继承 v0.4.0 NFR-0100)
+## NFR-0100 函数级 lazy import — 白名单维持 v0.4.0 边界 (Round 1 偏差:不放行 `quantide.data.models.calendar.*`)
 
 ### AC-1
 
@@ -185,11 +188,11 @@ AC-NFR0100-01
 AC-NFR0100-02
 
 - **WHEN** 验证 `quantide_adapter.py` 函数体内 import
-- **THEN** 系统 SHALL 至少 2 个 `from quantide ...` 匹配,证明实际接入了 `quantide.data.fetchers.tushare.TushareFetcher` 与 `quantide.data.models.calendar.Calendar, FrameType`
+- **THEN** 系统 SHALL 至少 1 个 `from quantide ...` 匹配,证明实际接入了 `quantide.data.fetchers.tushare.TushareFetcher, fetch_calendar`(Round 1 偏差:仅 1 个 `from quantide.data.fetchers.tushare import ...`,**不**导入 `quantide.data.models.calendar.*`)
 - **断言**:
   - 给定:`quantide_adapter.py` 源文件。
   - 当:`grep -rn "from quantide" src/trader_off/data/quantide_adapter.py` 执行(无 `^` 锚定,允许函数体内任意位置)。
-  - 那么:至少 2 行匹配,内容分别包含 `from quantide.data.fetchers.tushare import TushareFetcher` 与 `from quantide.data.models.calendar import Calendar, FrameType`(允许顺序、import 风格小变)。
+  - 那么:**至少** 1 行匹配,内容包含 `from quantide.data.fetchers.tushare import TushareFetcher, fetch_calendar`(允许顺序、import 风格小变;**不**应出现 `from quantide.data.models.calendar` 行)。
 
 ### AC-3
 
@@ -207,11 +210,11 @@ AC-NFR0100-03
 AC-NFR0100-04
 
 - **WHEN** 验证 `quantide_adapter.py` 业务符号白名单边界
-- **THEN** 系统 SHALL 无 `quantide.service.*` / `quantide.portfolio.*` / `quantide.backtest.*` / `quantide.core.scheduler.*` 的 import(白名单外模块零出现)
+- **THEN** 系统 SHALL 无 `quantide.service.*` / `quantide.portfolio.*` / `quantide.backtest.*` / `quantide.core.scheduler.*` / `quantide.data.models.calendar.*` 的 import(白名单外模块零出现;Round 1 偏差后 `quantide.data.models.calendar.*` **不**放行)
 - **断言**:
   - 给定:`quantide_adapter.py` 源文件。
-  - 当:`grep -rnE "quantide\.(service|portfolio|backtest|core\.scheduler)" src/trader_off/data/quantide_adapter.py` 执行。
-  - 那么:无匹配(grep 退出码 `1`,stdout 为空)。白名单内仅允许 `quantide.data.fetchers.tushare.*` 与 `quantide.data.models.calendar.*`。
+  - 当:`grep -rnE "quantide\.(service|portfolio|backtest|core\.scheduler|models\.calendar)" src/trader_off/data/quantide_adapter.py` 执行。
+  - 那么:无匹配(grep 退出码 `1`,stdout 为空)。白名单内**仅**允许 `quantide.data.fetchers.tushare.*`(`TushareFetcher` / `fetch_calendar` / `fetch_bars` 等),**不**放行 `quantide.data.models.calendar.*`。
 
 ### AC-5
 
