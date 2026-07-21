@@ -159,7 +159,7 @@ class OptimizedTopKStrategy(BaseStrategy):
         for asset, weight in sorted_assets:
             self.broker.trade_target_pct(
                 asset=asset,
-                pct=float(weight),
+                target_pct=float(weight),
                 extra=self._trade_extra(weight),
             )
             self._position_cache[asset] = float(weight)
@@ -169,7 +169,7 @@ class OptimizedTopKStrategy(BaseStrategy):
             if asset not in target_assets:
                 self.broker.trade_target_pct(
                     asset=asset,
-                    pct=0.0,
+                    target_pct=0.0,
                     extra=self._trade_extra(0.0),
                 )
                 del self._position_cache[asset]

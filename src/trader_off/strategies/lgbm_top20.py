@@ -109,7 +109,7 @@ class LGBMTop20Strategy(BaseStrategy):
             }
             self.broker.trade_target_pct(
                 asset=row["asset"],
-                pct=weight,
+                target_pct=weight,
                 extra=extra,
             )
             self._position_cache[row["asset"]] = weight
@@ -119,7 +119,7 @@ class LGBMTop20Strategy(BaseStrategy):
             if asset not in target_assets:
                 self.broker.trade_target_pct(
                     asset=asset,
-                    pct=0.0,
+                    target_pct=0.0,
                     extra={
                         "reason": "lgbm_top20",
                         "score": 0.0,
@@ -129,10 +129,7 @@ class LGBMTop20Strategy(BaseStrategy):
                 )
                 del self._position_cache[asset]
 
-        logger.info(
-            f"on_day_open {tm.date()}: targets={len(targets)}, "
-            f"weight={weight:.4f}"
-        )
+        logger.info(f"on_day_open {tm.date()}: targets={len(targets)}, weight={weight:.4f}")
 
     async def on_bar(self, tm: datetime) -> None:
         """No-op for daily strategy."""

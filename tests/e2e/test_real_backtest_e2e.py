@@ -51,16 +51,6 @@ def weights_csv_dir(tmp_path: Path) -> Path:
 class TestRealBacktestE2E:
     """E2E test for FR-0500 + FR-0700 + FR-0800: real quantide backtest."""
 
-    @pytest.mark.skip(
-        reason=(
-            "Skipped for v0.3.0 MVP: ClockRewind in quantide BacktestBroker.set_clock "
-            "due to calendar alignment gap between ohlcv_10x60 fixture (starts 2024-01-02) "
-            "and quantide's initial clock (day_shift returns same day). "
-            "Requires proper calendar fixture setup or BacktestBroker bug fix. "
-            "The backtest delegation contract (FR-0500) is verified by other passing tests. "
-            "Will be unskipped when v0.3.0 quantide calendar integration is complete."
-        )
-    )
     def test_run_backtest_real_summary_keys(self, weights_csv_dir: Path):
         """AC-FR0600-06, AC-FR0500-01, AC-FR0800-07:
         Real backtest produces summary.json with 6 required keys + optional extensions.
@@ -155,13 +145,6 @@ class TestRealBacktestE2E:
         elapsed = time.perf_counter() - t0
         assert elapsed < 180, f"Real backtest e2e took {elapsed:.1f}s, must be <180s"
 
-    @pytest.mark.skip(
-        reason=(
-            "Skipped for v0.3.0 MVP: ClockRewind in quantide BacktestBroker.set_clock "
-            "due to calendar alignment gap between ohlcv_10x60 fixture and quantide's "
-            "initial clock computation. See test_run_backtest_real_summary_keys for details."
-        )
-    )
     def test_run_backtest_nav_curve_is_real(self, weights_csv_dir: Path):
         """AC-FR0700-01, AC-FR0500-01:
         NAV curve reflects real (not random/synthetic) data.
@@ -266,14 +249,6 @@ class TestRealBacktestE2E:
             "FR-0500: synthetic NAV branch still present in runner.py"
         )
 
-    @pytest.mark.skip(
-        reason=(
-            "Skipped for v0.3.0 MVP: ClockRewind in quantide BacktestBroker.set_clock "
-            "due to calendar alignment gap. See test_run_backtest_real_summary_keys for details. "
-            "The FR-0500-08 store_path override path is verified by the runner source inspection "
-            "test test_run_backtest_no_synthetic_data_branch."
-        )
-    )
     def test_run_backtest_with_custom_store_path(self, weights_csv_dir: Path):
         """AC-FR0500-08: store_path can be overridden via config.
 

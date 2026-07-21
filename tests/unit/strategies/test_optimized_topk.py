@@ -23,8 +23,8 @@ class MockBroker:
     def __init__(self):
         self.calls = []
 
-    def trade_target_pct(self, asset, pct, extra=None):
-        self.calls.append({"asset": asset, "pct": pct, "extra": extra or {}})
+    def trade_target_pct(self, asset, target_pct, extra=None):
+        self.calls.append({"asset": asset, "pct": target_pct, "extra": extra or {}})
 
 
 class TestOptimizedTopKStrategyInheritance:
