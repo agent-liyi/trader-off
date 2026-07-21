@@ -99,16 +99,9 @@ class LGBMTop20Strategy(BaseStrategy):
         target_assets = set(targets["asset"].to_list())
         weight = 1.0 / self.top_k if self.top_k > 0 else 0.0
 
-        # Place orders for target positions
-        for row in targets.iter_rows(named=True):
-            await self.broker.trade_target_pct(
-                asset=row["asset"],
-                target_pct=weight,
-                order_time=tm,
-            )
-            self._position_cache[row["asset"]] = weight
-
-        # Clear positions not in target list
+        # Step 1: Clear positions not in target list first.
+        # Selling first frees cash before rebalancing targets, avoiding
+        # transient cash depletion when buys precede sells.
         for asset in list(self._position_cache.keys()):
             if asset not in target_assets:
                 await self.broker.trade_target_pct(
@@ -117,6 +110,26 @@ class LGBMTop20Strategy(BaseStrategy):
                     order_time=tm,
                 )
                 del self._position_cache[asset]
+
+        # Step 2: Adjust target weights for residual cash.
+        # trade_target_pct uses total_asset() (cash + market_value) as its
+        # denominator. When cash > 0, the sum of position weights is less
+        # than the intended total, causing perpetual buying pressure that
+        # drains cash over consecutive trading days.  Scaling by
+        # market_value/total anchors the allocation to the invested portion.
+        total = self.broker.total_asset()
+        market_value = self.broker.market_value()
+        cash_factor = market_value / total if total > 0 and market_value > 0 else 1.0
+        adjusted_weight = weight * cash_factor
+
+        # Step 3: Place orders for target positions
+        for row in targets.iter_rows(named=True):
+            await self.broker.trade_target_pct(
+                asset=row["asset"],
+                target_pct=adjusted_weight,
+                order_time=tm,
+            )
+            self._position_cache[row["asset"]] = weight
 
         logger.info(f"on_day_open {tm.date()}: targets={len(targets)}, weight={weight:.4f}")
 
