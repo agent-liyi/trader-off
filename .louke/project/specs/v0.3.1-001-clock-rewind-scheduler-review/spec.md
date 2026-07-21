@@ -4,9 +4,9 @@
 - **Created**: 2026-07-21
 - **Status**: Draft
 
-> **Responsibility split**: This document only describes the requirements themselves (FR/NFR descriptions + metadata).
-> Acceptance criteria (observable, assertable pass conditions) live in `acceptance.md` so they can grow without bloating spec.
-> The test plan (`test-plan.md`) references both spec.md and acceptance.md as inputs.
+> **职责切分**: 本文档只描述需求本身 (FR/NFR 描述 + 元数据)。
+> 验收标准 (可观察、可断言的通过条件) 放在 `acceptance.md` 中。
+> 测试计划 (`test-plan.md`) 同时引用本文件与 `acceptance.md` 作为输入。
 
 ## User Stories
 
@@ -26,18 +26,18 @@ priority: P0
 
 ## Functional Requirements
 
-> **Format convention (must read)**: Each FR unit starts with a level-3 heading + space + FR-XXXX (uppercase, 4-digit zero-padded) + {title}, immediately followed by a 3-column metadata table (Valid / Testable / Decided), then the requirement description; separate FRs with `---`.
+> **格式约定 (必读)**: 每个 FR 单元以三级标题 + 空格 + `FR-XXXX`(大写、4 位补零)+ {标题} 开头,紧接三列元数据表 (Valid / Testable / Decided),再写需求描述;FR 之间用 `---` 分隔。
 >
-> **Numbering convention (must read)**: FR codes use **4 digits**, zero-padded, **starting from 100 in the initial draft, stepping by 100** (FR-0100, FR-0200, ...); **after the first review round, insert by step 10** (FR-0110 between FR-0100 and FR-0200); **after the second round, use sequential numbering**. This 100/10/1 spacing reserves room for future insertions and avoids large-scale renumbering.
+> **编号约定 (必读)**: 本 spec 使用 **FR-0100 / FR-0200** 两条 P0 FR + **NFR-0101 / NFR-0200** 两条 NFR;起始草案 100/200 间隔,首次复审后按 10 插入(预留扩展位)。4 位补零,锁定后不改 ID,deprecated 时 Valid=❌ + 备注。
 >
-> **Must read**: The FR-XXXX code is the id of that requirement. Never delete an existing requirement id to avoid reference confusion; if a FR must be deprecated, change `Valid` to ❌ in the table and explain in the clarification log.
+> **必读**: FR-XXXX 是该需求唯一 ID,**禁止删除**既有 ID;若 FR 需废弃,改表内 Valid=❌ 并在 Clarification Log 解释。
 >
-> **AC reference**: Acceptance criteria use the `AC-FRXXXX-YY` format (4-digit FR + 2-digit AC), see `acceptance.md`.
+> 引用约定 (AC): 验收标准用 `AC-FRXXXX-YY` 格式 (4 位 FR + 2 位 AC),见 `acceptance.md`。
 >
-> **Metadata fields (table columns)**:
-> - Valid (formerly yaml `valid`): ✅ = still active, ❌ = deprecated
-> - Testable (formerly yaml `testability`): ✅ = can be tested/asserted, ⚠️ {reason} = has reservations
-> - Decided (formerly yaml `resolved`): ✅ = user approved, ⚠️ = pending clarification, ❌ = user explicitly rejected
+> **元数据表 (3 列)**:
+> - Valid (原 yaml `valid`): ✅ = 仍生效,❌ = 已废弃
+> - Testable (原 yaml `testability`): ✅ = 可测试/可断言,⚠️ {原因} = 存保留意见
+> - Decided (原 yaml `resolved`): ✅ = 用户已确认,⚠️ = 待澄清,❌ = 用户明确拒绝
 
 <a id="fr-0100"></a>
 ### FR-0100 ClockRewind fixture 修复 — 移除 2（自然 3）个 e2e skip
@@ -82,7 +82,7 @@ priority: P0
 
 ## Non-Functional Requirements
 
-> **Must read**: Format and numbering rules are the same as FR; omitted here.
+> **必读**: NFR 格式与编号规则同 FR,此处省略。
 
 <a id="nfr-0101"></a>
 ### NFR-0101 调度器隔离改写 — 函数级 lazy import + 零业务符号 (继承 v0.2.0 AC-FR1500-04，**替代** v0.3.0 NFR-0100)
