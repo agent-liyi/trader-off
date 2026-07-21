@@ -1,3 +1,8 @@
+---
+locked: true
+locked-at: 2026-07-21T06:59:25Z
+locked-by: lk agent sage record-lock
+---
 # v0.3.1 patch — ClockRewind fixture fix + scheduler decoupling review — Spec
 
 - **Spec ID**: v0.3.1-001-clock-rewind-scheduler-review
@@ -119,7 +124,7 @@ priority: P0
 > Record questions raised during user review, Sage/Lex replies, reasons for deprecated requirements, and any decisions that affect FR/NFR table status.
 
 | Round | Source | Question / Decision | Status |
-|---|---|---|---|
+|---|---|---|---|---|
 | 0 (Story) | M-STORY §5 | FR-0100 修复方式 (a) vs (b)：建议 (a) 与 50×252 fixture 对齐 2023 年窗口 | ⚠️ [M-SPEC 锁定] |
 | 0 (Story) | M-STORY §5 | FR-0200 verdict：Agent 倾向 (S) Stay-isolated | ⚠️ [Human 决策必填] |
 | 1 (User 2026-07-21) | M-SPEC Step 1 | **FR-0100 决策 = option (a)** — 修改 `convert_fixture_to_quantide.py` 默认起始日期（或重生 fixture） | ✅ |
@@ -128,3 +133,4 @@ priority: P0
 | 1 (User 2026-07-21) | M-SPEC Step 1 | **FR-0200 落地范围**：croniter → `SchedulerManager` 适配；禁止顺手 refactor scheduler 其他模块 | ✅ |
 | 1 (User 2026-07-21) | M-SPEC Step 1 | **story §3.1 Avoid 第 3 个 skip**（`test_run_backtest_with_custom_store_path`）— 同 ClockRewind 根因，FR-0100 修复后自然覆盖；显式纳入 AC 但不作为独立 FR | ✅ |
 | 1 (M-SPEC) | 本 spec | **NFR-0100 → NFR-0101 改写**：v0.3.0 NFR-0100 被本 spec NFR-0101 替代（仅限 scheduler 模块），其他模块隔离由 v0.3.0 NFR-0200 约束 | ✅ |
+| 2 (M-DEV 2026-07-21) | Devon | **FR-0100 实施偏差 (a)→(b)**：spec 正文第 54 行写入选项 (a) "修改 convert_fixture_to_quantide.py"，实际实施为选项 (b) "修改 _generate_inline_calendar() 在 runner.py 中前置合成前一天"；选择 (b) 的理由：根本原因在于 `runner.py` 中的 inline calendar 生成（`calendar.day_shift(start, -1)` 需要前一日历条目），而非 fixture 转换脚本；(b) 更简洁，不要求改变上游 fixture 数据，在 calendar 层修复而非数据层。| ✅
