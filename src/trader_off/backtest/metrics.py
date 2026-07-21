@@ -1,9 +1,10 @@
 """Performance metrics computation (FR-1200 / FR-0800).
 
 Pure functions for computing annualized return, Sharpe ratio, max drawdown,
-win rate, total trades, and average turnover from a NAV time series.
+and win rate from a NAV time series.
 
-FR-0800: Removed hardcoded zero values (lines ~66-68 of v0.2.0).
+FR-0800: total_trades and avg_turnover are no longer part of this function's
+output — they are injected by the runner via quantide BacktestBroker.bills().
 FR-0900: Public signature unchanged — compute_performance_metrics(nav_df).
 """
 
@@ -31,9 +32,9 @@ def compute_performance_metrics(nav_df: pl.DataFrame) -> dict:
 
     Returns:
         Dict with keys: annualized_return, sharpe_ratio, max_drawdown,
-        win_rate, total_trades, avg_turnover.
-        Extended optional keys (sortino, drawdown_duration_days, etc.)
-        may be present when bills data is available via the runner.
+        win_rate.
+        total_trades and avg_turnover are provided by the runner (not this
+        function) when trade data is available from BacktestBroker.bills().
 
     Raises:
         InsufficientDataError: If fewer than 30 NAV data points.
@@ -69,17 +70,9 @@ def compute_performance_metrics(nav_df: pl.DataFrame) -> dict:
     # Win rate: fraction of positive daily returns
     win_rate = float(np.mean(daily_returns > 0))
 
-    # total_trades and avg_turnover — no longer hardcoded constants.
-    # When standalone (no trade data), return 0 as a sensible default.
-    # Real values are injected by run_backtest via the BacktestResult summary.
-    total_trades = 0
-    avg_turnover = 0.0
-
     return {
         "annualized_return": annualized_return,
         "sharpe_ratio": sharpe_ratio,
         "max_drawdown": max_dd,
         "win_rate": win_rate,
-        "total_trades": total_trades,
-        "avg_turnover": avg_turnover,
     }

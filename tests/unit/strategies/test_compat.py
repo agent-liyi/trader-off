@@ -110,6 +110,31 @@ class TestCompatWithQuantideInstalled:
     use mocking to simulate the scenario where quantide IS available.
     """
 
+    def test_on_bar_signature_matches_quantide(self):
+        """Compat stub on_bar signature matches quantide BaseStrategy.on_bar.
+
+        The compat stub's on_bar must accept the same parameters as the real
+        quantide BaseStrategy.on_bar: (self, tm, quote, frame_type).
+        """
+        import inspect
+
+        try:
+            from quantide.core.strategy import BaseStrategy as RealBaseStrategy
+        except ImportError:
+            pytest.skip("quantide not installed — cannot verify signature")
+
+        from trader_off.strategies.compat import BaseStrategy as CompatBaseStrategy
+
+        real_params = list(inspect.signature(RealBaseStrategy.on_bar).parameters.keys())
+        compat_params = list(inspect.signature(CompatBaseStrategy.on_bar).parameters.keys())
+
+        # Compat stub should have at least the same parameter names as real
+        for param in real_params:
+            assert param in compat_params, (
+                f"compat.on_bar missing parameter '{param}'. "
+                f"real params: {real_params}, compat params: {compat_params}"
+            )
+
     def test_quantide_not_installed_uses_stubs(self):
         """Verify quantide is not installed (stubs are being used).
 

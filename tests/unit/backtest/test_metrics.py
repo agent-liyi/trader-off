@@ -25,9 +25,9 @@ def _make_nav_df(values: list[float]) -> pl.DataFrame:
 class TestComputePerformanceMetrics:
     """Unit tests for compute_performance_metrics."""
 
-    # returns dict with all 6 required keys + optional keys
+    # FR-0800: returns core 4 keys only (total_trades/avg_turnover come from runner)
     def test_keys(self):
-        """Result dict has all 6 required keys with correct types."""
+        """Result dict has core keys with correct types."""
         rng = np.random.RandomState(42)
         n = 252
         returns = rng.randn(n) * 0.02 + 0.001
@@ -36,30 +36,25 @@ class TestComputePerformanceMetrics:
         nav_df = _make_nav_df(nav.tolist())
         result = compute_performance_metrics(nav_df)
 
-        required = {
+        core_keys = {
             "annualized_return",
             "sharpe_ratio",
             "max_drawdown",
             "win_rate",
-            "total_trades",
-            "avg_turnover",
         }
-        # FR-0900 AC-3: required keys are a subset (optional keys may also exist)
-        assert required.issubset(set(result.keys())), (
-            f"Missing keys: {required - set(result.keys())}"
+        assert core_keys.issubset(set(result.keys())), (
+            f"Missing core keys: {core_keys - set(result.keys())}"
         )
 
         assert isinstance(result["annualized_return"], float)
         assert isinstance(result["sharpe_ratio"], float)
         assert isinstance(result["max_drawdown"], float)
         assert isinstance(result["win_rate"], float)
-        assert isinstance(result["total_trades"], int)
-        assert isinstance(result["avg_turnover"], float)
 
-    # FR-0700 AC-2: metrics should return non-negative total_trades
-    # (0 when no bills data, but the type must be correct)
-    def test_total_trades_type(self):
-        """total_trades is an int >= 0."""
+    # FR-0800: total_trades and avg_turnover no longer hardcoded
+    def test_no_trade_keys_when_standalone(self):
+        """total_trades/avg_turnover absent when compute_performance_metrics
+        is called standalone (no trade data from broker)."""
         rng = np.random.RandomState(42)
         n = 252
         returns = rng.randn(n) * 0.02 + 0.001
@@ -67,36 +62,9 @@ class TestComputePerformanceMetrics:
         nav_df = _make_nav_df(nav.tolist())
         result = compute_performance_metrics(nav_df)
 
-        assert isinstance(result["total_trades"], int)
-        assert result["total_trades"] >= 0
-
-    def test_avg_turnover_type(self):
-        """avg_turnover is a float >= 0.0."""
-        rng = np.random.RandomState(42)
-        n = 252
-        returns = rng.randn(n) * 0.02 + 0.001
-        nav = 100.0 * np.cumprod(1.0 + returns)
-        nav_df = _make_nav_df(nav.tolist())
-        result = compute_performance_metrics(nav_df)
-
-        assert isinstance(result["avg_turnover"], float)
-        assert result["avg_turnover"] >= 0.0
-
-    # AC-FR0800-03: extended keys may be present
-    def test_extended_keys_may_exist(self):
-        """Result may include optional extended keys."""
-        rng = np.random.RandomState(42)
-        n = 252
-        returns = rng.randn(n) * 0.02 + 0.001
-        nav = 100.0 * np.cumprod(1.0 + returns)
-        nav_df = _make_nav_df(nav.tolist())
-        result = compute_performance_metrics(nav_df)
-
-        # sortino and drawdown_duration_days may be present or None
-        assert "sortino" not in result or result["sortino"] is not None or result["sortino"] is None
-        assert "drawdown_duration_days" not in result or isinstance(
-            result.get("drawdown_duration_days"), (int, type(None))
-        )
+        # These keys are provided by the runner, not by this function
+        assert "total_trades" not in result
+        assert "avg_turnover" not in result
 
     # max_drawdown for [100, 110, 105, 120, 115]
     def test_max_drawdown(self):
@@ -121,9 +89,9 @@ class TestComputePerformanceMetrics:
 
     # AC-FR0800-05: NaN/Inf in nav → error
     def test_nan_in_nav_raises(self):
-        """NaN values in nav raise RuntimeError."""
+        """NaN values in nav raise ValueError."""
         nav_values = [100.0] * 30 + [float("nan")]
         nav_df = _make_nav_df(nav_values)
 
-        with pytest.raises((RuntimeError, ValueError)):
+        with pytest.raises(ValueError):
             compute_performance_metrics(nav_df)
