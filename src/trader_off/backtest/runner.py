@@ -51,6 +51,10 @@ def _generate_inline_calendar(
     Schema: {date, is_open=1, prev} where prev is the previous trading date
     index computed by the runner.
 
+    FR-0100: Prepend one synthetic day before the earliest date so that
+    calendar.day_shift(first_date, -1) returns a real previous day,
+    avoiding ClockRewind in quantide's BacktestBroker.set_clock.
+
     Args:
         dates: Sorted list of unique trading dates.
         output_path: Path to write the calendar parquet to.
@@ -67,6 +71,20 @@ def _generate_inline_calendar(
 
         # Build calendar DataFrame
         date_series = sorted(dates)
+
+        # FR-0100: prepend synthetic previous day to avoid ClockRewind
+        if date_series:
+            from datetime import timedelta
+
+            first = date_series[0]
+            # Use a simple heuristic: go back one calendar day.
+            # If first is a Monday, go back to Friday; otherwise back one day.
+            if first.weekday() == 0:  # Monday
+                prev_day = first - timedelta(days=3)  # Friday
+            else:
+                prev_day = first - timedelta(days=1)
+            date_series = [prev_day] + date_series
+
         n = len(date_series)
         prev_indices = list(range(-1, n - 1))  # prev index: -1 for first day
 

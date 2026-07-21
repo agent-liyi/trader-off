@@ -18,8 +18,19 @@ import polars as pl
 from loguru import logger
 
 REQUIRED_COLUMNS = {"date", "asset", "open", "high", "low", "close", "volume", "adj_factor"}
-OUTPUT_COLUMNS = ["date", "asset", "open", "high", "low", "close", "volume", "adj_factor"]
-EXCLUDED_COLUMNS = {"turnover", "limit_up", "limit_down"}
+OUTPUT_COLUMNS = [
+    "date",
+    "asset",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "adjust",
+    "up_limit",
+    "down_limit",
+]
+EXCLUDED_COLUMNS = {"turnover", "limit_up", "limit_down", "adj_factor"}
 
 DEFAULT_OUTPUT_ROOT = "tests/fixtures/v0.3.0"
 FIXTURES_V020 = Path("tests/fixtures/v0.2.0")
@@ -52,8 +63,24 @@ def convert_parquet(input_path: Path, output_root: Path) -> None:
     df = pl.read_parquet(input_path)
     validate_schema(df)
 
-    # Select and rename columns for quantide format
-    out = df.select(OUTPUT_COLUMNS)
+    # Select base columns for quantide format
+    # Map adj_factor -> adjust for quantide compatibility
+    _select_cols = ["date", "asset", "open", "high", "low", "close", "volume", "adj_factor"]
+    out = df.select(_select_cols)
+    out = out.rename({"adj_factor": "adjust"})
+
+    # Compute price limits if not present (A-share ±10% from prev close)
+    if "up_limit" not in df.columns:
+        out = out.sort(["asset", "date"]).with_columns(
+            [
+                (pl.col("close").shift(1).over("asset").fill_null(pl.col("close")) * 1.10).alias(
+                    "up_limit"
+                ),
+                (pl.col("close").shift(1).over("asset").fill_null(pl.col("close")) * 0.90).alias(
+                    "down_limit"
+                ),
+            ]
+        )
 
     store_path = output_root / "daily_bars_store"
 
@@ -67,7 +94,7 @@ def convert_parquet(input_path: Path, output_root: Path) -> None:
 
     for year in years:
         year_df = out.filter(pl.col("date").dt.year() == year)
-        partition_dir = store_path / f"year={year}"
+        partition_dir = store_path / f"partition_key_year={year}"
         partition_dir.mkdir(parents=True, exist_ok=True)
         year_df.write_parquet(
             partition_dir / "part-0.parquet",

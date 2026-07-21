@@ -16,9 +16,9 @@ class FakeBroker:
     def __init__(self):
         self.calls: list[dict] = []
 
-    def trade_target_pct(self, asset: str, pct: float, extra: dict | None = None) -> None:
+    async def trade_target_pct(self, asset: str, target_pct: float, **kwargs) -> None:
         """Record the trade call for assertion."""
-        self.calls.append({"asset": asset, "pct": pct, "extra": extra})
+        self.calls.append({"asset": asset, "pct": target_pct})
 
 
 @pytest.fixture
@@ -42,29 +42,34 @@ def five_assets_60_days() -> pl.DataFrame:
     for asset in assets:
         for i, d in enumerate(dates):
             base_price = 10.0 + i * 0.1 + (ord(asset) - ord("A")) * 2.0
-            data.append({
-                "asset": asset,
-                "date": d,
-                "open": base_price * 1.0,
-                "high": base_price * 1.02,
-                "low": base_price * 0.98,
-                "close": base_price * (1.0 + 0.005 * (i % 5)),
-                "volume": 1_000_000 + i * 10_000,
-                "turnover": 0.02 + (i % 10) * 0.001,
-                "adj_factor": 1.0,
-            })
+            data.append(
+                {
+                    "asset": asset,
+                    "date": d,
+                    "open": base_price * 1.0,
+                    "high": base_price * 1.02,
+                    "low": base_price * 0.98,
+                    "close": base_price * (1.0 + 0.005 * (i % 5)),
+                    "volume": 1_000_000 + i * 10_000,
+                    "turnover": 0.02 + (i % 10) * 0.001,
+                    "adj_factor": 1.0,
+                }
+            )
 
-    return pl.DataFrame(data, schema={
-        "asset": pl.Utf8,
-        "date": pl.Date,
-        "open": pl.Float64,
-        "high": pl.Float64,
-        "low": pl.Float64,
-        "close": pl.Float64,
-        "volume": pl.Float64,
-        "turnover": pl.Float64,
-        "adj_factor": pl.Float64,
-    })
+    return pl.DataFrame(
+        data,
+        schema={
+            "asset": pl.Utf8,
+            "date": pl.Date,
+            "open": pl.Float64,
+            "high": pl.Float64,
+            "low": pl.Float64,
+            "close": pl.Float64,
+            "volume": pl.Float64,
+            "turnover": pl.Float64,
+            "adj_factor": pl.Float64,
+        },
+    )
 
 
 @pytest.fixture
@@ -75,25 +80,30 @@ def single_asset_ohlcv() -> pl.DataFrame:
     data = []
     for i, close_val in enumerate(close_values):
         d = start_date + timedelta(days=i)
-        data.append({
-            "asset": "A",
-            "date": d,
-            "open": close_val * 0.99,
-            "high": close_val * 1.02,
-            "low": close_val * 0.98,
-            "close": close_val,
-            "volume": 1_000_000.0,
-            "turnover": 0.02,
-            "adj_factor": 1.0,
-        })
-    return pl.DataFrame(data, schema={
-        "asset": pl.Utf8,
-        "date": pl.Date,
-        "open": pl.Float64,
-        "high": pl.Float64,
-        "low": pl.Float64,
-        "close": pl.Float64,
-        "volume": pl.Float64,
-        "turnover": pl.Float64,
-        "adj_factor": pl.Float64,
-    })
+        data.append(
+            {
+                "asset": "A",
+                "date": d,
+                "open": close_val * 0.99,
+                "high": close_val * 1.02,
+                "low": close_val * 0.98,
+                "close": close_val,
+                "volume": 1_000_000.0,
+                "turnover": 0.02,
+                "adj_factor": 1.0,
+            }
+        )
+    return pl.DataFrame(
+        data,
+        schema={
+            "asset": pl.Utf8,
+            "date": pl.Date,
+            "open": pl.Float64,
+            "high": pl.Float64,
+            "low": pl.Float64,
+            "close": pl.Float64,
+            "volume": pl.Float64,
+            "turnover": pl.Float64,
+            "adj_factor": pl.Float64,
+        },
+    )

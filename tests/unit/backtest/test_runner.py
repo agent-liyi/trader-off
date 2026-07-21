@@ -95,6 +95,35 @@ class TestInlineCalendar:
         )
         assert (cal_df["is_open"] == 1).all(), "All days should be marked open"
 
+    def test_calendar_has_prev_day_before_first_date(self, tmp_path):
+        """FR-0100: calendar day_shift(start, -1) returns a date before start.
+
+        When the inline calendar starts at a given date, day_shift(start, -1)
+        must return a real previous day (not the same day) to avoid ClockRewind
+        in BacktestBroker.set_clock.
+        """
+        from quantide.data.models.calendar import Calendar
+
+        from trader_off.backtest.runner import _generate_inline_calendar
+
+        # Use dates starting at 2024-01-02 (same pattern as ohlcv_10x60 fixture)
+        dates = [date(2024, 1, 2), date(2024, 1, 3), date(2024, 1, 4)]
+        cal_path = _generate_inline_calendar(dates, tmp_path / "calendar.parquet")
+
+        # Load the calendar into quantide Calendar
+        cal = Calendar()
+        cal.load(str(cal_path))
+
+        first_date = dates[0]
+
+        # Before fix: day_shift(first_date, -1) returns first_date itself
+        # After fix: day_shift(first_date, -1) returns a date before first_date
+        prev_day = cal.day_shift(first_date, -1)
+        assert prev_day < first_date, (
+            f"day_shift({first_date}, -1) returned {prev_day}, "
+            f"must be before {first_date} to avoid ClockRewind"
+        )
+
     def test_calendar_generation_failure(self):
         """Calendar generation failure raises RuntimeError."""
         from trader_off.backtest.runner import _generate_inline_calendar

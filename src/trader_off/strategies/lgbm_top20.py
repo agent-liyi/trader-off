@@ -101,40 +101,26 @@ class LGBMTop20Strategy(BaseStrategy):
 
         # Place orders for target positions
         for row in targets.iter_rows(named=True):
-            extra = {
-                "reason": "lgbm_top20",
-                "score": row["score"],
-                "rank": row["rank"],
-                "model_version": self.model_version,
-            }
-            self.broker.trade_target_pct(
+            await self.broker.trade_target_pct(
                 asset=row["asset"],
-                pct=weight,
-                extra=extra,
+                target_pct=weight,
+                order_time=tm,
             )
             self._position_cache[row["asset"]] = weight
 
         # Clear positions not in target list
         for asset in list(self._position_cache.keys()):
             if asset not in target_assets:
-                self.broker.trade_target_pct(
+                await self.broker.trade_target_pct(
                     asset=asset,
-                    pct=0.0,
-                    extra={
-                        "reason": "lgbm_top20",
-                        "score": 0.0,
-                        "rank": 0,
-                        "model_version": self.model_version,
-                    },
+                    target_pct=0.0,
+                    order_time=tm,
                 )
                 del self._position_cache[asset]
 
-        logger.info(
-            f"on_day_open {tm.date()}: targets={len(targets)}, "
-            f"weight={weight:.4f}"
-        )
+        logger.info(f"on_day_open {tm.date()}: targets={len(targets)}, weight={weight:.4f}")
 
-    async def on_bar(self, tm: datetime) -> None:
+    async def on_bar(self, tm: datetime, quote: dict | None = None, frame_type=None) -> None:
         """No-op for daily strategy."""
 
     async def on_day_close(self, tm: datetime) -> None:

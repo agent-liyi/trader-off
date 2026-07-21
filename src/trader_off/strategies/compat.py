@@ -66,11 +66,10 @@ except ImportError:
         """Stub Broker matching millionaire's interface."""
 
         @abstractmethod
-        def trade_target_pct(
+        async def trade_target_pct(
             self,
             asset: str,
-            pct: float,
-            extra: dict | None = None,
+            target_pct: float,
         ) -> None:
             """Set target portfolio percentage for an asset."""
             ...

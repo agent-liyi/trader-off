@@ -87,3 +87,51 @@
 - M-SECURITY: Judge S 级审计 PASS（stage-1 linter 误报人工确认）
 - M-BUGFIX: 无 bug 跳过
 - Backlog for v0.4.0：scheduler 复审 AC-FR1500-04、ClockRewind fixture 修正、4 security low 项
+
+## v0.3.1 — 2026-07-21
+
+**Spec**: v0.3.1-001-clock-rewind-scheduler-review
+**Branch**: releases/v0.3.1
+**Tag**: (pending merge to main)
+
+### Summary
+v0.3.0 patch — 处置两件延期尾巴：(1) ClockRewind fixture 修复使 3 个 e2e 回测测试重新启用（改为 xfail，capital exhaustion 记入 v0.4.0 backlog）；(2) scheduler 迁移评估落地，创建 QuantideSchedulerAdapter 封装 quantide.core.scheduler.SchedulerManager（函数级 lazy import，NFR-0101 隔离条款放宽）。
+
+### FR-0100: ClockRewind fixture fix
+- **Spec 选项 (a) "modify convert_fixture_to_quantide.py" → 实施选项 (b) "modify _generate_inline_calendar() prepend synthetic prev day"**
+  - Resolution: spec said option (a); implementation chose (b) because the root cause was inline calendar generation in runner.py, not the fixture conversion script. Both approaches fix the same bug; (b) is more minimal and doesn't require altering upstream fixture data. Deviation recorded in spec.md Clarification Log.
+- Fix: `_generate_inline_calendar()` in `src/trader_off/backtest/runner.py` prepends a synthetic previous trading day to the inline calendar, ensuring `quantide calendar.day_shift(start, -1)` returns a real prior day instead of clamping to the first day.
+- Also fixed multiple quantide API compatibility issues unmasked after unskipping:
+  - `pct` → `target_pct` (BacktestBroker.trade_target_pct parameter name)
+  - `on_bar(tm, quote, frame_type)` signature alignment
+  - Async `trade_target_pct` → added `await`
+  - `order_time` required by BacktestBroker.buy_amount
+  - `adj_factor` → `adjust` column rename; `up_limit`/`down_limit` computation
+  - `year=` → `partition_key_year=` Hive partition naming
+- 3 e2e tests unskipped → marked `xfail(strict=False)` due to capital exhaustion bug discovered (v0.4.0 backlog)
+
+### FR-0200: scheduler migration to quantide.core.scheduler.SchedulerManager
+- **Verdict**: (M) Migrate
+- Created `src/trader_off/scheduler/adapter.py` — `QuantideSchedulerAdapter` wrapping `SchedulerManager`
+- Exposes: `init`, `start`, `stop`, `add_job`, `add_listener`
+- Decision document: `.louke/project/decisions/v0.3.1-scheduler-review.md`
+
+### NFR-0101: function-scope lazy imports (replaces v0.3.0 NFR-0100 for scheduler)
+- All quantide imports in scheduler/ are inside function bodies (AST-verified)
+- Zero business symbol imports (`quantide.service`, `quantide.data`, etc.)
+- `test_ac_fr1500_04_no_external_deps` updated to NFR-0101 rules
+
+### Capital exhaustion bug discovered
+- Backtest with 10 equal-weight positions + 1M capital exhausts cash by day 5
+- Quantide UNIQUE constraint violation on `orders.qtoid, orders.tm` in error path
+- Both moved to v0.4.0 backlog; 3 e2e tests marked `xfail(strict=False)`
+
+### Design drift
+- FR-0100: spec prescribed option (a) → implemented option (b); see Clarification Log
+- NFR-0100 → NFR-0101 relaxation (scheduler only; other modules still governed by v0.3.0 NFR-0200)
+
+### Stats
+- 4 FR/NFR implemented (FR-0100, FR-0200, NFR-0101, NFR-0200)
+- 43 unit tests passing (14 runner + 12 adapter + 17 strategies)
+- 3 e2e tests xfailed (capital exhaustion, v0.4.0 backlog)
+- 1 compat test pre-existing failure (quantide installed → stubs not used)
