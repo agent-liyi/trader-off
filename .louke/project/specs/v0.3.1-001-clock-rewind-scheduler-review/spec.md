@@ -100,7 +100,9 @@ priority: P0
 
 ---
 
+<a id="nfr-0200"></a>
 ### NFR-0200 Compat shim 模式保留 (trader-off 不直接 import quantide) — 继承 v0.3.0
+
 
 | Valid | Testable | Decided |
 |---|---|---|

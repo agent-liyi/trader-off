@@ -12,9 +12,8 @@
 >
 > During Lex phase 1/2 review, verify: (1) this table exists; (2) every FR/NFR in spec.md has a corresponding section here; (3) each AC can be tested/asserted.
 
-## FR-0100 ClockRewind fixture 修复 — 移除 2（自然 3）个 e2e skip
-
 <a id="ac-fr-0100"></a>
+## FR-0100 ClockRewind fixture 修复 — 移除 2（自然 3）个 e2e skip
 
 ### AC-1
 
@@ -90,9 +89,8 @@ AC-FR0100-08
 
 ---
 
-## FR-0200 Scheduler decoupling migration — verdict (M) Migrate to `quantide.core.scheduler.SchedulerManager`
-
 <a id="ac-fr-0200"></a>
+## FR-0200 Scheduler decoupling migration — verdict (M) Migrate to `quantide.core.scheduler.SchedulerManager`
 
 ### AC-1
 
@@ -168,9 +166,8 @@ AC-FR0200-08
 
 ---
 
-## NFR-0101 调度器隔离改写 — 函数级 lazy import + 零业务符号 (继承 v0.2.0 AC-FR1500-04，替代 v0.3.0 NFR-0100)
-
 <a id="ac-nfr-0101"></a>
+## NFR-0101 调度器隔离改写 — 函数级 lazy import + 零业务符号 (继承 v0.2.0 AC-FR1500-04，替代 v0.3.0 NFR-0100)
 
 ### AC-1
 
@@ -201,9 +198,9 @@ AC-NFR0101-03
 
 ---
 
-## NFR-0200 Compat shim 模式保留 (trader-off 不直接 import quantide) — 继承 v0.3.0
-
+<a id="nfr-0200"></a>
 <a id="ac-nfr-0200"></a>
+## NFR-0200 Compat shim 模式保留 (trader-off 不直接 import quantide) — 继承 v0.3.0
 
 ### AC-1
 
