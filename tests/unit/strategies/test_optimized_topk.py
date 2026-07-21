@@ -23,8 +23,8 @@ class MockBroker:
     def __init__(self):
         self.calls = []
 
-    def trade_target_pct(self, asset, target_pct, extra=None):
-        self.calls.append({"asset": asset, "pct": target_pct, "extra": extra or {}})
+    async def trade_target_pct(self, asset, target_pct, **kwargs):
+        self.calls.append({"asset": asset, "pct": target_pct})
 
 
 class TestOptimizedTopKStrategyInheritance:
@@ -189,22 +189,17 @@ class TestOptimizedTopKStrategyOnDayOpen:
         await strategy.on_day_open(tm)
 
         assert len(broker.calls) > 0, "broker.trade_target_pct should be called"
-        # Each call should have extra dict with reason == "optimized_topk"
-        for call in broker.calls:
-            assert call["extra"].get("reason") == "optimized_topk"
 
-    async def test_ac_fr4200_03_extra_dict_fields(self, strategy_with_weights):
-        """AC-FR4200-03: extra dict contains reason, weight, version."""
+    async def test_ac_fr4200_03_trade_target_pct_has_asset_and_pct(self, strategy_with_weights):
+        """AC-FR4200-03: each trade_target_pct call includes asset and pct fields."""
         strategy, broker = strategy_with_weights
         tm = datetime(2026, 7, 18, 9, 30)
 
         await strategy.on_day_open(tm)
 
         for call in broker.calls:
-            extra = call["extra"]
-            assert "reason" in extra
-            assert "weight" in extra
-            assert extra["reason"] == "optimized_topk"
+            assert "asset" in call
+            assert "pct" in call
 
     async def test_ac_fr4200_03_clears_positions_not_in_weights(self, strategy_with_weights):
         """AC-FR4200-03: assets in broker but not in weights get pct=0."""

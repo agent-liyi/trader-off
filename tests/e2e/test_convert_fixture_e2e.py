@@ -22,7 +22,18 @@ import pytest
 
 FIXTURES_E2E = Path(__file__).parent / "fixtures"
 OHLCV_10X60 = FIXTURES_E2E / "ohlcv_10x60.parquet"
-EXPECTED_COLUMNS = {"date", "asset", "open", "high", "low", "close", "volume", "adj_factor"}
+EXPECTED_COLUMNS = {
+    "date",
+    "asset",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "adjust",
+    "up_limit",
+    "down_limit",
+}
 
 
 @pytest.mark.e2e
@@ -86,10 +97,10 @@ class TestConvertFixtureE2E:
         partition_dates: list[pl.DataFrame] = []
 
         for pq_path in parquet_files:
-            # Verify year=YYYY directory naming
+            # Verify partition_key_year=YYYY directory naming
             parent_name = pq_path.parent.name
-            assert parent_name.startswith("year="), (
-                f"Partition dir '{parent_name}' does not follow 'year=YYYY' naming"
+            assert parent_name.startswith("partition_key_year="), (
+                f"Partition dir '{parent_name}' does not follow 'partition_key_year=YYYY' naming"
             )
 
             df = pl.read_parquet(pq_path)
@@ -100,8 +111,17 @@ class TestConvertFixtureE2E:
                 f"Column mismatch: expected {sorted(EXPECTED_COLUMNS)}, got {sorted(actual_cols)}"
             )
 
-            # AC-FR0300-02: open, high, low, close, volume, adj_factor are Float64
-            numeric_cols = ["open", "high", "low", "close", "volume", "adj_factor"]
+            # AC-FR0300-02: open, high, low, close, volume, adjust are Float64
+            numeric_cols = [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "adjust",
+                "up_limit",
+                "down_limit",
+            ]
             for col in numeric_cols:
                 assert df.schema[col] == pl.Float64, (
                     f"Column '{col}' has type {df.schema[col]}, expected Float64"

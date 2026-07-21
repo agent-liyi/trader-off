@@ -157,20 +157,20 @@ class OptimizedTopKStrategy(BaseStrategy):
 
         # Place orders for target positions
         for asset, weight in sorted_assets:
-            self.broker.trade_target_pct(
+            await self.broker.trade_target_pct(
                 asset=asset,
                 target_pct=float(weight),
-                extra=self._trade_extra(weight),
+                order_time=tm,
             )
             self._position_cache[asset] = float(weight)
 
         # Clear positions not in target list
         for asset in list(self._position_cache.keys()):
             if asset not in target_assets:
-                self.broker.trade_target_pct(
+                await self.broker.trade_target_pct(
                     asset=asset,
                     target_pct=0.0,
-                    extra=self._trade_extra(0.0),
+                    order_time=tm,
                 )
                 del self._position_cache[asset]
 
@@ -179,7 +179,7 @@ class OptimizedTopKStrategy(BaseStrategy):
             f"total_weight={weight_total:.4f}"
         )
 
-    async def on_bar(self, tm: datetime) -> None:
+    async def on_bar(self, tm: datetime, quote: dict | None = None, frame_type=None) -> None:
         """No-op for daily strategy."""
 
     async def on_day_close(self, tm: datetime) -> None:

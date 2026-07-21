@@ -102,14 +102,14 @@ class TestLGBMTop20Strategy:
         assert "000001.SZ" in assets_called
         assert "000002.SZ" in assets_called
 
-    # extra dict in orders
+    # trade call verification
     @pytest.mark.asyncio
-    async def test_extra_snapshot(
+    async def test_trade_target_pct_called_with_correct_params(
         self,
         fake_broker,
         sample_config,
     ):
-        """extra dict contains reason/score/rank/model_version."""
+        """trade_target_pct is called with correct asset and weight."""
         strategy = LGBMTop20Strategy(fake_broker, sample_config)
         strategy.model = MagicMock()  # mock-overuse: Booster requires C++ lib
         strategy.model_version = "v1"
@@ -134,13 +134,11 @@ class TestLGBMTop20Strategy:
         ):
             await strategy.on_day_open(datetime(2024, 12, 31, 9, 30))
 
-        # Check extra dict via FakeBroker call records
+        # Check trade_target_pct was called with correct params
         assert len(fake_broker.calls) == 1
-        extra = fake_broker.calls[0].get("extra", {})
-        assert extra.get("reason") == "lgbm_top20"
-        assert extra.get("score") == 0.10
-        assert extra.get("rank") == 1
-        assert extra.get("model_version") == "v1"
+        call = fake_broker.calls[0]
+        assert call["asset"] == "000001.SZ"
+        assert call["pct"] == 0.5  # 1/top_k = 1/2
 
     # config loaded from YAML
     def test_config_loading(self, fake_broker, tmp_path):

@@ -16,9 +16,9 @@ class FakeBroker:
     def __init__(self):
         self.calls: list[dict] = []
 
-    def trade_target_pct(self, asset: str, target_pct: float, extra: dict | None = None) -> None:
+    async def trade_target_pct(self, asset: str, target_pct: float, **kwargs) -> None:
         """Record the trade call for assertion."""
-        self.calls.append({"asset": asset, "pct": target_pct, "extra": extra})
+        self.calls.append({"asset": asset, "pct": target_pct})
 
 
 @pytest.fixture
