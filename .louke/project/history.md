@@ -58,3 +58,32 @@
 - M-BUGFIX: 无 bug，豁免跳过
 - M-SECURITY: Judge S 级审计 pass（人工确认）
 - Agent 模型统一：kimi-for-coding/k3 ×5 + deepseek/deepseek-v4-pro ×8（MiniMax 不可用已移除）
+
+## v0.3.0 — 2026-07-21
+
+**Spec**: v0.3.0-001-real-backtest
+**Branch**: releases/v0.3.0 → merged to main
+**Tag**: v0.3.0
+
+### Summary
+真回测引擎里程碑。把 trader-off 的"假数据回测"（`np.random.RandomState(42)` 生成合成 NAV）替换为真实 quantide/millionaire BacktestRunner —— 真实撮合（手续费/涨跌停/T+1）、真实记账（`BacktestBroker.bills()`）、真实指标（Sortino/回撤持续期/基准对比）。Python 3.13 升级，quantide 作为引擎供应商通过依赖接入（不改 fork）。trader-off 继续作为 alpha 研究层（features/labels/training/factor_mining/portfolio）。
+
+### 复用 millionaire 原则达成
+- ✅ BacktestRunner + BacktestBroker + Calendar → 100% 委托 quantide
+- ✅ metrics.py → 委托 quantide.service.metrics
+- ✅ 数据存储格式 → 委托 quantide DailyBarsStore (parquet 分区)
+- ✅ 策略基类 + Broker 接口 → compat shim 已对齐 quantide
+- 🔜 推迟到 v0.4.0+：tushare、grid_search、walk-forward、polars-talib 指标、qfq/hfq 复权、scheduler cron 触发器复审
+
+### Stats
+- 8 FR + 5 NFR + 71 AC 实现
+- 32 e2e tests passing（9 skipped — 7 因 lgbm_top20 + 预训练模型不在 v0.3.0 MVP scope，2 因 ClockRewind fixture 日期问题）
+- 单元测试 40 passed（v0.3.0 改动）+ 41 pre-existing
+- 安全审计 PASS（0 critical/high；4 low 记入 v0.4.0 backlog）
+
+### Stage artifacts
+- M-DEV: 8 FRs (FR-0100~0900)，8 commits，Prism PASS，Keeper gate via waiver（AC trace gap 是基础设施 FR 无独立测试）
+- M-E2E: 5 commits 添加 convert_fixture/real_backtest/cli/backward-compat e2e，Prism PASS
+- M-SECURITY: Judge S 级审计 PASS（stage-1 linter 误报人工确认）
+- M-BUGFIX: 无 bug 跳过
+- Backlog for v0.4.0：scheduler 复审 AC-FR1500-04、ClockRewind fixture 修正、4 security low 项

@@ -9,7 +9,7 @@ release_branch = "releases/v0.3.0"
 [meta]
 pre_commit = "installed (python + base)"
 created = "2026-07-21"
-current_stage = "M-FOUND"
+current_stage = "M-MILESTONE"
 security_audit = "enabled"
 smoke_test_issue = "TBD"
 smoke_test_pr = "TBD"
