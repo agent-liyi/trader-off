@@ -39,8 +39,19 @@ except ImportError:
             """Called at the start of each trading day."""
             pass
 
-        async def on_bar(self, tm: datetime) -> None:
-            """Called on each bar/period update."""
+        async def on_bar(
+            self,
+            tm: datetime,
+            quote: dict[str, Any] | None = None,
+            frame_type=None,
+        ) -> None:
+            """Called on each bar/period update.
+
+            Args:
+                tm: Current bar timestamp.
+                quote: Quote data dict keyed by asset.
+                frame_type: Bar frame type (e.g., FrameType.DAY).
+            """
             pass
 
         async def on_day_close(self, tm: datetime) -> None:

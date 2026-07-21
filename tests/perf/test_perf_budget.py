@@ -396,6 +396,12 @@ class TestPerfBacktestBudget:
     Budget: ≤600s.  Timeout: ~670s.
     """
 
+    @pytest.mark.skip(
+        reason=(
+            "requires pretrained LGBM models at models/v1 "
+            "(out of v0.3.0 MVP scope; tracked in v0.4.0 backlog)"
+        )
+    )
     def test_backtest_1year_50assets_perf(self, tmp_path: Path):
         """AC-NFR0100-03: backtest 1y window, 50 assets ≤ 600s."""
         from trader_off.backtest.runner import run_backtest
