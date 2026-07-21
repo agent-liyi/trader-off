@@ -5,7 +5,6 @@ T-1 (ClockPort) and T-2 (TrainerPort) testability seams verified.
 """
 
 import asyncio
-import re
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -175,26 +174,71 @@ async def test_ac_fr1500_03_stop():
 
 @pytest.mark.unit
 def test_ac_fr1500_04_no_external_deps():
-    """AC-FR1500-04: scheduler module has no quantide/millionaire business imports."""
+    """NFR-0101: scheduler module has no top-level quantide/millionaire business imports.
+
+    Rules (supersedes v0.3.0 NFR-0100 for this module):
+    - ALLOW: quantide mentions in docstrings and comments
+    - ALLOW: function-body ``from quantide.core.scheduler import ...``
+    - FORBID: top-level ``import quantide`` or ``from quantide`` at module level
+    - FORBID: business symbol imports (quantide.service, quantide.data, etc.)
+    - Validate via AST: all quantide imports must be inside FunctionDef/AsyncFunctionDef.
+    """
+    import ast
     from pathlib import Path
 
     src_dir = Path(__file__).parents[3] / "src" / "trader_off" / "scheduler"
 
     for py_file in src_dir.glob("**/*.py"):
-        if py_file.name == "__init__.py":
-            # __init__.py may re-export but should not business-import millionaire
-            pass
         content = py_file.read_text()
-        lines = content.split("\n")
-        for lineno, line in enumerate(lines, 1):
-            if line.strip().startswith("#"):
+        tree = ast.parse(content, filename=str(py_file))
+
+        # Build parent mapping
+        parent_map: dict[int, ast.AST] = {}
+        for parent in ast.walk(tree):
+            for child in ast.iter_child_nodes(parent):
+                parent_map[id(child)] = parent
+
+        # Walk the AST to find all Import/ImportFrom nodes
+        for node in ast.walk(tree):
+            module_name = None
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name.startswith("quantide"):
+                        module_name = alias.name
+                        break
+            elif isinstance(node, ast.ImportFrom):
+                if node.module and node.module.startswith("quantide"):
+                    module_name = node.module
+
+            if module_name is None:
                 continue
-            # Check for import of quantide or millionaire
-            if re.search(r"\b(quantide|millionaire)\b", line) and not re.search(
-                r"pyproject\.toml", line
+
+            # Check parent chain for FunctionDef/AsyncFunctionDef
+            current = node
+            in_function = False
+            while current is not None:
+                if isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    in_function = True
+                    break
+                current = parent_map.get(id(current))
+
+            if not in_function:
+                line = node.lineno
+                raise AssertionError(
+                    f"File {py_file}:{line} has top-level quantide "
+                    f"import outside function body: import {module_name}. "
+                    f"NFR-0101 requires all quantide imports inside "
+                    f"FunctionDef/AsyncFunctionDef."
+                )
+
+            # Forbid quantide business symbols even inside functions
+            if module_name.startswith("quantide.") and not module_name.startswith(
+                "quantide.core.scheduler"
             ):
                 raise AssertionError(
-                    f"File {py_file}:{lineno} imports quantide/millionaire: {line.strip()}"
+                    f"File {py_file}:{node.lineno} imports forbidden quantide "
+                    f"business module: {module_name}. "
+                    f"NFR-0101 only allows quantide.core.scheduler."
                 )
 
 
