@@ -20,6 +20,19 @@ class FakeBroker:
         """Record the trade call for assertion."""
         self.calls.append({"asset": asset, "pct": target_pct})
 
+    def total_asset(self) -> float:
+        """Return total portfolio value (cash + market_value)."""
+        return 1_000_000.0
+
+    def market_value(self) -> float:
+        """Return total market value of all positions."""
+        return 0.0
+
+    @property
+    def positions(self) -> dict:
+        """Return current positions dict."""
+        return {}
+
 
 @pytest.fixture
 def fake_broker() -> FakeBroker:

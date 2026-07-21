@@ -26,6 +26,19 @@ class MockBroker:
     async def trade_target_pct(self, asset, target_pct, **kwargs):
         self.calls.append({"asset": asset, "pct": target_pct})
 
+    def total_asset(self) -> float:
+        """Return total portfolio value."""
+        return 1_000_000.0
+
+    def market_value(self) -> float:
+        """Return total market value of all positions."""
+        return 0.0
+
+    @property
+    def positions(self) -> dict:
+        """Return current positions dict."""
+        return {}
+
 
 class TestOptimizedTopKStrategyInheritance:
     """Tests for FR-4200 AC-01: inheritance."""
