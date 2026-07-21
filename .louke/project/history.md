@@ -91,6 +91,36 @@
 ## v0.3.1 — 2026-07-21
 
 **Spec**: v0.3.1-001-clock-rewind-scheduler-review
+**Branch**: fix/102 → releases/v0.3.1 → merged to main
+**Tag**: v0.3.1
+
+### Summary
+Patch 修复 + 架构迁移。ClockRewind 修复（inline calendar prev day，Devon (b)，用户接受偏差）；scheduler 迁入 `quantide.core.scheduler.SchedulerManager`（NFR-0101 函数级 lazy import 替代 v0.3.0 NFR-0100）；决策文档 `.louke/project/decisions/v0.3.1-scheduler-review.md` 落地。
+
+### Stats
+- 4 FR/NFR + 20 AC
+- 28 e2e passed + 3 xfailed（capital exhaustion bug 暴露 → v0.3.2 修）
+
+## v0.3.2 — 2026-07-21
+
+**Branch**: fix/102 → merged to main
+**Tag**: v0.3.2
+
+### Summary
+资金耗尽 bug 修复。根因：(1) `trade_target_pct()` 使用 `total_asset()` 做分母，现金稀释导致每个持仓权重被缩小，每天产生净买入消耗现金；(2) 调仓顺序为「先买后卖」，卖出回流前现金已耗尽；(3) quantide `pos.mv` 跨日不更新，使用过期数据。修复：先清仓非目标 → 计算 `cash_factor = market_value / total_asset` → 按调整后权重调入目标。3 个 v0.3.1 xfailed 测试全部转 PASS。
+
+### Stats
+- 891 测试通过（+6 vs v0.3.1），0 xfail
+- Security PASS（0 critical/high；2 medium 调仓风险记入 v0.3.3 backlog）
+
+### Backlog for v0.3.3
+- 调仓非原子性（buy-after-fail 无补偿）
+- `cash_factor` 资产轮换时系统性扩大现金仓位
+- `cash_factor` 范围校验（NaN/负值/超额）
+
+## v0.3.1 — 2026-07-21
+
+**Spec**: v0.3.1-001-clock-rewind-scheduler-review
 **Branch**: releases/v0.3.1
 **Tag**: (pending merge to main)
 
