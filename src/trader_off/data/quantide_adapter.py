@@ -1,14 +1,15 @@
 """Quantide adapter (FR-0100).
 
 Wires QuantideDataLoader to real quantide.data.fetchers.tushare functions
-and quantide.data.models.calendar for CN trading calendar support.
+for CN trading calendar support via fetch_calendar.
 Replaces v0.4.0's pandas.bdate_range stub with real Tushare data fetching.
 
 NFR-0100: All quantide imports are function-scope (lazy), not module-top-level.
+Only whitelisted quantide.data.fetchers.tushare submodules are allowed.
 """
 
 import os
-from datetime import date
+from datetime import date, timedelta
 
 import polars as pl
 from loguru import logger
@@ -59,7 +60,7 @@ class QuantideDataLoader:
     async def get_daily(self, asset: str, end_date: date, count: int = 60) -> pl.DataFrame:
         """Fetch up to ``count`` daily OHLCV rows ending at ``end_date``.
 
-        Uses quantide's TushareFetcher and calendar.get_frames_by_count
+        Uses quantide's TushareFetcher and fetch_calendar
         for CN trading calendar-aware date range generation and real data fetch.
         All quantide imports are function-scope (NFR-0100).
 
@@ -76,7 +77,7 @@ class QuantideDataLoader:
         from quantide.data.fetchers.tushare import TushareFetcher, fetch_bars
 
         try:
-            # Compute real CN trading dates via calendar
+            # Compute real CN trading dates via fetch_calendar
             trade_dates = self._compute_real_trade_dates(end_date, count)
 
             # Instantiate TushareFetcher for real data access (side-effect)
@@ -98,16 +99,29 @@ class QuantideDataLoader:
     def _compute_real_trade_dates(self, end_date: date, count: int) -> list[date]:
         """Compute ``count`` real CN trading days ending at ``end_date``.
 
-        Uses quantide's Calendar.get_frames_by_count to account for
-        CN holidays. Replaces v0.4.0's pandas.bdate_range.
+        Uses quantide's fetch_calendar to get CN trading calendar
+        with holiday exclusion. Replaces v0.4.0's pandas.bdate_range.
+
+        Algorithm:
+          1. Compute start_epoch = end_date - count*2 buffer days
+          2. Call fetch_calendar(start_epoch) to get full calendar
+          3. Filter to is_open==1, index <= end_date
+          4. Take last ``count`` dates
 
         NFR-0100: Import is function-scope, not module-top-level.
         """
-        from quantide.data.models.calendar import FrameType, calendar
+        from quantide.data.fetchers.tushare import fetch_calendar
 
-        raw_dates = calendar.get_frames_by_count(end_date, count, FrameType.DAY)
-        # Normalize to date objects
-        return [d if isinstance(d, date) else d.date() for d in raw_dates]
+        start_epoch = end_date - timedelta(days=count * 2)
+        cal_df = fetch_calendar(start_epoch)
+
+        # Filter to open trading days on or before end_date
+        open_mask = cal_df["is_open"] == 1
+        date_mask = cal_df.index <= end_date
+        trading_dates: list[date] = sorted(cal_df[open_mask & date_mask].index.tolist())
+
+        # Take the last ``count`` dates
+        return trading_dates[-count:]
 
     def _to_polars_ohlcv(self, df, asset: str, count: int) -> pl.DataFrame:
         """Convert pandas DataFrame to polars with schema normalization.

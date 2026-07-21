@@ -94,23 +94,22 @@ def mock_quantide(monkeypatch):
         result_df = pd.DataFrame(all_rows)
         return result_df, []
 
-    def mock_get_frames_by_count(end, n, frame_type):
-        """Return simple date list without requiring real calendar."""
-        result = []
-        current = end
-        added = 0
-        while added < n:
-            if current.weekday() < 5:  # Skip weekends (crude approximation)
-                result.append(current)
-                added += 1
-            current = current - timedelta(days=1)
-        return sorted(result)
+    def mock_fetch_calendar(start_epoch):
+        """Return mock calendar DataFrame with all weekdays as open."""
+        end = SMOKE_END_DATE
+        all_dates = pd.date_range(start=start_epoch, end=end, freq="D")
+        rows = []
+        for d in all_dates:
+            d_date = d.date()
+            is_open = 1 if d_date.weekday() < 5 else 0
+            rows.append({"is_open": is_open, "prev": d_date - timedelta(days=1)})
+        return pd.DataFrame(rows, index=pd.Index([d.date() for d in all_dates], name="date"))
 
     monkeypatch.setattr("quantide.data.fetchers.tushare.TushareFetcher", MockTushareFetcher)
     monkeypatch.setattr("quantide.data.fetchers.tushare.fetch_bars", mock_fetch_bars)
     monkeypatch.setattr(
-        "quantide.data.models.calendar.calendar.get_frames_by_count",
-        mock_get_frames_by_count,
+        "quantide.data.fetchers.tushare.fetch_calendar",
+        mock_fetch_calendar,
     )
     monkeypatch.setenv("TUSHARE_TOKEN", "ci-mock-token")
 

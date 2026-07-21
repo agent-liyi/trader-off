@@ -2,10 +2,11 @@
 
 Tests cover:
 - Token gating (AC-FR0100-01, AC-FR0100-05)
-- Real TushareFetcher + Calendar integration (AC-FR0100-02, AC-FR0100-04)
+- Real TushareFetcher + fetch_calendar integration (AC-FR0100-02, AC-FR0100-04)
 - No pandas.bdate_range usage (AC-FR0100-03)
 - Error handling (AC-FR0100-06)
 - Function-scope lazy imports (AC-NFR0100-01 through AC-NFR0100-05)
+- No quantide.data.models.calendar / quantide.core.enums imports allowed
 """
 
 import ast
@@ -15,10 +16,25 @@ from datetime import date, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 
 # Module under test
 from trader_off.data.quantide_adapter import QuantideDataLoader
+
+
+def _make_calendar_df(dates: list[date]) -> pd.DataFrame:
+    """Create a mock fetch_calendar DataFrame with given open trading dates."""
+    all_dates = pd.date_range(start=min(dates) - timedelta(days=7), end=max(dates), freq="D")
+    rows = []
+    for d in all_dates:
+        d_date = d.date()
+        is_open = 1 if d_date in dates else 0
+        prev_date = d_date - timedelta(days=1)
+        rows.append({"is_open": is_open, "prev": prev_date})
+    cal_df = pd.DataFrame(rows, index=pd.Index([d.date() for d in all_dates], name="date"))
+    return cal_df
+
 
 # ---------------------------------------------------------------------------
 # FR-0100 AC-1: Token gate — missing token raises RuntimeError
@@ -81,7 +97,7 @@ class TestExplicitToken:
 
 
 class TestGetDailyIntegration:
-    """AC-FR0100-02 & AC-FR0100-04: get_daily calls TushareFetcher + Calendar."""
+    """AC-FR0100-02 & AC-FR0100-04: get_daily calls fetch_calendar + fetch_bars."""
 
     @pytest.fixture
     def loader_with_token(self, monkeypatch):
@@ -90,13 +106,14 @@ class TestGetDailyIntegration:
         return QuantideDataLoader()
 
     @pytest.mark.asyncio
-    async def test_get_daily_calls_calendar_get_frames_by_count(self, loader_with_token):
-        """WHEN get_daily is called THEN calendar.get_frames_by_count is invoked."""
+    async def test_get_daily_calls_fetch_calendar(self, loader_with_token):
+        """WHEN get_daily is called THEN fetch_calendar is invoked."""
         end_date = date(2024, 1, 31)
         count = 60
+        trade_dates = [end_date]
 
-        with patch("quantide.data.models.calendar.calendar.get_frames_by_count") as mock_cal:
-            mock_cal.return_value = [end_date]  # minimal return
+        with patch("quantide.data.fetchers.tushare.fetch_calendar") as mock_fetch_cal:
+            mock_fetch_cal.return_value = _make_calendar_df(trade_dates)
 
             with patch("quantide.data.fetchers.tushare.fetch_bars") as mock_fetch_bars:
                 mock_df = self._make_mock_pandas_df()
@@ -104,7 +121,7 @@ class TestGetDailyIntegration:
 
                 await loader_with_token.get_daily("000001.SZ", end_date, count)
 
-            mock_cal.assert_called_once()
+            mock_fetch_cal.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_daily_calls_fetch_bars(self, loader_with_token):
@@ -113,8 +130,8 @@ class TestGetDailyIntegration:
         trade_dates = [end_date]
 
         with patch(
-            "quantide.data.models.calendar.calendar.get_frames_by_count",
-            return_value=trade_dates,
+            "quantide.data.fetchers.tushare.fetch_calendar",
+            return_value=_make_calendar_df(trade_dates),
         ):
             with patch("quantide.data.fetchers.tushare.fetch_bars") as mock_fetch_bars:
                 mock_df = self._make_mock_pandas_df()
@@ -130,8 +147,8 @@ class TestGetDailyIntegration:
         end_date = date(2024, 1, 31)
 
         with patch(
-            "quantide.data.models.calendar.calendar.get_frames_by_count",
-            return_value=[end_date],
+            "quantide.data.fetchers.tushare.fetch_calendar",
+            return_value=_make_calendar_df([end_date]),
         ):
             with patch(
                 "quantide.data.fetchers.tushare.fetch_bars",
@@ -151,8 +168,8 @@ class TestGetDailyIntegration:
         end_date = date(2024, 1, 31)
 
         with patch(
-            "quantide.data.models.calendar.calendar.get_frames_by_count",
-            return_value=[end_date],
+            "quantide.data.fetchers.tushare.fetch_calendar",
+            return_value=_make_calendar_df([end_date]),
         ):
             with patch("quantide.data.fetchers.tushare.fetch_bars") as mock_fetch_bars:
                 mock_df = self._make_mock_pandas_df()
@@ -178,10 +195,11 @@ class TestGetDailyIntegration:
     async def test_get_daily_respects_count_limit(self, loader_with_token):
         """WHEN get_daily is called THEN returned rows <= count."""
         count = 60
+        trade_dates = [date(2024, 6, 1) + timedelta(days=i) for i in range(count)]
 
         with patch(
-            "quantide.data.models.calendar.calendar.get_frames_by_count",
-            return_value=[date(2024, 6, 1) + timedelta(days=i) for i in range(count)],
+            "quantide.data.fetchers.tushare.fetch_calendar",
+            return_value=_make_calendar_df(trade_dates),
         ):
             with patch("quantide.data.fetchers.tushare.fetch_bars") as mock_fetch_bars:
                 mock_df = self._make_mock_pandas_df(rows=count)
@@ -284,8 +302,8 @@ class TestErrorHandling:
     async def test_fetch_bars_error_returns_empty_df(self, loader_with_token):
         """WHEN fetch_bars raises THEN get_daily returns empty DataFrame."""
         with patch(
-            "quantide.data.models.calendar.calendar.get_frames_by_count",
-            return_value=[date(2024, 1, 31)],
+            "quantide.data.fetchers.tushare.fetch_calendar",
+            return_value=_make_calendar_df([date(2024, 1, 31)]),
         ):
             with patch(
                 "quantide.data.fetchers.tushare.fetch_bars",
@@ -311,8 +329,8 @@ class TestErrorHandling:
     async def test_fetch_bars_returns_errors_logs_warning(self, loader_with_token):
         """WHEN fetch_bars returns errors THEN warning is logged but no exception."""
         with patch(
-            "quantide.data.models.calendar.calendar.get_frames_by_count",
-            return_value=[date(2024, 1, 31)],
+            "quantide.data.fetchers.tushare.fetch_calendar",
+            return_value=_make_calendar_df([date(2024, 1, 31)]),
         ):
             with patch("quantide.data.fetchers.tushare.fetch_bars") as mock_fetch:
                 mock_df = self._make_mock_pandas_df(rows=1)
@@ -444,7 +462,7 @@ class TestNFR0100FunctionScopeImports:
     """AC-NFR0100-02: quantide_adapter.py must have >=2 function-scope quantide imports."""
 
     def test_at_least_two_quantide_imports(self):
-        """WHEN grepping for 'from quantide' THEN >=2 matches (TushareFetcher + Calendar)."""
+        """WHEN grepping for 'from quantide' THEN >=2 matches (TushareFetcher + fetch_calendar)."""
         src_path = (
             Path(__file__).resolve().parents[3]
             / "src"
@@ -471,8 +489,8 @@ class TestNFR0100FunctionScopeImports:
         content = src_path.read_text()
         assert "TushareFetcher" in content, "quantide_adapter.py must import TushareFetcher"
 
-    def test_calendar_import_present(self):
-        """WHEN checking imports THEN Calendar/Frametype import is present."""
+    def test_fetch_calendar_import_present(self):
+        """WHEN checking imports THEN fetch_calendar import is present."""
         src_path = (
             Path(__file__).resolve().parents[3]
             / "src"
@@ -481,7 +499,9 @@ class TestNFR0100FunctionScopeImports:
             / "quantide_adapter.py"
         )
         content = src_path.read_text()
-        assert "FrameType" in content, "quantide_adapter.py must import FrameType from quantide"
+        assert "fetch_calendar" in content, (
+            "quantide_adapter.py must import fetch_calendar from quantide"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -490,7 +510,8 @@ class TestNFR0100FunctionScopeImports:
 
 
 class TestNFR0100BusinessSymbolWhitelist:
-    """AC-NFR0100-04: no quantide.service/portfolio/backtest/core imports."""
+    """AC-NFR0100-04: no quantide.service/portfolio/backtest/core imports,
+    AND no quantide.data.models.calendar or quantide.core.enums imports."""
 
     def test_no_non_whitelist_quantide_imports(self):
         """WHEN grepping for banned quantide.* submodules THEN no matches."""
@@ -508,9 +529,28 @@ class TestNFR0100BusinessSymbolWhitelist:
             "quantide.portfolio",
             "quantide.backtest",
             "quantide.core.scheduler",
+            "quantide.data.models.calendar",
+            "quantide.core.enums",
         ]
         for pattern in banned_patterns:
             assert pattern not in content, f"Banned quantide import found: {pattern}"
+
+    def test_no_calendar_or_frame_type_import(self):
+        """WHEN checking imports THEN no Calendar/FrameType from quantide.data.models.calendar."""
+        src_path = (
+            Path(__file__).resolve().parents[3]
+            / "src"
+            / "trader_off"
+            / "data"
+            / "quantide_adapter.py"
+        )
+        content = src_path.read_text()
+        assert "quantide.data.models.calendar" not in content, (
+            "quantide.data.models.calendar import is forbidden; use fetch_calendar instead"
+        )
+        assert "quantide.core.enums" not in content, (
+            "quantide.core.enums import is forbidden; use fetch_calendar instead"
+        )
 
 
 # ---------------------------------------------------------------------------
