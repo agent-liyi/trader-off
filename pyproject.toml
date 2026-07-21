@@ -2,7 +2,7 @@
 name = "trader-off"
 version = "0.1.0"
 description = "lightGBM-based short-term A-share asset pricing model"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 
 dependencies = [
     "lightgbm>=4.3",
@@ -45,7 +45,7 @@ addopts = "--strict-markers"
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "T201"]
@@ -58,7 +58,7 @@ indent-style = "space"
 exclude_dirs = ["tests"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 ignore_missing_imports = true
 files = ["src/trader_off/scheduler/"]
 disallow_any_generics = false
@@ -78,6 +78,7 @@ dev = [
     "types-pyyaml>=6.0.12.20260518",
     "mutmut>=2.0",
     "psutil>=5.9",
+    "ruff>=0.15.21",
 ]
 
 [tool.coverage.run]
