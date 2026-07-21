@@ -447,28 +447,28 @@ AC-FR0700-05
 
 AC-FR0800-01
 
-- 给定:`src/trader_off/backtest/metrics.py` 在 v0.3.0 重写后。
+- 给定:`src/trader_off/backtest/metrics.py` 在 v0.3.0 重写后(Devon commit 39d85a8)。
 - 当:用 `grep` 检查。
-- 那么:文件**不**含 `total_trades = 0` 或 `avg_turnover = 0.0` 硬编码行(原 66-68 行已删除)。
+- 那么:文件**不**含 `total_trades = 0` 或 `avg_turnover = 0.0` 硬编码行(原 v0.2.0 66-68 行已删除)。
 - 断言:`"total_trades = 0" not in metrics_text and "avg_turnover = 0.0" not in metrics_text`。
 
 ### AC-2
 
 AC-FR0800-02
 
-- 给定:重写后的 `metrics.py`。
-- 当:用 `grep` 检查。
-- 那么:含 `quantide.service.metrics` 导入或函数调用语句。
-- 断言:`"quantide.service.metrics" in metrics_text or "from quantide.service.metrics" in metrics_text or "import quantide.service.metrics" in metrics_text`。
+- 给定:`runner.py` 中 quantide 调用层(经 compat shim 解析,见 NFR-0200)。
+- 当:检查 `BacktestRunner.run()` 返回值与 `quantide.service.metrics.metrics()` 调用关系。
+- 那么:`quantide.service.metrics.metrics(portfolio_id, baseline_returns=None)` 函数**存在并可调用**(函数名 `metrics`,首参 `portfolio_id: str`),返回 `pandas.DataFrame` 含 16+ 个 metric 键(`Sharpe Ratio`, `Sortino Ratio`, `Max Drawdown`, `Max Drawdown Days` 等)。
+- 断言:`hasattr(__import__("quantide.service.metrics", fromlist=["metrics"]), "metrics")` 且 `inspect.signature(metrics).parameters.keys()` 包含 `"portfolio_id"`。
 
 ### AC-3
 
-AC-FR0800-03
+AC-FR0800-03 (Round 2 — API 实际签名锁定)
 
-- 给定:`compute_performance_metrics(nav_df)` 调用。
-- 当:委托路径生效后,传入 252 日真实 NAV DataFrame + 真实 bills(由 `run_backtest` 收集)。
-- 那么:返回 dict 含 6 个 v0.1.0 必需键 + 新增可选键(`sortino` 等)。
-- 断言:`set(result.keys()) >= {"annualized_return", "sharpe_ratio", "max_drawdown", "win_rate", "total_trades", "avg_turnover"} and "sortino" in result.keys()`。
+- 给定:`compute_performance_metrics(nav_df)` **standalone** 调用(**不**传 portfolio_id,**不**经 `run_backtest`)。
+- 当:执行。
+- 那么:返回 dict **仅含 4 个核心键**:`annualized_return, sharpe_ratio, max_drawdown, win_rate`,**不**含 `total_trades` / `avg_turnover` / `sortino` / `drawdown_duration_days` / 其他 quantide 扩展键。
+- 断言:`set(result.keys()) == {"annualized_return", "sharpe_ratio", "max_drawdown", "win_rate"} and all(isinstance(result[k], float) for k in result.keys())`。
 
 ### AC-4
 
@@ -481,21 +481,30 @@ AC-FR0800-04
 
 ### AC-5
 
-AC-FR0800-05
+AC-FR0800-05 (Round 2 — NaN 校验改为 ValueError)
 
 - 给定:`compute_performance_metrics(nav_df)` 调用,`nav_df` 含 NaN/Inf。
 - 当:执行。
-- 那么:委托给 quantide 后,quantide 内部抛异常 → `metrics.py` 包装为 `RuntimeError`,message 含 quantide traceback 前 3 行。
-- 断言:`pytest.raises(RuntimeError, match="quantide|metric computation failed")`。
+- 那么:抛 `ValueError`,message 含 "NaN" 或 "Inf"(Devon commit 39d85a8 新增校验,直接抛 ValueError,**不**委托给 quantide,**不**包装为 RuntimeError)。
+- 断言:`pytest.raises(ValueError, match="NaN|Inf")`。
 
 ### AC-6
 
-AC-FR0800-06
+AC-FR0800-06 (Round 2 — 重写)
 
-- 给定:`compute_performance_metrics` 调用真实 NAV(252 日,从 `run_backtest` 收集)。
+- 给定:`compute_performance_metrics(nav_df)` **standalone** 调用,传入 252 日真实 NAV DataFrame。
 - 当:执行。
-- 那么:`result["total_trades"] > 0` 且 `result["avg_turnover"] > 0.0`(真实来自 `BacktestBroker.bills()`,非硬编码 0)。
-- 断言:`result["total_trades"] > 0 and result["avg_turnover"] > 0.0`。
+- 那么:返回 dict **不含** `total_trades` 与 `avg_turnover` 键(Devon commit 39d85a8 删除硬编码 0 后,这两个键从 metrics 输出中消失;真实 `total_trades` 与 `avg_turnover` 由 `run_backtest` 通过 `BacktestRunner.run()` 注入到 `BacktestResult.summary`,**不**通过 `compute_performance_metrics`)。
+- 断言:`"total_trades" not in result and "avg_turnover" not in result`。
+
+### AC-7
+
+AC-FR0800-07 (Round 2 新增 — 实际 API 验证)
+
+- 给定:`BacktestRunner.run()` 真实回测(50 资产 × 252 日 fixture),`run_backtest` 收集 `result["metrics"]`(quantide.metrics.metrics(portfolio_id) 的 DataFrame 化 dict)。
+- 当:`run_backtest` 构造 `BacktestResult.summary` 时(注入路径,不是 metrics.py 路径)。
+- 那么:`summary["total_trades"]` 与 `summary["avg_turnover"]` 来自 `BacktestRunner.run()` 返回值,值为真实成交笔数 / 真实换手率(非 0);同时如 `sortino` / `drawdown_duration_days` / `benchmark_return` 等 quantide 扩展键存在,也被注入 summary。
+- 断言:`summary["total_trades"] > 0 and summary["avg_turnover"] > 0.0 and "sortino" in summary`(`sortino` 是 quantide 16+ 键之一,真值存在)。
 
 ---
 
@@ -522,12 +531,12 @@ AC-FR0900-02
 
 ### AC-3
 
-AC-FR0900-03
+AC-FR0900-03 (Round 2 — 4 个核心键,非 6 个)
 
-- 给定:6 个 v0.1.0 必需键集合。
-- 当:调用 `compute_performance_metrics(nav_df)` 并检查返回 dict 的 keys。
-- 那么:必需键集合**完整保留**(`issubset`),可选键可额外存在(`set(result.keys()) >= required_6_keys`)。
-- 断言:`required_6_keys.issubset(set(result.keys()))`。
+- 给定:`compute_performance_metrics(nav_df)` standalone 调用(Devon commit 39d85a8 后只返回 4 核心键)。
+- 当:检查返回 dict 的 keys。
+- 那么:**4 个核心键** 完整保留(`set(result.keys()) == core_4_keys`),`total_trades` / `avg_turnover` / `sortino` / `drawdown_duration_days` 等键**不**存在(这些键由 `run_backtest` 通过 `BacktestRunner.run()` 注入到 `BacktestResult.summary`,**不**通过 `compute_performance_metrics`)。
+- 断言:`set(result.keys()) == {"annualized_return", "sharpe_ratio", "max_drawdown", "win_rate"}`。
 
 ### AC-4
 
@@ -535,8 +544,8 @@ AC-FR0900-04
 
 - 给定:`compute_performance_metrics(nav_df)` 返回值。
 - 当:检查类型。
-- 那么:`annualized_return, sharpe_ratio, max_drawdown, win_rate, avg_turnover` 为 float;`total_trades` 为 int(继承 v0.1.0 FR-1200 AC-1)。
-- 断言:同 FR-0600 AC-7。
+- 那么:`annualized_return, sharpe_ratio, max_drawdown, win_rate` 全部为 `float`(无 `int` 字段,因为 `total_trades` 已从 metrics 输出中移除)。
+- 断言:`all(isinstance(result[k], float) for k in result.keys())`。
 
 ### AC-5
 

@@ -1,5 +1,8 @@
 ---
 status: draft
+locked: true
+locked-at: 2026-07-21T03:24:08Z
+locked-by: lk agent sage record-lock
 ---
 # trader-off v0.3.0 — 真实回测引擎接入 (quantide 替换假数据) — Spec
 
@@ -201,12 +204,14 @@ priority: P0
     - `result.summary["annualized_return"]` 是有限数(`math.isfinite(...) == True`,非 NaN/Inf)
     - `result.summary["max_drawdown"] <= 0.0`(回撤为负数或零,符合约定)
 - **`tests/unit/backtest/test_metrics.py::TestComputePerformanceMetrics::test_keys`** 断言升级:
-  - 现有断言:6 个必需键存在 + 类型正确
-  - 新增断言:`compute_performance_metrics` 返回值中 `total_trades > 0` 且 `avg_turnover > 0.0`(前提:`run_backtest` 真实执行后传入真实 NAV)
-  - **重要**:本测试的 `test_keys` 直接调用 `compute_performance_metrics(nav_df)`,不经过 `run_backtest`;为使其断言 `total_trades > 0`,需扩展 metrics 输入接口(见 FR-0800 公开签名说明 —— 通过 `config` 参数接收 `bills` 数据,或在 metrics 内部委托 quantide 时使用 mock broker)
+  - 现有断言:6 个必需键存在 + 类型正确(**已废弃 — 见下方重写**)
+  - **重写**:Devon commit 39d85a8 删除硬编码 0 后,`compute_performance_metrics(nav_df)` standalone 只返回 **4 个核心键**(`annualized_return, sharpe_ratio, max_drawdown, win_rate`)。test_keys 改为:
+    - 断言 4 个核心键存在 + 类型全部为 `float`
+    - 断言 `total_trades` 与 `avg_turnover` **不在** 返回值中(无 portfolio_id 输入,不调用 quantide 委托)
+    - `run_backtest` 通过 BacktestRunner.run() 注入的 `total_trades` / `avg_turnover` 走 `tests/integration/test_backtest_cli.py::test_metrics_integration` 路径(见下),不污染 standalone metrics 测试
 - **`tests/integration/test_backtest_cli.py::test_metrics_integration`** 断言升级:
   - 现有断言:`run_backtest` 返回 summary 类型正确 + 数值范围合理
-  - 新增断言:`summary["total_trades"] > 0` 与 `summary["avg_turnover"] > 0.0`
+  - 新增断言:`summary["total_trades"] > 0` 与 `summary["avg_turnover"] > 0.0`(通过 `BacktestRunner.run()` 注入,runner 调用 quantide 真实回测得到)
 - **`tests/e2e/test_full_pipeline_e2e.py`** 端到端断言升级(若适用):
   - 全链路真实回测后,断言 `summary.json` 含 `sortino` 字段(`is not None`)
   - 断言 wall time ≤ 600s(NFR-0500 性能预算)
@@ -219,26 +224,27 @@ priority: P0
 
 | Valid | Testable | Decided |
 |---|---|---|
-| ✅ | ⚠️ [M-FOUND 锁定] quantide.service.metrics 真实接口 | ✅ |
+| ✅ | ✅ (API 已在 M-FOUND 锁定,见下) | ✅ |
 
 - 模块路径:`src/trader_off/backtest/metrics.py`。
-- **删除**原 66-68 行硬编码:
+- **删除**原 v0.2.0 66-68 行硬编码:
   ```python
   total_trades = 0
   avg_turnover = 0.0
   ```
-- **替换**为委托逻辑:
-  - 调用 `quantide.service.metrics.compute_metrics(nav_df=nav_df, bills=bills, benchmark_returns=benchmark_returns)` 返回真实指标 dict。
-  - 输入参数:
-    - `nav_df`: `pl.DataFrame`,列 `{date, nav}`(继承现有)
-    - `bills`: `pl.DataFrame`,列 `{date, asset, action, quantity, price}`,来自 `BacktestBroker.bills()`(由 `run_backtest` 收集后传入 metrics)
-    - `benchmark_returns`: `pl.DataFrame` 或 `None`,列 `{date, return}`,基准收益对比(可选,quantide 内部 fallback)
-  - 返回值:`dict`,含 6 个 v0.1.0 必需键 + 新增可选键(见 FR-0600 summary schema)。
-  - `[M-FOUND 锁定]` `quantide.service.metrics.compute_metrics` 真实函数名、参数名、返回值 schema 以源码为准;若与本 FR 描述不符,在 M-FOUND 阶段更新本 FR 描述与对应 AC。
+- **实际 quantide API(已在 M-FOUND 阶段由 Devon 锁定)**:
+  - `quantide.service.metrics.metrics(portfolio_id: str, baseline_returns: pl.DataFrame | None = None) -> pd.DataFrame`
+  - 函数名 `metrics`(不是 `compute_metrics`);首参 `portfolio_id: str`;返回 `pandas.DataFrame`(2 列 `Metric / Value`,16+ 个 metric keys)
+  - 已知输出键:`Start Date`, `End Date`, `Total Trading Days`, `Total Return`, `CAGR`, `Volatility (ann.)`, `Sharpe Ratio`, `Sortino Ratio`, `Max Drawdown`, `Max Drawdown Days`, `Calmar Ratio`, `Win Rate (Daily)`, `Profit Factor`, `Skewness`, `Kurtosis` + 基准相关 `Excess Return (ann.)`, `Beta`, `Alpha (ann.)`, `Information Ratio`, `Correlation`
+- **trader-off 公开 API 与 quantide 的关系**:
+  - `compute_performance_metrics(nav_df: pl.DataFrame) -> dict`(**只**接受 nav_df,**不**接受 portfolio_id)仍为公开入口(FR-0900 签名不变)。
+  - **standalone 模式**(无 portfolio_id):返回 **4 个核心键**:`annualized_return, sharpe_ratio, max_drawdown, win_rate`。**不**包含 `total_trades` / `avg_turnover`(Devon commit 39d85a8 删除硬编码 0 后,这两个键从 metrics 输出中消失)。
+  - **extended 模式**(通过 `run_backtest` 调用):`BacktestRunner.run()` 返回 `result["metrics"]`,包含 quantide 完整 DataFrame 的键(含 `sortino`, `drawdown_duration_days`, `total_trades`, `avg_turnover`, 基准对比等);`run_backtest` 将这些键**注入**到 `BacktestResult.summary`(不是通过 `compute_performance_metrics`)。
+- **总保留断言**(spec.md §5.2 兼容性 + FR-0600 summary schema):`summary.json` 仍含 v0.1.0 FR-1200 的 6 必需键(`annualized_return, sharpe_ratio, max_drawdown, win_rate, total_trades, avg_turnover`),但 `total_trades` / `avg_turnover` 来自 runner 注入,**不**来自 `compute_performance_metrics`。
 - **错误处理**:
   - `< 30` 日 NAV 数据时仍抛 `InsufficientDataError`(继承 v0.1.0 FR-1200 AC-3)
-  - quantide 委托失败时抛 `RuntimeError`,message 含 quantide 内部异常 traceback 前 3 行
-- **日志**:`logger.debug(f"Delegated metrics computation to quantide, returned {len(result)} keys")`。
+  - NAV 含 NaN/Inf 时抛 `ValueError`(Devon commit 39d85a8 新增校验,不再包装为 RuntimeError)
+- **日志**:`logger.debug(f"compute_performance_metrics returned {len(result)} keys")`(不直接调用 quantide)。
 
 ---
 
@@ -255,13 +261,17 @@ priority: P0
   - `src/trader_off/visualization/` 模块同上
   - `tests/integration/test_backtest_cli.py::test_metrics_integration` 直接调用 `result = run_backtest(...)` 后断言 `result.summary` 字段(已通过 BacktestResult 间接消费 metrics)
   - `tests/unit/backtest/test_metrics.py::TestComputePerformanceMetrics::test_keys` 直接调用 `compute_performance_metrics(nav_df)`
-- **内部扩展**(不影响公开签名):
-  - 函数体内部可调用 `quantide.service.metrics.compute_metrics(nav_df=..., bills=..., benchmark_returns=...)`,其中 `bills` 与 `benchmark_returns` 通过以下两种方式之一获取:
-    - **方式 A**(推荐):在 `run_backtest` 内部收集 `bills = BacktestBroker.bills()` 后,作为 closure 或 thread-local 传入 `compute_performance_metrics`
-    - **方式 B**:在 `compute_performance_metrics` 内部新建一个 quantide context,通过 `daily_bars` 单例查询
-  - `[M-FOUND 锁定]` 具体方式以 `quantide.service.metrics` 真实接口设计为准;若 quantide 期望 `bills` 作为必传参数,采用方式 A;否则采用方式 B
-- **6 个必需键** + **类型约束** 完全继承 v0.1.0 FR-1200 AC-1。
-- **新增可选键**(`sortino, drawdown_duration_days, benchmark_return, ...` 等)在返回值中存在但**不**出现在 6 个必需键集合中;下游测试断言 `set(result.keys()) == required_6_keys` 仍通过(若断言使用 `issubset` 则新增键不影响)。
+- **内部实现**(不影响公开签名):
+  - `compute_performance_metrics` **不**直接调用 `quantide.service.metrics.metrics()`(该函数需 `portfolio_id`,而 standalone metrics 函数无此输入)。
+  - 真实 `total_trades` / `avg_turnover` / `sortino` / `drawdown_duration_days` / 基准对比等 quantide 扩展键由 **`run_backtest`** 通过 `BacktestRunner.run()` 返回值(`result["metrics"]`)直接**注入**到 `BacktestResult.summary`(详见 FR-0500 runner.py 注入路径与 FR-0600 summary schema)。
+  - 因此 standalone `compute_performance_metrics(nav_df)` 只计算 4 个可由 NAV 序列直接推导的核心键(annualized_return、sharpe_ratio、max_drawdown、win_rate);trade-derived 键依赖 portfolio 上下文,由 runner 注入。
+- **4 个核心键** + **类型约束**(Devon commit 39d85a8 后):
+  - `annualized_return`: float
+  - `sharpe_ratio`: float
+  - `max_drawdown`: float
+  - `win_rate`: float
+  - **不**包含 `total_trades`(原硬编码 0,已删除);**不**包含 `avg_turnover`(原硬编码 0.0,已删除)
+- **下游 `summary.json` 兼容性**:`summary.json` 仍含 v0.1.0 FR-1200 的 6 必需键(因 runner.py 注入 `total_trades` / `avg_turnover` 到 summary,**不**通过 `compute_performance_metrics`),v0.1.0 e2e 测试断言 `set(result.summary.keys()) == required_6_keys` 仍通过(`run_backtest` 是间接消费者,不是 metrics 函数消费者)。
 
 ---
 
@@ -360,9 +370,9 @@ priority: P0
 | 0 (Task) | MVP 工作量 | 控制在 1-2 个 issue 工作量(FR-1 BacktestRunner 接入 + FR-2 metrics 委托 可并行) | ✅ (用户 Task 描述已确认) |
 | 0 (Task) | FR 编号 | 使用 FR-0100 ~ FR-0900 (与 v0.2.0 同范围,不同 spec-id,独立命名空间) | ✅ (Sage 决策,文档中已说明) |
 | 1 (User 2026-07-21) | **FR-0400 合并入 FR-0500** | 用户决策:交易日历不再独立成脚本,改为 `runner.py` 启动时内联生成临时 calendar parquet(schema `{date, is_open=1, prev}`,从 ohlcv fixture `trade_date` / `date` 列去重排序)→ `quantide.service.calendar.Calendar.load(tmp_path)` 注入。`scripts/generate_calendar.py` 取消;`tests/fixtures/v0.3.0/calendar_store/` 目录不再产生。FR 数量由 9 → **8**(FR-0400 删除,FR-0500 扩充含 inline calendar)。Issue #84 关闭,FR-0500 (Issue #85) 加 comment 记录此变更。 | ✅ |
+| 2 (M-FOUND Devon 39d85a8) | **quantide.service.metrics 实际 API 锁定** | Devon commit 39d85a8 锁定真实 API:`quantide.service.metrics.metrics(portfolio_id: str, baseline_returns: pl.DataFrame \| None = None) -> pd.DataFrame`(函数名 `metrics`,首参 `portfolio_id: str`,返回 DataFrame 含 16+ 键 `Sharpe Ratio / Sortino Ratio / Max Drawdown / Max Drawdown Days / CAGR / Volatility / Calmar / Win Rate / Profit Factor / Skewness / Kurtosis` + 基准相关 `Beta / Alpha / Information Ratio / Correlation`)。`trader_off.backtest.metrics.compute_performance_metrics(nav_df)` standalone 改为只返回 **4 个核心键**(`annualized_return, sharpe_ratio, max_drawdown, win_rate`),**不**含 `total_trades` / `avg_turnover`(硬编码 0 已删除);这两个键由 `run_backtest` 通过 `BacktestRunner.run()` 返回值注入到 `BacktestResult.summary`,**不**通过 metrics 函数路径。NaN/Inf 校验改为抛 `ValueError`(非 RuntimeError)。FR-0800 AC-1~6 重写为 AC-1~7,FR-0900 AC-3/4 同步更新。 | ✅ |
 | 待 M-FOUND | BacktestRunner.run 真实签名 | 在 M-FOUND 阶段读 `quantide.service.runner` 源码确认;若签名与本 FR-0500 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | DailyBarsStore 真实 schema | 在 M-FOUND 阶段读 `quantide.data.daily_bars` 源码确认;若列/分区与本 FR-0300 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
-| 待 M-FOUND | quantide.service.metrics 真实接口 | 在 M-FOUND 阶段读 `quantide.service.metrics` 源码确认;若函数名/参数/返回值与本 FR-0800 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | Calendar.load() 真实 API | 在 M-FOUND 阶段读 `quantide.service.calendar.Calendar` 源码确认;若 `load()` 签名/参数/返回值与本 FR-0500 Step B 描述不符,更新 AC 细节 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | BacktestBroker.bills() 真实 schema | 在 M-FOUND 阶段读 `quantide.service.broker.BacktestBroker.bills()` 源码确认返回列定义 | ⚠️ [M-FOUND 锁定] |
 
