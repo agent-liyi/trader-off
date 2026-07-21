@@ -33,6 +33,9 @@ models/
 reports/
 *.log
 
+# Smoke test output (FR-0200)
+tests/smoke/output/
+
 # OS
 .DS_Store
 Thumbs.db
