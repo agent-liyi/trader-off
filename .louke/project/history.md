@@ -165,3 +165,4 @@ v0.3.0 patch — 处置两件延期尾巴：(1) ClockRewind fixture 修复使 3 
 - 43 unit tests passing (14 runner + 12 adapter + 17 strategies)
 - 3 e2e tests xfailed (capital exhaustion, v0.4.0 backlog)
 - 1 compat test pre-existing failure (quantide installed → stubs not used)
+# v0.4.1 smoke test 2026-07-21T10:07:26Z
