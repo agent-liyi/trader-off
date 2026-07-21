@@ -188,3 +188,20 @@ v0.3.0 patch — 处置两件延期尾巴：(1) ClockRewind fixture 修复使 3 
 - 完整 BacktestRunner.run on 真实数据（当前 smoke 只验证 fetch_bars）
 - CLI `trader-off sync-data` 命令
 - 自动重试 / token 轮换
+
+## v0.3.3 — 2026-07-21
+
+**Branch**: fix/115 → merged to main
+**Tag**: v0.3.3
+
+### Summary
+调仓逻辑风险修复（v0.3.2 backlog 的 3 项）。`optimized_topk.py` + `lgbm_top20.py` 的 `on_day_open` 方法加固：(1) `_reconcile_position_cache()` 在 try/finally 中执行，删除幽灵 cache 项；(2) `cash_factor` 用卖出前快照计算，避免资产轮换时系统性扩大现金仓位；(3) `_compute_cash_factor()` 加 `math.isfinite()` + 范围校验（0 ≤ x ≤ 1.0），无效值 fallback 1.0 + warning。
+
+### Stats
+- 1 bug issue (#115) + 10 new unit tests
+- 927 测试通过，0 回归
+- Security PASS（0 critical/high；2 low 记入 v0.4.x backlog）
+
+### Backlog for v0.4.x
+- 双向 reconcile（snapshot/restore 模式）
+- `_compute_cash_factor` 区分「空仓回退 1.0」与「broker 损坏 raise」
