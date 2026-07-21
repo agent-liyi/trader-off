@@ -165,3 +165,26 @@ v0.3.0 patch — 处置两件延期尾巴：(1) ClockRewind fixture 修复使 3 
 - 43 unit tests passing (14 runner + 12 adapter + 17 strategies)
 - 3 e2e tests xfailed (capital exhaustion, v0.4.0 backlog)
 - 1 compat test pre-existing failure (quantide installed → stubs not used)
+
+## v0.4.1 — 2026-07-21
+
+**Spec**: v0.4.1-001-real-tushare-integration
+**Branch**: releases/v0.4.1 → merged to main
+**Tag**: v0.4.1
+
+### Summary
+真数据接入里程碑。`QuantideDataLoader` 现在实际调用 `quantide.data.fetchers.tushare.fetch_bars()` + `fetch_calendar()`（受 `TUSHARE_TOKEN` 环境变量门控）。原计划用 `quantide.data.models.calendar.Calendar.get_frames_by_count()` 替换 `pandas.bdate_range`，但实现发现该方法有内部 bug（pyarrow `pc.sum` 抛 TypeError），改用模块级 `fetch_calendar(start_epoch)`。TUSHARE_TOKEN 三道防线：env-only / memory-only / 不入日志。Token 仅在本会话使用，**未**落盘。
+
+### Smoke 测试结果
+`uv run python` + TUSHARE_TOKEN → QuantideDataLoader.get_daily("000001.SZ", 2026-07-17, count=10) → **10 rows 真实数据**（2026-07-06 至 2026-07-17，含 OHLCV/turnover/adj_factor）。
+
+### Stats
+- 2 FR + 1 NFR + 16 AC
+- 22 单元测试 + 4 e2e mock + 1 skip（无 token 时）通过
+- Security PASS（0 critical/high；2 placeholder token 误报已澄清）
+
+### Backlog for v0.4.2+
+- `Calendar.get_frames_by_count` bug 已识别，可向 quantide 上游提 issue
+- 完整 BacktestRunner.run on 真实数据（当前 smoke 只验证 fetch_bars）
+- CLI `trader-off sync-data` 命令
+- 自动重试 / token 轮换
