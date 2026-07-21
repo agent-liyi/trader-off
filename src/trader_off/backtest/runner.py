@@ -131,6 +131,8 @@ def run_backtest(
         BacktestResult with summary, positions, trades, nav, and report_dir.
     """
     config = config or {}
+    # Pass model_version through config for strategy use
+    config.setdefault("model_version", model_version)
     store_path = config.get("store_path", DEFAULT_STORE_PATH)
     calendar_source = config.get("calendar_source", DEFAULT_CALENDAR_SOURCE)
 
@@ -168,6 +170,7 @@ def run_backtest(
             start_date=start,
             end_date=end,
             initial_cash=capital,
+            db_path=str(Path(tmp_dir) / "backtest.db"),
         )
         if asyncio.iscoroutine(result):
             result = asyncio.run(result)

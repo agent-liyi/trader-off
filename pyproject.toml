@@ -42,6 +42,8 @@ markers = [
     "slow: slow-running tests",
     "perf: performance benchmark tests (NFR-0100)",
     "asyncio: async tests",
+    "timeout: test timeout (pytest-timeout plugin)",
+    "socket: network access control (pytest-socket plugin)",
 ]
 addopts = "--strict-markers"
 
@@ -81,6 +83,8 @@ dev = [
     "mutmut>=2.0",
     "psutil>=5.9",
     "ruff>=0.15.21",
+    "pytest-timeout>=2.4.0",
+    "pytest-asyncio>=1.4.0",
 ]
 
 [tool.coverage.run]

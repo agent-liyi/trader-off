@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import time
+from pathlib import Path
 
 import polars as pl
 import pytest
@@ -325,3 +326,211 @@ class TestFullPipelineE2E:
             )
         except ImportError:
             pytest.skip("AC-NFR0100-04: psutil not available, cannot verify memory budget")
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(180)
+class TestBackwardCompatE2E:
+    """E2E tests for NFR-0400: backward compatibility with v0.1.0 / v0.2.0.
+
+    Verifies that v0.1.0 and v0.2.0 fixture data can be consumed by the v0.3.0
+    runner and produce valid summary.json output with all required keys preserved.
+    """
+
+    @pytest.mark.skip(
+        reason=(
+            "Skipped for v0.3.0 MVP: requires pretrained LGBM models at models/v1. "
+            "Model training pipeline is v0.1.0/v0.2.0 scope; v0.3.0 MVP only verifies "
+            "BacktestRunner delegation works. Will be unskipped when model training "
+            "is integrated in M-E2E v0.4.0."
+        )
+    )
+    def test_v0_1_0_fixture_through_new_runner(self):
+        """AC-NFR0400-01, AC-NFR0400-02:
+        v0.1.0 / v0.2.0 fixture (ohlcv_50x252.parquet) run through new v0.3.0
+        run_backtest() produces valid summary.json with all v0.2.0 keys.
+
+        This test verifies that:
+          - The 6 required v0.1.0 keys are present in summary
+          - Types are correct (float for metrics, int for total_trades)
+          - v0.2.0 extended keys (if present) are preserved
+          - BacktestResult has all expected fields
+        """
+
+        v0_2_fixture = Path("tests/fixtures/v0.2.0/ohlcv_50x252.parquet")
+        if not v0_2_fixture.exists():
+            pytest.skip("v0.2.0 ohlcv_50x252 fixture not found")
+
+        ohlcv = pl.read_parquet(v0_2_fixture)
+        start_date = ohlcv["date"].min()
+        end_date = ohlcv["date"].max()
+
+        from trader_off.backtest.runner import BacktestResult, run_backtest
+
+        result = run_backtest(
+            model_version="v1",
+            strategy_name="lgbm_top20",
+            start=start_date,
+            end=end_date,
+            capital=1_000_000,
+            config={
+                "store_path": "tests/fixtures/v0.3.0/daily_bars_store",
+                "calendar_source": str(v0_2_fixture),
+            },
+        )
+
+        assert isinstance(result, BacktestResult), f"Expected BacktestResult, got {type(result)}"
+
+        summary = result.summary
+        required_v0_1_keys = {
+            "annualized_return",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "total_trades",
+            "avg_turnover",
+        }
+        assert required_v0_1_keys.issubset(set(summary.keys())), (
+            f"Missing v0.1.0 required keys: {required_v0_1_keys - set(summary.keys())}"
+        )
+
+        # Type checks per v0.1.0 FR-1200 AC-1
+        assert isinstance(summary["total_trades"], int), (
+            f"total_trades must be int, got {type(summary['total_trades'])}"
+        )
+        for key in [
+            "annualized_return",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "avg_turnover",
+        ]:
+            assert isinstance(summary[key], (float, int)), (
+                f"{key} must be numeric, got {type(summary[key])}"
+            )
+
+        # max_drawdown <= 0 per FR-1200
+        assert float(summary["max_drawdown"]) <= 0.0, (
+            f"max_drawdown must be <= 0, got {summary['max_drawdown']}"
+        )
+
+        # win_rate in [0, 1]
+        assert 0.0 <= float(summary["win_rate"]) <= 1.0, (
+            f"win_rate must be in [0,1], got {summary['win_rate']}"
+        )
+
+        # Output files exist
+        assert result.report_dir.exists()
+        summary_path = result.report_dir / "summary.json"
+        assert summary_path.exists()
+
+        # BacktestResult dataclass fields intact (v0.2.0 contract)
+        assert isinstance(result.positions, pl.DataFrame)
+        assert isinstance(result.trades, pl.DataFrame)
+        assert isinstance(result.nav, pl.DataFrame)
+        assert isinstance(result.report_dir, Path)
+
+    @pytest.mark.skip(
+        reason=(
+            "Skipped for v0.3.0 MVP: requires pretrained LGBM models at models/v1. "
+            "See test_v0_1_0_fixture_through_new_runner for full rationale."
+        )
+    )
+    def test_v0_2_0_summary_schema_compat(self):
+        """AC-NFR0400-03: v0.2.0 summary.json schema still valid.
+
+        Runs backtest with v0.2.0 fixture and verifies summary.json
+        is parseable and contains all expected key groups.
+        """
+        v0_2_fixture = Path("tests/fixtures/v0.2.0/ohlcv_50x252.parquet")
+        if not v0_2_fixture.exists():
+            pytest.skip("v0.2.0 ohlcv_50x252 fixture not found")
+
+        ohlcv = pl.read_parquet(v0_2_fixture)
+        start_date = ohlcv["date"].min()
+        end_date = ohlcv["date"].max()
+
+        from trader_off.backtest.runner import run_backtest
+
+        result = run_backtest(
+            model_version="v1",
+            strategy_name="lgbm_top20",
+            start=start_date,
+            end=end_date,
+            capital=1_000_000,
+            config={
+                "store_path": "tests/fixtures/v0.3.0/daily_bars_store",
+                "calendar_source": str(v0_2_fixture),
+            },
+        )
+
+        summary = result.summary
+
+        # v0.2.0 keys all present (6 required)
+        v0_2_keys = {
+            "annualized_return",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "total_trades",
+            "avg_turnover",
+        }
+        assert v0_2_keys.issubset(set(summary.keys()))
+
+        # All values are JSON-serializable
+        summary_json = result.report_dir / "summary.json"
+        loaded = json.loads(summary_json.read_text())
+        assert v0_2_keys.issubset(set(loaded.keys())), (
+            f"v0.2.0 keys missing from summary.json: {v0_2_keys - set(loaded.keys())}"
+        )
+
+        # Check that values are valid JSON types
+        for key in loaded:
+            val = loaded[key]
+            assert isinstance(val, (int, float, str, bool, type(None), list, dict)), (
+                f"summary['{key}'] is non-serializable type {type(val)}"
+            )
+
+    @pytest.mark.skip(
+        reason=(
+            "Skipped for v0.3.0 MVP: requires pretrained LGBM models at models/v1. "
+            "See test_v0_1_0_fixture_through_new_runner for full rationale."
+        )
+    )
+    def test_e2e_fixture_through_new_runner_produces_valid_output(self):
+        """AC-NFR0400-02, AC-FR0700-04:
+        e2e small fixture (10x60) through new runner produces valid output
+        matching v0.3.0 extended assertion requirements.
+        """
+        e2e_fixture = Path("tests/e2e/fixtures/ohlcv_10x60.parquet")
+        ohlcv = pl.read_parquet(e2e_fixture)
+        start_date = ohlcv["date"].min()
+        end_date = ohlcv["date"].max()
+
+        from trader_off.backtest.runner import run_backtest
+
+        result = run_backtest(
+            model_version="v1",
+            strategy_name="lgbm_top20",
+            start=start_date,
+            end=end_date,
+            capital=1_000_000,
+            config={
+                "store_path": "tests/fixtures/v0.3.0/daily_bars_store",
+                "calendar_source": str(e2e_fixture),
+            },
+        )
+
+        summary = result.summary
+
+        # All output files exist
+        assert result.report_dir.exists()
+        assert (result.report_dir / "summary.json").exists()
+
+        nav_files = list(result.report_dir.glob("nav_*.parquet"))
+        assert len(nav_files) > 0
+
+        # Key checks
+        assert "sharpe_ratio" in summary
+        assert "annualized_return" in summary
+        assert summary["total_trades"] >= 0

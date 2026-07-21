@@ -3064,6 +3064,8 @@ dev = [
     { name = "mutmut" },
     { name = "mypy" },
     { name = "psutil" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-timeout" },
     { name = "ruff" },
     { name = "types-pyyaml" },
 ]
@@ -3100,6 +3102,8 @@ dev = [
     { name = "mutmut", specifier = ">=2.0" },
     { name = "mypy", specifier = ">=2.3.0" },
     { name = "psutil", specifier = ">=5.9" },
+    { name = "pytest-asyncio", specifier = ">=1.4.0" },
+    { name = "pytest-timeout", specifier = ">=2.4.0" },
     { name = "ruff", specifier = ">=0.15.21" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20260518" },
 ]
