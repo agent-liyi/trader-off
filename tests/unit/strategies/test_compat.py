@@ -121,6 +121,9 @@ class TestCompatWithQuantideInstalled:
         try:
             from quantide.core.strategy import BaseStrategy as RealBaseStrategy
         except ImportError:
+            # AC-NFR0200-01: skip when quantide not installed (CI stub env);
+            # the compat shim's on_bar signature is only verifiable against
+            # the real quantide class when the package is present.
             pytest.skip("quantide not installed — cannot verify signature")
 
         from trader_off.strategies.compat import BaseStrategy as CompatBaseStrategy
