@@ -4,14 +4,17 @@
 
 ## 功能
 
-- **因子挖掘**：从 13 个模板（动量 / 波动率 / 成交量 / 基本面）展开 373 个候选因子，按 IC 排名精选
-- **训练预测**：LightGBM 训练 + 模型推理 + 版本管理
-- **策略评估**：IC / Rank IC / 分层回测
-- **交易策略**：`LGBMTop20`、`OptimizedTopK`（接 quantide 策略框架）
-- **历史回测**：委托 quantide 引擎（真实撮合 / 手续费 / T+1 / 记账），取真数据或本地 fixture
+- **因子挖掘**：从 13 个模板展开 373 候选因子，IC 排名精选
+- **参数寻优**：网格搜索策略参数，多进程并行回测，Sharpe 排名选最优
+- **策略回测**：委托 quantide 引擎（真实撮合 / 手续费 / T+1 / 记账）
 - **纸交易**：仿真交易，同一份策略代码跑回测和纸交易
 - **组合优化**：cvxpy Max Sharpe（long-only / 满仓 / 行业中性 / 个股上限）
 - **数据同步**：从 tuShare 拉 A 股日线到本地 DailyBarsStore
+<<<<<<< HEAD
+=======
+- **股票列表**：获取 A 股列表，支持按交易所/状态过滤
+- **实时行情**：quantide LiveQuote 订阅，需 qmt-gateway
+>>>>>>> b835574 (docs: README — add grid-search section + sync feature list)
 - **调度重训**：定时检测漂移 → 自动重训练 → 部署
 
 ## 安装
@@ -73,6 +76,23 @@ trader-off-paper-trade \
 
 输出 `reports/paper_trade_<ts>/`：仿真 NAV、持仓、交易记录。需 `TUSHARE_TOKEN`。
 
+### 参数寻优
+
+```bash
+trader-off-grid-search --config params.yaml \
+    --strategy optimized_topk \
+    --start 2024-01-01 --end 2024-12-31 \
+    --capital 1000000
+```
+
+`params.yaml` 定义参数空间：
+```yaml
+param_space:
+  top_k: [10, 20, 30]
+  rebalance_days: [5, 10, 20]
+```
+多进程并行跑回测，按 Sharpe 排名输出最优参数。
+
 ### 数据同步
 
 ```bash
@@ -104,6 +124,25 @@ trader-off-stock-list --exchange SSE --json    # JSON 输出
 ```
 
 从 tuShare 获取 A 股列表，返回 JSON 含 `ts_code` / `name`。需 `TUSHARE_TOKEN`。
+
+### 实时行情
+
+```bash
+trader-off-live --status                                           # 查看状态
+trader-off-live --start --assets 000001.SZ,600000.SH              # 订阅
+trader-off-live --stop                                            # 停止
+```
+
+通过 quantide LiveQuote 订阅实时行情，需 qmt-gateway。
+
+### 生成策略
+
+```bash
+trader-off-generate-strategy --name MyStrategy --dry-run           # 预览
+trader-off-generate-strategy --name MomentumReversion              # 生成到 src/trader_off/strategies/
+```
+
+生成 quantide BaseStrategy 子类（init/on_day_open/on_bar/on_day_close/on_stop）。
 
 ### 调度
 
