@@ -410,6 +410,11 @@ def run_paper_trade(
     date_col = "date" if "date" in ohlcv.columns else "trade_date"
     trade_dates: list[date] = sorted(ohlcv[date_col].unique().cast(pl.Date).to_list())
 
+    # Auto-derive universe from OHLCV if not provided (FR-0200 blocker fix)
+    if not universe and "asset" in ohlcv.columns:
+        universe = ohlcv["asset"].unique().to_list()
+        logger.info(f"Auto-derived {len(universe)} assets from calendar source {calendar_source}")
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_calendar_path = Path(tmp_dir) / f"calendar_{ts}.parquet"
         _generate_inline_calendar(trade_dates, tmp_calendar_path)

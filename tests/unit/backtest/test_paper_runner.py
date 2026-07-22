@@ -710,6 +710,83 @@ class TestRunPaperTradeWithMocks:
             f"Each run must use a unique path: {captured_paths}"
         )
 
+    # Auto-derive universe from calendar source when config.universe is empty
+    def test_auto_derive_universe_from_calendar_source(self):
+        """When universe is empty, assets are derived from calendar source OHLCV."""
+        from trader_off.backtest.runner import run_paper_trade
+
+        mock_daily_bars = MagicMock()
+        mock_daily_bars.connect = MagicMock()
+
+        mock_db = MagicMock()
+        mock_db.init = MagicMock()
+        mock_db.assets_all = MagicMock(
+            return_value=pl.DataFrame({"dt": ["2026-07-21"], "total": [1_000_000.0]})
+        )
+        mock_db.positions_all = MagicMock(return_value=pl.DataFrame())
+        mock_db.trades_all = MagicMock(return_value=pl.DataFrame())
+
+        mock_paper = MagicMock()
+        mock_paper.total_assets = 1_000_000.0
+        mock_paper.positions = []
+        mock_paper.on_day_open = AsyncMock()
+        mock_paper.on_day_close = AsyncMock()
+        mock_paper_cls = MagicMock(return_value=mock_paper)
+
+        mock_msg_hub = MagicMock()
+        mock_topics = MagicMock()
+        mock_topics.QUOTES_ALL = MagicMock()
+        mock_topics.QUOTES_ALL.value = "quotes_all"
+
+        # OHLCV file with asset column → universe auto-derives from it
+        ohlcv_df = pl.DataFrame(
+            {
+                "asset": ["000001.SZ", "000001.SZ", "600519.SH"],
+                "date": [date(2026, 7, 20), date(2026, 7, 21), date(2026, 7, 21)],
+            }
+        )
+
+        with patch("trader_off.backtest.runner.pl.read_parquet") as mock_read:
+            mock_read.return_value = ohlcv_df
+            with patch("quantide.data.models.daily_bars.daily_bars", mock_daily_bars):
+                with patch("quantide.data.sqlite.db", mock_db):
+                    with patch("quantide.service.sim_broker.PaperBroker", mock_paper_cls):
+                        with patch("quantide.core.message.msg_hub", mock_msg_hub):
+                            with patch("quantide.core.enums.Topics", mock_topics):
+                                with patch(
+                                    "uuid.uuid4",
+                                    return_value=uuid_mod.UUID(
+                                        "12345678-1234-5678-1234-567812345678"
+                                    ),
+                                ):
+                                    with patch.object(
+                                        mock_daily_bars,
+                                        "get_bars_in_range",
+                                        return_value=pl.DataFrame(
+                                            {
+                                                "asset": ["000001.SZ", "600519.SH"],
+                                                "open": [10.0, 20.0],
+                                                "high": [11.0, 21.0],
+                                                "low": [9.0, 19.0],
+                                                "close": [10.5, 20.5],
+                                                "volume": [1e6, 2e6],
+                                                "amount": [1.05e7, 4.1e7],
+                                            }
+                                        ),
+                                    ):
+                                        result = run_paper_trade(
+                                            strategy_name="lgbm_top20",
+                                            end_date=date(2026, 7, 21),
+                                            initial_cash=1_000_000.0,
+                                            # No universe in config → auto-derive from OHLCV
+                                        )
+
+        # Session loop must have executed (msg_hub.publish called per day)
+        assert mock_msg_hub.publish.called, (
+            "msg_hub.publish should be called — session loop must run with auto-derived assets"
+        )
+        assert isinstance(result.nav, pl.DataFrame)
+
 
 # ── NFR-0100 lazy import tests (runner.py) ─────────────────────────────────
 

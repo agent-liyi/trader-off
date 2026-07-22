@@ -89,6 +89,56 @@ class TestPaperTradeCLIArgs:
         assert kwargs["end_date"] == date(2026, 7, 21)
         assert kwargs["initial_cash"] == 500_000.0
 
+    # --universe flag passes asset list to run_paper_trade via config
+    def test_universe_flag_passes_assets(self, tmp_path):
+        """--universe reads file and passes asset list in config."""
+        from trader_off.cli.paper_trade import main
+
+        # Create a universe CSV file
+        universe_file = tmp_path / "watchlist.csv"
+        universe_file.write_text("asset\n000001.SZ\n600519.SH\n")
+
+        with patch("trader_off.cli.paper_trade.run_paper_trade") as mock_run:
+            mock_result = MagicMock()
+            mock_result.summary = {"total_trades": 0}
+            mock_result.positions = pl.DataFrame()
+            mock_result.trades = pl.DataFrame()
+            mock_result.nav = pl.DataFrame()
+            mock_result.report_dir = Path("/tmp/reports")
+            mock_run.return_value = mock_result
+
+            exit_code = main(["--strategy", "optimized_topk", "--universe", str(universe_file)])
+
+        assert exit_code == 0
+        kwargs = mock_run.call_args.kwargs
+        config = kwargs.get("config") or {}
+        universe = config.get("universe", [])
+        assert set(universe) == {"000001.SZ", "600519.SH"}, (
+            f"Expected universe from file, got {universe}"
+        )
+
+    # no --universe flag → empty universe passes (auto-derive in runner)
+    def test_no_universe_flag_empty_config(self):
+        """No --universe flag → empty universe list in config."""
+        from trader_off.cli.paper_trade import main
+
+        with patch("trader_off.cli.paper_trade.run_paper_trade") as mock_run:
+            mock_result = MagicMock()
+            mock_result.summary = {"total_trades": 0}
+            mock_result.positions = pl.DataFrame()
+            mock_result.trades = pl.DataFrame()
+            mock_result.nav = pl.DataFrame()
+            mock_result.report_dir = Path("/tmp/reports")
+            mock_run.return_value = mock_result
+
+            exit_code = main(["--strategy", "optimized_topk"])
+
+        assert exit_code == 0
+        kwargs = mock_run.call_args.kwargs
+        config = kwargs.get("config") or {}
+        universe = config.get("universe", [])
+        assert universe == [], f"Expected empty universe, got {universe}"
+
     # AC-FR0200-06: exception → exit code 5
     def test_exception_exits_5(self):
         """CLI returns exit code 5 when run_paper_trade raises RuntimeError."""

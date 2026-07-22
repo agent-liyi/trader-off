@@ -10,9 +10,33 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import polars as pl
 from loguru import logger
 
 from trader_off.backtest.runner import run_paper_trade
+
+
+def _read_universe_file(path: Path) -> list[str]:
+    """Read a universe file (CSV or Parquet) and return asset list.
+
+    Args:
+        path: Path to CSV or Parquet file with an 'asset' column.
+
+    Returns:
+        List of asset codes.
+
+    Raises:
+        ValueError: If the file cannot be read or has no 'asset' column.
+    """
+    suffix = path.suffix.lower()
+    if suffix == ".parquet":
+        df = pl.read_parquet(str(path))
+    else:
+        # Default to CSV
+        df = pl.read_csv(str(path), has_header=True)
+    if "asset" not in df.columns:
+        raise ValueError(f"Universe file {path} has no 'asset' column; columns: {df.columns}")
+    return df["asset"].unique().to_list()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,6 +73,12 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Output directory (default: reports/paper_trade_<ts>/)",
     )
+    parser.add_argument(
+        "--universe",
+        type=Path,
+        default=None,
+        help="Universe watchlist file (CSV or Parquet with 'asset' column)",
+    )
 
     try:
         args = parser.parse_args(argv)
@@ -56,12 +86,23 @@ def main(argv: list[str] | None = None) -> int:
         # argparse calls sys.exit(0) for --help, sys.exit(2) for errors
         return e.code if isinstance(e.code, int) else 2
 
+    # Read universe file if provided
+    universe: list[str] = []
+    if args.universe:
+        try:
+            universe = _read_universe_file(args.universe)
+            logger.info(f"Loaded {len(universe)} assets from {args.universe}")
+        except (ValueError, OSError) as e:
+            logger.error(f"Failed to read universe file: {e}")
+            return 4  # Exit code 4: config file error (mirrors backtest.py)
+
     # Exit code 5: Paper engine failure
     try:
         result = run_paper_trade(
             strategy_name=args.strategy,
             end_date=date.fromisoformat(args.end),
             initial_cash=args.capital,
+            config={"universe": universe},
         )
 
         # If --output specified, write files there instead of default location
