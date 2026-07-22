@@ -19,6 +19,7 @@ import numpy as np
 import polars as pl
 from loguru import logger
 
+from trader_off.cli._json_output import _json_wrap
 from trader_off.portfolio.baseline import compare_to_baseline
 from trader_off.portfolio.constraints import OptimizerConstraints
 from trader_off.portfolio.covariance import estimate_covariance
@@ -26,6 +27,12 @@ from trader_off.portfolio.expected_returns import build_expected_returns
 from trader_off.portfolio.industry import load_industry_map
 from trader_off.portfolio.persistence import save_portfolio_results
 from trader_off.portfolio.solver import solve_max_sharpe
+
+_ERROR_MESSAGES: dict[int, str] = {
+    2: "File not found or invalid",
+    3: "Too few assets (<5)",
+    4: "Configuration/parameter error",
+}
 
 
 class OptimizeArgs(NamedTuple):
@@ -101,6 +108,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.05,
         help="Industry neutral tolerance (default: 0.05).",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Output JSON to stdout (suppresses normal output)",
     )
     return parser
 
@@ -241,10 +254,16 @@ def main(argv: list[str] | None = None) -> int:
         industry_neutral_tol=parsed.industry_neutral_tol,
     )
 
+    if parsed.json:
+        return _json_wrap(lambda: _run_or_validate(args), error_messages=_ERROR_MESSAGES)
+    return _run_or_validate(args)
+
+
+def _run_or_validate(args: OptimizeArgs) -> int:
+    """Validate args and run optimization, returning exit code."""
     exit_code = _validate_args(args)
     if exit_code is not None:
         return exit_code
-
     return _run_optimization(args)
 
 

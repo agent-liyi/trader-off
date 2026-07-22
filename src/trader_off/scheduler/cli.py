@@ -364,6 +364,14 @@ def build_retrain_parser() -> argparse.ArgumentParser:
         help="Maximum number of tasks to show (default: %(default)s)",
     )
 
+    # --json flag (FR-0100)
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Output JSON to stdout (suppresses normal output)",
+    )
+
     return parser
 
 
@@ -453,9 +461,13 @@ def main(args: list[str] | None = None) -> int:
     Returns:
         Exit code: 0 on success, non-zero on error.
     """
+    from trader_off.cli._json_output import _json_wrap
+
     parser = build_retrain_parser()
     _parsed = parser.parse_args(args)
-    # With required=True on subparsers, _parsed.subcommand is always set
+
+    if _parsed.json:
+        return _json_wrap(lambda: 0)
     return 0
 
 

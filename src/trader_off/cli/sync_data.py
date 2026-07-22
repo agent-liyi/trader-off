@@ -12,6 +12,8 @@ Exit codes:
 NFR-0100: All quantide imports are function-scope (lazy), not module-top-level.
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import os
@@ -22,21 +24,24 @@ from pathlib import Path
 import polars as pl
 from loguru import logger
 
+from trader_off.cli._json_output import _json_wrap
 
-def main(argv: list[str] | None = None) -> int:
-    """CLI entry for 'trader-off sync-data' command.
+_ERROR_MESSAGES: dict[int, str] = {
+    2: "CLI argument error",
+    4: "Configuration error",
+    5: "Partial sync failure",
+}
+
+
+def _run_sync(args: argparse.Namespace) -> int:
+    """Execute sync logic after parsing and return an exit code.
 
     Args:
-        argv: Command-line arguments. If None, reads from sys.argv[1:].
+        args: Parsed command-line arguments.
 
     Returns:
-        Exit code: 0 success, 2 argparse error, 4 config error, 5 partial failure.
+        Exit code: 0 success, 4 config error, 5 partial failure.
     """
-    # --- Argparse (exit code 2) ---
-    # Let argparse propagate SystemExit(2) naturally on errors
-    parser = _build_argparser()
-    args = parser.parse_args(argv)
-
     # --- Token gate (exit code 4) ---
     token = os.environ.get("TUSHARE_TOKEN")
     if not token:
@@ -82,6 +87,23 @@ def main(argv: list[str] | None = None) -> int:
     return asyncio.run(_sync(assets, start, end, store_path, token))
 
 
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry for 'trader-off sync-data' command.
+
+    Args:
+        argv: Command-line arguments. If None, reads from sys.argv[1:].
+
+    Returns:
+        Exit code: 0 success, 2 argparse error, 4 config error, 5 partial failure.
+    """
+    parser = _build_argparser()
+    args = parser.parse_args(argv)
+
+    if args.json:
+        return _json_wrap(lambda: _run_sync(args), error_messages=_ERROR_MESSAGES)
+    return _run_sync(args)
+
+
 # ---------------------------------------------------------------------------
 # Argparser builder
 # ---------------------------------------------------------------------------
@@ -122,6 +144,12 @@ def _build_argparser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Print sync plan without making network requests or writing files",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Output JSON to stdout (suppresses normal output)",
     )
     return parser
 

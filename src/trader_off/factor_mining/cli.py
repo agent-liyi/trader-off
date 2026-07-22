@@ -109,6 +109,12 @@ def _create_parser() -> ArgumentParser:
             "Path to OHLCV parquet fixture. Defaults to tests/fixtures/v0.2.0/ohlcv_50x252.parquet."
         ),
     )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        default=False,
+        help="Output JSON to stdout (suppresses normal output)",
+    )
     return parser
 
 
@@ -390,6 +396,17 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Exit code: 0 (success), 3 (<10 sel), 4 (config error), 5 (eval failure).
     """
+    from trader_off.cli._json_output import _json_wrap
+
+    error_messages: dict[int, str] = {
+        3: "Fewer than 10 selected factors",
+        4: "Configuration error",
+        5: "Evaluation failure",
+    }
+
     parser = _create_parser()
     args = parser.parse_args(argv)
+
+    if args.json:
+        return _json_wrap(lambda: _run(args), error_messages=error_messages)
     return _run(args)
