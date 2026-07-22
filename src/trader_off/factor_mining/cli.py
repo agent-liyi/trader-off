@@ -12,11 +12,13 @@ Exit codes:
 
 from __future__ import annotations
 
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
+import polars as pl
 import yaml  # type: ignore[import-untyped]
 
 from trader_off.factor_mining.evaluation import evaluate_factor
@@ -98,6 +100,14 @@ def _create_parser() -> ArgumentParser:
         default=None,
         help="Registry directory. Defaults to factor_registry/.",
     )
+    parser.add_argument(
+        "--fixture",
+        type=Path,
+        default=None,
+        help=(
+            "Path to OHLCV parquet fixture. Defaults to tests/fixtures/v0.2.0/ohlcv_50x252.parquet."
+        ),
+    )
     return parser
 
 
@@ -135,16 +145,124 @@ def _load_config(config_path: Path) -> dict:
         return yaml.safe_load(fh)
 
 
+# ---------------------------------------------------------------------------
+# Data loading (Bug 3 fix)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_FIXTURE = Path("tests/fixtures/v0.2.0/ohlcv_50x252.parquet")
+
+
+def _load_ohlcv_data(
+    fixture_path: Path | None = None,
+    start: str | None = None,
+    end: str | None = None,
+) -> pl.DataFrame:
+    """Load OHLCV data from fixture or Tushare.
+
+    Priority:
+        1. If ``fixture_path`` is provided, read from that parquet file.
+        2. If ``TUSHARE_TOKEN`` env var is set, use QuantideDataLoader to
+           fetch data from Tushare (function-scope lazy import per NFR-0100).
+        3. Otherwise, read from the default v0.2.0 fixture.
+
+    Args:
+        fixture_path: Optional override path to a parquet fixture file.
+        start: Start date (YYYY-MM-DD), used for Tushare queries.
+        end: End date (YYYY-MM-DD), used for Tushare queries.
+
+    Returns:
+        A polars DataFrame with OHLCV columns (asset, date, open, high, low,
+        close, volume, turnover, etc.).
+    """
+    if fixture_path is not None:
+        return pl.read_parquet(fixture_path)
+
+    token = os.environ.get("TUSHARE_TOKEN")
+    if token:
+        # NFR-0100: function-scope lazy import
+        try:
+            from quantide.data.fetchers.tushare import (
+                QuantideDataLoader,  # type: ignore[import-not-found]
+            )
+        except ImportError:
+            logger.warning("QuantideDataLoader not available, falling back to fixture")
+            return pl.read_parquet(_DEFAULT_FIXTURE)
+
+        loader = QuantideDataLoader(token=token)
+        df = loader.get_daily(start_date=start, end_date=end)
+        if df is None or len(df) == 0:
+            logger.warning("Tushare returned empty data, falling back to fixture")
+            return pl.read_parquet(_DEFAULT_FIXTURE)
+        return df
+
+    return pl.read_parquet(_DEFAULT_FIXTURE)
+
+
+def _compute_labels(
+    df: pl.DataFrame,
+    forward_days: int = 5,
+) -> pl.DataFrame:
+    """Compute N-day forward returns as prediction labels.
+
+    Computes label = close[t+N] / close[t] - 1 for each asset, sorted by date.
+    The last ``forward_days`` rows per asset will have null labels.
+
+    Args:
+        df: OHLCV DataFrame with ``asset``, ``date``, ``close`` columns.
+        forward_days: Number of days to look forward (default 5).
+
+    Returns:
+        DataFrame with added ``label`` column.
+    """
+    return df.sort(["asset", "date"]).with_columns(
+        (pl.col("close").shift(-forward_days).over("asset") / pl.col("close") - 1).alias("label")
+    )
+
+
+def _build_factor_values(
+    df: pl.DataFrame,
+    factor_series: pl.Series,
+) -> pl.DataFrame:
+    """Build a factor_values DataFrame for evaluate_factor.
+
+    Extracts asset and date from the input DataFrame and pairs them with the
+    computed factor values.
+
+    Args:
+        df: OHLCV DataFrame with ``asset``, ``date`` columns.
+        factor_series: Factor values as a polars Series, aligned with ``df``.
+
+    Returns:
+        DataFrame with columns ``asset``, ``date``, ``value``.
+    """
+    result = df.select(["asset", "date"]).with_columns(factor_series.alias("value"))
+    return result
+
+
+def _extract_dates(df: pl.DataFrame) -> list:
+    """Extract sorted unique trading dates from the DataFrame.
+
+    Args:
+        df: DataFrame with a ``date`` column.
+
+    Returns:
+        List of unique date objects sorted ascending.
+    """
+    dates = df["date"].unique().sort().to_list()
+    return dates
+
+
 def _run_pipeline(args: Namespace) -> int:
     """Execute the full factor mining pipeline and return an exit code.
 
     Steps:
-        1. List templates
-        2. Enumerate candidate factors
-        3. Evaluate each candidate
-        4. Select top-K factors (ICIR ranking + Pearson de-redundancy)
-        5. Save factor registry
-        6. Print summary to stdout
+        1. Load OHLCV data (fixture or Tushare)
+        2. List templates
+        3. Enumerate candidate factors
+        4. Evaluate each candidate with actual data
+        5. Select top-K factors (ICIR ranking + Pearson de-redundancy)
+        6. Save factor registry
+        7. Print summary to stdout
 
     Args:
         args: Parsed command-line arguments (argparse.Namespace).
@@ -152,6 +270,10 @@ def _run_pipeline(args: Namespace) -> int:
     Returns:
         Exit code: 0 success, 3 <10 selected.
     """
+    config = _load_config(args.config)
+    start = args.start or config.get("start")
+    end = args.end or config.get("end")
+
     # -- Parse outputs paths --
     now_ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     output_dir = args.output or Path(f"reports/factor_mining_{now_ts}")
@@ -159,39 +281,52 @@ def _run_pipeline(args: Namespace) -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     registry_dir.mkdir(parents=True, exist_ok=True)
 
-    # -- Step 1: Templates --
+    # -- Step 1: Load OHLCV data --
+    fixture_path: Path | None = getattr(args, "fixture", None)
+    data = _load_ohlcv_data(fixture_path=fixture_path, start=start, end=end)
+    logger.info(f"loaded {len(data)} rows of OHLCV data")
+
+    # -- Step 1.5: Compute labels (forward returns) --
+    labels = _compute_labels(data)
+    dates = _extract_dates(data)
+    logger.info(f"{len(dates)} trading dates, labels computed")
+
+    # -- Step 2: Templates --
     templates = list_templates()
     logger.info(f"{len(templates)} factor templates loaded")
 
-    # -- Step 2: Enumerate candidates --
+    # -- Step 3: Enumerate candidates --
     candidates = enumerate_factors(templates, DEFAULT_PARAM_SPACE)
     logger.info(f"enumerated {len(candidates)} candidate factors")
 
-    # -- Step 3: Evaluate each candidate --
-    # Note: in a full implementation, this requires data loading (OHLCV, labels).
-    # For now we rely on the caller providing real or mocked data.
+    # -- Step 4: Evaluate each candidate --
+    eval_errors = 0
     evaluations = []
     for spec in candidates:
         try:
-            # evaluate_factor requires factor_values, labels, dates DataFrames
-            # which come from data loading. Without data this will fail.
-            # The CLI currently defers data loading to a future integration step
-            # (FR-0900+).  For unit tests the pipeline is mocked.
-            ev: Any = (
-                evaluate_factor.__wrapped__
-                if hasattr(evaluate_factor, "__wrapped__")
-                else evaluate_factor
+            # Compute factor values using the spec's compute_fn
+            factor_series = spec.compute_fn(data)
+            factor_values = _build_factor_values(data, factor_series)
+            # Evaluate the factor
+            ev = evaluate_factor(
+                factor_values=factor_values,
+                labels=labels.select(["asset", "date", "label"]),
+                dates=dates,
             )
             evaluations.append(ev)
         except Exception as exc:
             logger.warning(f"skipping {spec.id}: {exc}")
+            eval_errors += 1
             continue
+
+    if eval_errors > 0:
+        logger.warning(f"{eval_errors} factor(s) failed evaluation")
 
     if len(evaluations) == 0:
         logger.warning("no factors could be evaluated")
         return 3
 
-    # -- Step 4: Select top-K --
+    # -- Step 5: Select top-K --
     selected, diagnostics = select_factors(
         evaluations=evaluations,
         factor_specs=candidates,
@@ -199,13 +334,13 @@ def _run_pipeline(args: Namespace) -> int:
         corr_threshold=args.corr_threshold,
     )
 
-    # -- Step 5: Save registry --
+    # -- Step 6: Save registry --
     save_factor_registry(
         specs=candidates,
         out_path=registry_dir / "registry.parquet",
     )
 
-    # -- Step 6: Summary output --
+    # -- Step 7: Summary output --
     sys.stdout.write(f"枚举了 {len(candidates)} 个候选因子\n")
     sys.stdout.write(f"精选 {len(selected)} 个因子\n")
     if len(selected) < 10:
