@@ -58,7 +58,7 @@ def _handle_status() -> int:
             "running": lq.is_running,
         },
     }
-    sys.stdout.write(json.dumps(output, ensure_ascii=False) + "\n")
+    _write_json(output)
     return 0
 
 
@@ -86,7 +86,7 @@ def _handle_start(args) -> int:
             "connected": lq.is_running,
         },
     }
-    sys.stdout.write(json.dumps(output, ensure_ascii=False) + "\n")
+    _write_json(output)
     return 0
 
 
@@ -108,13 +108,22 @@ def _handle_stop() -> int:
             "running": lq.is_running,
         },
     }
-    sys.stdout.write(json.dumps(output, ensure_ascii=False) + "\n")
+    _write_json(output)
     return 0
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _write_json(data: dict) -> None:
+    """Write a dict as JSON to stdout with a trailing newline.
+
+    Args:
+        data: Dictionary to serialize and write.
+    """
+    sys.stdout.write(json.dumps(data, ensure_ascii=False) + "\n")
 
 
 def _get_live_quote():
@@ -139,7 +148,7 @@ def _get_live_quote():
             "code": 4,
             "message": f"qmt-gateway not available: {e}",
         }
-        sys.stdout.write(json.dumps(output, ensure_ascii=False) + "\n")
+        _write_json(output)
         return None
 
 
