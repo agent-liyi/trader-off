@@ -36,17 +36,18 @@ export TUSHARE_TOKEN=<your_token_from_tushare.pro>
 
 CLI 通过 `[project.scripts]` 注册（v0.4.2+），全局可用：
 
-### 数据获取（v0.4.1）
+### 数据同步（v0.5.1）
 
-```python
-import asyncio
-from datetime import date
-from trader_off.data.quantide_adapter import QuantideDataLoader
+从 tuShare 拉取 OHLCV 写入本地 DailyBarsStore（年分区 parquet）。需 `TUSHARE_TOKEN`。
 
-loader = QuantideDataLoader()
-df = asyncio.run(loader.get_daily("000001.SZ", date(2026, 7, 17), count=60))
-print(df)
+```bash
+trader-off-sync-data \
+    --universe watchlist.csv \
+    --start 2026-01-01 \
+    --end 2026-07-22
 ```
+
+支持 `--dry-run`（仅打印计划）。Python 接口见 `trader_off.data.quantide_adapter.QuantideDataLoader`。
 
 ### 因子挖掘（v0.2.0 模块级可用）
 
