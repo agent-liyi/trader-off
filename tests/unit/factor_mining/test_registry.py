@@ -1,11 +1,7 @@
-"""Unit tests for factor registry persistence — save/load YAML/JSON (FR-0600).
+"""Unit tests for factor registry persistence — save/load parquet (FR-0600).
 
-Covers:
-    AC-FR0600-01: save YAML factor registry with correct schema fields.
-    AC-FR0600-02: save JSON factor registry with correct schema fields.
-    AC-FR0600-03: auto-create output directory when missing.
-    AC-FR0600-04: schema validation on load — missing required field raises
-        FactorRegistrySchemaError.
+Adapted for Bug 4 fix: save_factor_registry now emits a single
+``registry.parquet`` file; load_factor_registry reads it back.
 """
 
 from __future__ import annotations
@@ -13,8 +9,8 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
+import polars as pl
 import pytest
-import yaml  # type: ignore[import-untyped]
 
 from trader_off.factor_mining.expression import FactorSpec, enumerate_factors
 from trader_off.factor_mining.templates import (
@@ -43,412 +39,235 @@ def sample_specs() -> list[FactorSpec]:
 
 @pytest.fixture
 def many_specs() -> list[FactorSpec]:
-    """A larger set (≥200) for AC-FR0600-01 total_candidates check."""
+    """A larger set (≥200) for candidate count checks."""
     return enumerate_factors()
 
 
-# ---------------------------------------------------------------------------
-# AC-FR0600-01: YAML format — schema fields and data integrity
-# ---------------------------------------------------------------------------
+# ============================================================================
+# save_factor_registry — parquet format
+# ============================================================================
 
 
-class TestSaveFactorRegistryYAML:
-    """AC-FR0600-01: save_factor_registry(fmt="yaml") writes a valid YAML file
-    with factor_template_version, generated_at, total_candidates, and factors
-    where len(factors) == total_candidates.
+class TestSaveFactorRegistryParquet:
+    """save_factor_registry writes a single .parquet file with correct schema.
+
+    Replaces AC-FR0600-01 (YAML) and AC-FR0600-02 (JSON).
     """
 
-    def test_ac_fr0600_01_yaml_file_exists(self, sample_specs, tmp_path):
-        """AC-FR0600-01: Save with fmt="yaml" produces an existing file."""
+    def test_save_to_parquet_file_exists(self, sample_specs, tmp_path):
+        """File exists at out_path with .parquet suffix."""
         from trader_off.factor_mining.registry import save_factor_registry
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        assert out_path.exists(), f"Expected {out_path} to exist"
-        assert out_path.suffix == ".yaml", f"Expected .yaml suffix, got {out_path.suffix}"
+        out_path = tmp_path / "registry.parquet"
+        result = save_factor_registry(sample_specs, out_path)
+        assert result == out_path
+        assert out_path.exists()
+        assert out_path.suffix == ".parquet"
+        assert out_path.stat().st_size > 0
 
-    def test_ac_fr0600_01_yaml_top_level_fields(self, sample_specs, tmp_path):
-        """AC-FR0600-01: YAML file contains factor_template_version, generated_at,
-        total_candidates, factors at top level."""
+    def test_parquet_contains_required_columns(self, sample_specs, tmp_path):
+        """Parquet contains id, category, template, params, formula,
+        factor_template_version, generated_at."""
         from trader_off.factor_mining.registry import save_factor_registry
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        with open(out_path) as f:
-            data = yaml.safe_load(f)
+        out_path = tmp_path / "registry.parquet"
+        save_factor_registry(sample_specs, out_path)
 
-        assert "factor_template_version" in data, "Missing factor_template_version"
-        assert data["factor_template_version"] == FACTOR_TEMPLATE_VERSION
-        assert "generated_at" in data, "Missing generated_at"
-        assert "total_candidates" in data, "Missing total_candidates"
-        assert "factors" in data, "Missing factors"
+        df = pl.read_parquet(out_path)
+        required = {
+            "id",
+            "category",
+            "template",
+            "params",
+            "formula",
+            "factor_template_version",
+            "generated_at",
+        }
+        assert required.issubset(set(df.columns))
 
-    def test_ac_fr0600_01_total_candidates_matches_factors_len(self, many_specs, tmp_path):
-        """AC-FR0600-01: total_candidates equals len(factors) and both ≥200."""
+    def test_parquet_factor_template_version(self, sample_specs, tmp_path):
+        """factor_template_version column matches FACTOR_TEMPLATE_VERSION."""
         from trader_off.factor_mining.registry import save_factor_registry
 
-        out_path = save_factor_registry(many_specs, tmp_path, fmt="yaml")
-        with open(out_path) as f:
-            data = yaml.safe_load(f)
+        out_path = tmp_path / "registry.parquet"
+        save_factor_registry(sample_specs, out_path)
 
-        assert data["total_candidates"] >= 200, (
-            f"Expected ≥200 candidates, got {data['total_candidates']}"
-        )
-        assert data["total_candidates"] == len(data["factors"]), (
-            f"total_candidates ({data['total_candidates']}) != len(factors) "
-            f"({len(data['factors'])})"
-        )
+        df = pl.read_parquet(out_path)
+        assert all(df["factor_template_version"].to_list())
+        assert df["factor_template_version"][0] == FACTOR_TEMPLATE_VERSION
 
-    def test_ac_fr0600_01_yaml_factor_entry_fields(self, sample_specs, tmp_path):
-        """AC-FR0600-01: Each factor entry has id, category, template, params, formula."""
+    def test_parquet_generated_at_is_iso8601_utc(self, sample_specs, tmp_path):
+        """generated_at column contains ISO 8601 UTC timestamps."""
         from trader_off.factor_mining.registry import save_factor_registry
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        with open(out_path) as f:
-            data = yaml.safe_load(f)
+        out_path = tmp_path / "registry.parquet"
+        save_factor_registry(sample_specs, out_path)
 
-        for factor in data["factors"]:
-            for field in ("id", "category", "template", "params", "formula"):
-                assert field in factor, f"Factor entry missing field: {field}"
-
-    def test_ac_fr0600_01_yaml_generated_at_is_iso8601_utc(self, sample_specs, tmp_path):
-        """AC-FR0600-01: generated_at is an ISO 8601 UTC timestamp string."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        with open(out_path) as f:
-            data = yaml.safe_load(f)
-
-        ts = data["generated_at"]
-        assert isinstance(ts, str), f"generated_at must be str, got {type(ts)}"
-        # Should be parseable as ISO 8601 UTC
+        df = pl.read_parquet(out_path)
+        ts = df["generated_at"][0]
+        assert isinstance(ts, str)
         parsed = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        assert parsed.tzinfo is not None, "generated_at must be timezone-aware"
+        assert parsed.tzinfo is not None
 
-    def test_ac_fr0600_01_yaml_round_trip_integrity(self, sample_specs, tmp_path):
-        """AC-FR0600-01: After save + load, factor IDs and params are preserved."""
+    def test_parquet_specs_round_trip(self, sample_specs, tmp_path):
+        """save + read: all factor IDs are preserved."""
         from trader_off.factor_mining.registry import save_factor_registry
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        with open(out_path) as f:
-            data = yaml.safe_load(f)
+        out_path = tmp_path / "registry.parquet"
+        save_factor_registry(sample_specs, out_path)
 
-        saved_ids = {f["id"] for f in data["factors"]}
+        df = pl.read_parquet(out_path)
+        saved_ids = set(df["id"].to_list())
         original_ids = {s.id for s in sample_specs}
-        assert saved_ids == original_ids, f"Mismatch: saved={saved_ids}, original={original_ids}"
+        assert saved_ids == original_ids
 
-        # Spot-check params
-        for factor in data["factors"]:
-            orig = next(s for s in sample_specs if s.id == factor["id"])
-            assert factor["params"] == orig.params, (
-                f"Params mismatch for {factor['id']}: "
-                f"saved={factor['params']}, original={orig.params}"
-            )
+        # Spot-check params (stored as JSON string)
+        for row in df.iter_rows(named=True):
+            orig = next(s for s in sample_specs if s.id == row["id"])
+            stored_params = json.loads(row["params"])
+            assert stored_params == orig.params
 
-
-# ---------------------------------------------------------------------------
-# AC-FR0600-02: JSON format — schema fields
-# ---------------------------------------------------------------------------
-
-
-class TestSaveFactorRegistryJSON:
-    """AC-FR0600-02: save_factor_registry(fmt="json") writes a valid JSON file
-    with selected_count, selection_diagnostics, and factors where each factor
-    has id, category, icir, ic_mean, ic_std.
-    """
-
-    def test_ac_fr0600_02_json_file_exists(self, sample_specs, tmp_path):
-        """AC-FR0600-02: Save with fmt="json" produces an existing file."""
+    def test_parquet_empty_specs(self, tmp_path):
+        """Empty specs list produces a file with zero rows."""
         from trader_off.factor_mining.registry import save_factor_registry
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="json")
-        assert out_path.exists(), f"Expected {out_path} to exist"
-        assert out_path.suffix == ".json", f"Expected .json suffix, got {out_path.suffix}"
+        out_path = tmp_path / "empty.parquet"
+        save_factor_registry([], out_path)
 
-    def test_ac_fr0600_02_json_top_level_fields(self, sample_specs, tmp_path):
-        """AC-FR0600-02: JSON contains factor_template_version, selected_count,
-        selection_diagnostics, and factors."""
+        df = pl.read_parquet(out_path)
+        assert len(df) == 0
+
+    def test_parquet_auto_create_parent_dir(self, sample_specs, tmp_path):
+        """Auto-creates parent directories when they don't exist."""
         from trader_off.factor_mining.registry import save_factor_registry
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="json")
-        with open(out_path) as f:
-            data = json.load(f)
+        out_path = tmp_path / "nested" / "deep" / "registry.parquet"
+        assert not out_path.parent.exists()
 
-        assert "factor_template_version" in data, "Missing factor_template_version"
-        assert data["factor_template_version"] == FACTOR_TEMPLATE_VERSION
-        assert "selected_count" in data, "Missing selected_count"
-        assert "selection_diagnostics" in data, "Missing selection_diagnostics"
-        assert "factors" in data, "Missing factors"
-
-    def test_ac_fr0600_02_selected_count_matches_factors_len(self, sample_specs, tmp_path):
-        """AC-FR0600-02: selected_count equals len(factors)."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="json")
-        with open(out_path) as f:
-            data = json.load(f)
-
-        assert data["selected_count"] == len(data["factors"]), (
-            f"selected_count ({data['selected_count']}) != len(factors) ({len(data['factors'])})"
-        )
-
-    def test_ac_fr0600_02_json_factor_has_ic_fields(self, sample_specs, tmp_path):
-        """AC-FR0600-02: Each factor in JSON has id, category plus icir, ic_mean, ic_std."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="json")
-        with open(out_path) as f:
-            data = json.load(f)
-
-        for factor in data["factors"]:
-            for field in ("id", "category", "icir", "ic_mean", "ic_std"):
-                assert field in factor, f"JSON factor entry missing field: {field}"
-
-
-# ---------------------------------------------------------------------------
-# AC-FR0600-03: Auto-create output directory
-# ---------------------------------------------------------------------------
-
-
-class TestSaveFactorRegistryAutoCreateDir:
-    """AC-FR0600-03: When out_dir does not exist, it is auto-created."""
-
-    def test_ac_fr0600_03_auto_create_dir_yaml(self, sample_specs, tmp_path):
-        """AC-FR0600-03: Non-existent out_dir is created for YAML save."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        out_dir = tmp_path / "nested" / "deep" / "factor_registry"
-        assert not out_dir.exists(), "Test precondition: out_dir must not exist"
-
-        out_path = save_factor_registry(sample_specs, out_dir, fmt="yaml")
-        assert out_dir.exists(), f"Expected {out_dir} to be auto-created"
-        assert out_path.exists(), f"Expected {out_path} to exist"
-
-    def test_ac_fr0600_03_auto_create_dir_json(self, sample_specs, tmp_path):
-        """AC-FR0600-03: Non-existent out_dir is created for JSON save."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        out_dir = tmp_path / "registry_json" / "subdir"
-        assert not out_dir.exists(), "Test precondition: out_dir must not exist"
-
-        out_path = save_factor_registry(sample_specs, out_dir, fmt="json")
-        assert out_dir.exists(), f"Expected {out_dir} to be auto-created"
-        assert out_path.exists(), f"Expected {out_path} to exist"
-
-    def test_ac_fr0600_03_existing_dir_no_error(self, sample_specs, tmp_path):
-        """AC-FR0600-03: Saving into an existing directory works without error."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        # Pre-create directory
-        out_dir = tmp_path / "existing_dir"
-        out_dir.mkdir(parents=True, exist_ok=True)
-        assert out_dir.exists()
-
-        out_path = save_factor_registry(sample_specs, out_dir, fmt="yaml")
+        save_factor_registry(sample_specs, out_path)
         assert out_path.exists()
 
+    def test_parquet_existing_dir_no_error(self, sample_specs, tmp_path):
+        """Saving into an existing directory works without error."""
+        from trader_off.factor_mining.registry import save_factor_registry
 
-# ---------------------------------------------------------------------------
-# AC-FR0600-04: Schema validation on load
-# ---------------------------------------------------------------------------
+        out_path = tmp_path / "existing" / "registry.parquet"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        result = save_factor_registry(sample_specs, out_path)
+        assert result.exists()
+
+    def test_parquet_params_serialized_as_json_string(self, sample_specs, tmp_path):
+        """params column stores parameter dicts as JSON strings."""
+        from trader_off.factor_mining.registry import save_factor_registry
+
+        out_path = tmp_path / "with_params.parquet"
+        save_factor_registry(sample_specs, out_path)
+
+        df = pl.read_parquet(out_path)
+        for row in df.iter_rows(named=True):
+            params_str = row["params"]
+            params_dict = json.loads(params_str)
+            assert isinstance(params_dict, dict)
+
+    def test_parquet_many_specs_count(self, many_specs, tmp_path):
+        """Many specs (≥200) produces correct row count."""
+        from trader_off.factor_mining.registry import save_factor_registry
+
+        out_path = tmp_path / "many.parquet"
+        save_factor_registry(many_specs, out_path)
+
+        df = pl.read_parquet(out_path)
+        assert len(df) == len(many_specs)
+        assert len(df) >= 200
+
+    def test_parquet_overwrite_existing_file(self, sample_specs, tmp_path):
+        """Saving to same path twice overwrites without error."""
+        from trader_off.factor_mining.registry import save_factor_registry
+
+        out_path = tmp_path / "registry.parquet"
+        p1 = save_factor_registry(sample_specs, out_path)
+
+        import time
+
+        time.sleep(0.01)
+        p2 = save_factor_registry(sample_specs, out_path)
+        assert p1 == p2
+
+    def test_parquet_factor_has_all_fields(self, sample_specs, tmp_path):
+        """Each row has non-empty id, category, template, formula fields."""
+        from trader_off.factor_mining.registry import save_factor_registry
+
+        out_path = tmp_path / "registry.parquet"
+        save_factor_registry(sample_specs, out_path)
+
+        df = pl.read_parquet(out_path)
+        for row in df.iter_rows(named=True):
+            for field in ("id", "category", "template", "formula", "params"):
+                assert row[field], f"Field '{field}' is empty for {row['id']}"
 
 
-class TestLoadFactorRegistrySchemaValidation:
-    """AC-FR0600-04: load_factor_registry validates required fields and
-    raises FactorRegistrySchemaError on missing factor_template_version."""
+# ============================================================================
+# load_factor_registry — parquet format
+# ============================================================================
 
-    def test_ac_fr0600_04_missing_factor_template_version(self, tmp_path):
-        """AC-FR0600-04: Loading a factors.yaml with missing
-        factor_template_version raises FactorRegistrySchemaError."""
-        from trader_off.factor_mining.registry import (
-            FactorRegistrySchemaError,
-            load_factor_registry,
-        )
 
-        # Write a yaml file manually missing the required field
-        bad_yaml = tmp_path / "bad_factors.yaml"
-        bad_yaml.write_text(yaml.dump({"total_candidates": 10, "factors": [{"id": "test"}]}))
+class TestLoadFactorRegistryParquet:
+    """load_factor_registry reads parquet and returns a polars DataFrame."""
 
-        with pytest.raises(FactorRegistrySchemaError, match="factor_template_version"):
-            load_factor_registry(bad_yaml)
-
-    def test_ac_fr0600_04_missing_factors_field(self, tmp_path):
-        """AC-FR0600-04: Loading a YAML file with missing 'factors' field
-        raises FactorRegistrySchemaError."""
-        from trader_off.factor_mining.registry import (
-            FactorRegistrySchemaError,
-            load_factor_registry,
-        )
-
-        bad_yaml = tmp_path / "no_factors.yaml"
-        bad_yaml.write_text(
-            yaml.dump(
-                {
-                    "factor_template_version": "v1",
-                    "generated_at": "2026-07-17T10:00:00Z",
-                    "total_candidates": 0,
-                }
-            )
-        )
-
-        with pytest.raises(FactorRegistrySchemaError, match="factors"):
-            load_factor_registry(bad_yaml)
-
-    def test_ac_fr0600_04_valid_file_loads_successfully(self, sample_specs, tmp_path):
-        """AC-FR0600-04: A valid file loads without error and returns the dict."""
+    def test_load_parquet_returns_dataframe(self, sample_specs, tmp_path):
+        """Returns a polars DataFrame after save."""
         from trader_off.factor_mining.registry import (
             load_factor_registry,
             save_factor_registry,
         )
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        data = load_factor_registry(out_path)
+        out_path = save_factor_registry(sample_specs, tmp_path / "test.parquet")
+        result = load_factor_registry(out_path)
+        assert isinstance(result, pl.DataFrame)
 
-        assert isinstance(data, dict), f"Expected dict, got {type(data)}"
-        assert data["total_candidates"] == len(sample_specs)
-        assert len(data["factors"]) == len(sample_specs)
+    def test_load_parquet_has_all_specs(self, sample_specs, tmp_path):
+        """After round-trip, DataFrame has one row per spec."""
+        from trader_off.factor_mining.registry import (
+            load_factor_registry,
+            save_factor_registry,
+        )
 
-    def test_ac_fr0600_04_load_nonexistent_file(self, tmp_path):
-        """AC-FR0600-04: Loading a non-existent file raises FileNotFoundError."""
+        out_path = save_factor_registry(sample_specs, tmp_path / "test.parquet")
+        df = load_factor_registry(out_path)
+        assert len(df) == len(sample_specs)
+
+    def test_load_nonexistent_parquet_raises(self, tmp_path):
+        """Loading a nonexistent parquet file raises FileNotFoundError."""
         from trader_off.factor_mining.registry import load_factor_registry
 
-        missing = tmp_path / "does_not_exist.yaml"
+        missing = tmp_path / "does_not_exist.parquet"
         with pytest.raises(FileNotFoundError):
             load_factor_registry(missing)
 
-    def test_ac_fr0600_04_load_invalid_yaml(self, tmp_path):
-        """AC-FR0600-04: Loading a malformed YAML file raises yaml.YAMLError."""
-        from trader_off.factor_mining.registry import load_factor_registry
-
-        invalid = tmp_path / "invalid.yaml"
-        invalid.write_text(": bad: yaml: :::")
-
-        with pytest.raises((yaml.YAMLError, ValueError)):
-            load_factor_registry(invalid)
-
-    def test_ac_fr0600_04_load_non_dict_root(self, tmp_path):
-        """AC-FR0600-04: Loading a YAML file whose root is not a dict
-        raises FactorRegistrySchemaError."""
+    def test_round_trip_parquet(self, sample_specs, tmp_path):
+        """Save to parquet, load back, verify all factor IDs match."""
         from trader_off.factor_mining.registry import (
-            FactorRegistrySchemaError,
             load_factor_registry,
+            save_factor_registry,
         )
 
-        list_yaml = tmp_path / "list.yaml"
-        list_yaml.write_text(yaml.dump([1, 2, 3]))
+        out_path = save_factor_registry(sample_specs, tmp_path / "test.parquet")
+        df = load_factor_registry(out_path)
 
-        with pytest.raises(FactorRegistrySchemaError):
-            load_factor_registry(list_yaml)
-
-    def test_ac_fr0600_04_load_json_missing_required_field(self, tmp_path):
-        """AC-FR0600-04: Loading a JSON file missing required fields
-        raises FactorRegistrySchemaError."""
-        from trader_off.factor_mining.registry import (
-            FactorRegistrySchemaError,
-            load_factor_registry,
-        )
-
-        bad_json = tmp_path / "bad_factors.json"
-        bad_json.write_text(json.dumps({"factors": []}))
-
-        with pytest.raises(FactorRegistrySchemaError):
-            load_factor_registry(bad_json)
-
-
-# ---------------------------------------------------------------------------
-# Atomic write — prevent partial files
-# ---------------------------------------------------------------------------
-
-
-class TestSaveFactorRegistryAtomicWrite:
-    """Atomic write: file is written to temp then renamed, preventing
-    partial or corrupted output files."""
-
-    def test_atomic_write_does_not_leave_temp_file(self, sample_specs, tmp_path):
-        """After a successful save, no .tmp or .partial files remain in out_dir."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-
-        # No temporary files left behind
-        remaining = list(tmp_path.iterdir())
-        assert len(remaining) == 1, f"Expected only 1 file, found {len(remaining)}: {remaining}"
-        assert remaining[0] == out_path
-
-    def test_atomic_write_produces_valid_file(self, sample_specs, tmp_path):
-        """After atomic write, the output file is immediately valid and parseable."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="json")
-        assert out_path.stat().st_size > 0, "File must be non-empty"
-
-        with open(out_path) as f:
-            data = json.load(f)
-        assert isinstance(data, dict)
-        assert len(data["factors"]) == len(sample_specs)
-
-
-# ---------------------------------------------------------------------------
-# Edge cases and round-trips
-# ---------------------------------------------------------------------------
-
-
-class TestLoadFactorRegistryRoundTrip:
-    """Round-trip: save → load → verify data integrity."""
-
-    def test_round_trip_yaml(self, sample_specs, tmp_path):
-        """Save to YAML, load back, verify all factor IDs match."""
-        from trader_off.factor_mining.registry import load_factor_registry, save_factor_registry
-
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        data = load_factor_registry(out_path)
-
-        loaded_ids = {f["id"] for f in data["factors"]}
+        loaded_ids = set(df["id"].to_list())
         original_ids = {s.id for s in sample_specs}
         assert loaded_ids == original_ids
 
-    def test_round_trip_json(self, sample_specs, tmp_path):
-        """Save to JSON, load back, verify all factor IDs match."""
-        from trader_off.factor_mining.registry import load_factor_registry, save_factor_registry
 
-        out_path = save_factor_registry(sample_specs, tmp_path, fmt="json")
-        data = load_factor_registry(out_path)
-
-        loaded_ids = {f["id"] for f in data["factors"]}
-        original_ids = {s.id for s in sample_specs}
-        assert loaded_ids == original_ids
-
-    def test_empty_specs_list(self, tmp_path):
-        """Saving an empty specs list produces a file with total_candidates=0."""
-        from trader_off.factor_mining.registry import load_factor_registry, save_factor_registry
-
-        out_path = save_factor_registry([], tmp_path, fmt="yaml")
-        data = load_factor_registry(out_path)
-
-        assert data["total_candidates"] == 0
-        assert data["factors"] == []
-
-    def test_overwrite_existing_file(self, sample_specs, tmp_path):
-        """Saving to same path twice overwrites without error."""
-        from trader_off.factor_mining.registry import save_factor_registry
-
-        p1 = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-        original_mtime = p1.stat().st_mtime
-
-        import time
-
-        time.sleep(0.01)  # ensure mtime differences on fast filesystems
-        p2 = save_factor_registry(sample_specs, tmp_path, fmt="yaml")
-
-        assert p1 == p2, "Second save should use the same path"
-        assert p2.stat().st_mtime >= original_mtime, "File should be updated"
-
-
-# ---------------------------------------------------------------------------
-# FactorRegistrySchemaError
-# ---------------------------------------------------------------------------
+# ============================================================================
+# FactorRegistrySchemaError — backward-compatible exception class
+# ============================================================================
 
 
 class TestFactorRegistrySchemaError:
-    """FactorRegistrySchemaError is a proper exception class."""
+    """FactorRegistrySchemaError remains as backward-compatible exception
+    class (no longer raised by parquet load)."""
 
     def test_exception_is_subclass_of_exception(self):
         """FactorRegistrySchemaError is a subclass of Exception."""
@@ -464,126 +283,3 @@ class TestFactorRegistrySchemaError:
         exc = FactorRegistrySchemaError(msg)
         assert str(exc) == msg
         assert exc.args[0] == msg
-
-
-class TestAtomicWriteFailure:
-    """Tests for _atomic_write exception cleanup."""
-
-    def test_atomic_write_cleans_up_on_exception(self, tmp_path):
-        """_atomic_write removes temp file when write fails."""
-        from trader_off.factor_mining.registry import _atomic_write
-
-        target = tmp_path / "factors.yaml"
-        # Pass invalid content that can't be written (directory doesn't exist for fd writing)
-        # Actually we need a scenario where the write itself fails
-        import os
-
-        # Use a read-only directory to cause write failure
-        readonly_dir = tmp_path / "readonly"
-        readonly_dir.mkdir()
-        os.chmod(readonly_dir, 0o444)
-
-        try:
-            with pytest.raises(Exception):
-                _atomic_write("content", target, readonly_dir, ".yaml")
-        finally:
-            os.chmod(readonly_dir, 0o755)
-
-        # No temp files should remain
-        remaining = list(readonly_dir.glob("**/*"))
-        # Only the directory itself should exist (or be empty of temp files)
-        temp_files = [f for f in remaining if f.is_file() and f.suffix == ".tmp"]
-        assert len(temp_files) == 0
-
-    def test_unsupported_file_format_raises(self, tmp_path):
-        """Loading a file with unsupported extension raises FactorRegistrySchemaError."""
-        from trader_off.factor_mining.registry import load_factor_registry
-
-        bad_file = tmp_path / "factors.txt"
-        bad_file.write_text("some content")
-
-        with pytest.raises(Exception):  # FactorRegistrySchemaError
-            load_factor_registry(bad_file)
-
-    def test_missing_top_level_field(self, tmp_path):
-        """Loading YAML missing 'factors' field raises FactorRegistrySchemaError."""
-        from trader_off.factor_mining.registry import (
-            FactorRegistrySchemaError,
-            load_factor_registry,
-        )
-
-        bad_yaml = tmp_path / "missing_factors.yaml"
-        bad_yaml.write_text(
-            yaml.dump(
-                {
-                    "factor_template_version": "v1",
-                    "generated_at": "2026-07-17T10:00:00Z",
-                    "total_candidates": 0,
-                }
-            )
-        )
-
-        with pytest.raises(FactorRegistrySchemaError, match="missing required field"):
-            load_factor_registry(bad_yaml)
-
-    def test_factors_entry_not_dict(self, tmp_path):
-        """Loading YAML with non-dict entry in factors list raises error."""
-        from trader_off.factor_mining.registry import (
-            FactorRegistrySchemaError,
-            load_factor_registry,
-        )
-
-        bad_yaml = tmp_path / "bad_factor_entry.yaml"
-        bad_yaml.write_text(
-            yaml.dump(
-                {
-                    "factor_template_version": "v1",
-                    "factors": [
-                        {
-                            "id": "test",
-                            "category": "momentum",
-                            "template": "t",
-                            "params": {},
-                            "formula": "x",
-                        },
-                        "not_a_dict",  # Invalid!
-                    ],
-                }
-            )
-        )
-
-        with pytest.raises(FactorRegistrySchemaError, match="must be a dict"):
-            load_factor_registry(bad_yaml)
-
-    def test_factor_missing_required_field(self, tmp_path):
-        """Loading YAML with factor missing required field raises error."""
-        from trader_off.factor_mining.registry import (
-            FactorRegistrySchemaError,
-            load_factor_registry,
-        )
-
-        bad_yaml = tmp_path / "missing_formula.yaml"
-        bad_yaml.write_text(
-            yaml.dump(
-                {
-                    "factor_template_version": "v1",
-                    "factors": [
-                        {"id": "test", "category": "momentum", "template": "t", "params": {}},
-                        # missing "formula"
-                    ],
-                }
-            )
-        )
-
-        with pytest.raises(FactorRegistrySchemaError, match="missing required field"):
-            load_factor_registry(bad_yaml)
-
-    def test_json_unsupported_format(self, tmp_path):
-        """Loading .txt file raises FactorRegistrySchemaError."""
-        from trader_off.factor_mining.registry import load_factor_registry
-
-        bad_file = tmp_path / "factors.xml"
-        bad_file.write_text("<factors/>")
-
-        with pytest.raises(Exception):
-            load_factor_registry(bad_file)

@@ -134,13 +134,8 @@ class TestCLIFullPipeline:
         assert int(match_sel.group(1)) >= 1
 
     def test_cli_pipeline_writes_registry(self, tmp_path, capsys):
-        """AC-FR0600-01/AC-FR0800-01: Verify factor_registry/factors.yaml
-        is written and non-empty after successful pipeline run.
-
-        Uses unmocked ``Path.mkdir`` so ``tempfile.mkstemp`` inside
-        ``save_factor_registry`` can create temp files within the registry
-        directory that the pipeline creates.
-        """
+        """AC-FR0600-01/AC-FR0800-01: Verify factor_registry/registry.parquet
+        is written and non-empty after successful pipeline run."""
         config_path = tmp_path / "config.yaml"
         config_path.write_text("start: '2022-01-01'\nend: '2022-12-31'\n")
         registry_dir = tmp_path / "factor_registry"
@@ -172,16 +167,16 @@ class TestCLIFullPipeline:
 
         assert result == 0, f"Expected exit 0, got {result}"
 
-        # Verify registry file exists and is valid
-        registry_yaml = registry_dir / "factors.yaml"
-        assert registry_yaml.exists(), f"Registry file not found at {registry_yaml}"
-        assert registry_yaml.stat().st_size > 0, "Registry file is empty"
+        # Verify registry parquet file exists and is valid
+        registry_parquet = registry_dir / "registry.parquet"
+        assert registry_parquet.exists(), f"Registry file not found at {registry_parquet}"
+        assert registry_parquet.stat().st_size > 0, "Registry file is empty"
 
-        data = load_factor_registry(registry_yaml)
-        assert "total_candidates" in data
-        assert data["total_candidates"] >= num_candidates
-        assert len(data["factors"]) == data["total_candidates"]
-        assert data["factor_template_version"] == "v1"
+        df = load_factor_registry(registry_parquet)
+        assert len(df) >= num_candidates
+        assert "id" in df.columns
+        assert "factor_template_version" in df.columns
+        assert df["factor_template_version"][0] == "v1"
 
 
 # ---------------------------------------------------------------------------

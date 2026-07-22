@@ -135,7 +135,7 @@ class TestMineFactorsCLISuccess:
             patch.object(
                 factor_mining_cli,
                 "save_factor_registry",
-                return_value=(Path("/tmp/factors.yaml"), Path("/tmp/selected.json")),
+                return_value=Path("/tmp/registry.parquet"),
             ),
         ):
             result = factor_mining_cli.main(
@@ -208,7 +208,7 @@ class TestMineFactorsCLISuccess:
             patch.object(
                 factor_mining_cli,
                 "save_factor_registry",
-                return_value=(Path("/tmp/factors.yaml"), Path("/tmp/selected.json")),
+                return_value=Path("/tmp/registry.parquet"),
             ),
         ):
             result = factor_mining_cli.main(
@@ -265,7 +265,9 @@ class TestMineFactorsCLISuccess:
             ),
             patch.object(factor_mining_cli, "select_factors", return_value=([], MagicMock())),
             patch.object(
-                factor_mining_cli, "save_factor_registry", return_value=tmp_path / "factors.yaml"
+                factor_mining_cli,
+                "save_factor_registry",
+                return_value=tmp_path / "registry.parquet",
             ),
         ):
             # Should not raise, but returns 3 (no factors evaluated)

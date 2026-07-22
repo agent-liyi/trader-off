@@ -202,7 +202,7 @@ def _run_pipeline(args: Namespace) -> int:
     # -- Step 5: Save registry --
     save_factor_registry(
         specs=candidates,
-        out_dir=registry_dir,
+        out_path=registry_dir / "registry.parquet",
     )
 
     # -- Step 6: Summary output --
