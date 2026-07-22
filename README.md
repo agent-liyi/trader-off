@@ -4,20 +4,15 @@
 
 ## 功能
 
-- **因子挖掘**：13 个模板（momentum / volatility / volume / fundamental）→ 373 候选因子 → IC 评估 → 注册
-- **特征工程**：动量 / 波动率 / 成交量（polars）
-- **标签构建**：未来 N 日收益率
-- **训练**：LightGBM 训练 + joblib 序列化
-- **预测**：模型推理 + 版本管理
-- **评估**：IC / Rank IC / 分层回测
-- **策略**：`LGBMTop20` / `OptimizedTopK`（接 quantide `BaseStrategy`）
-- **回测**：委托 `quantide.BacktestRunner` + `BacktestBroker`（真实撮合 / 手续费 / T+1 / 记账）
-- **纸交易**：委托 `quantide.PaperBroker`（仿真交易，策略零改动，同一份代码跑回测和纸交易）
-- **数据同步**：`trader-off-sync-data` 从 tuShare 拉 OHLCV 到本地每日条存储
-- **指标**：委托 `quantide.service.metrics`（Sharpe / Sortino / 回撤持续期 / 基准对比）
-- **组合优化**：cvxpy Max Sharpe（long-only / 满仓 / 行业中性 / 个股 ≤10%）
-- **调度**：croniter + `quantide.SchedulerManager`（漂移检测 → 重训练 → 部署）
-- **可视化**：静态 PNG 图表（IC 分布 / 因子重要性 / 分层回测）
+- **因子挖掘**：从 13 个模板（动量 / 波动率 / 成交量 / 基本面）展开 373 个候选因子，按 IC 排名精选
+- **训练预测**：LightGBM 训练 + 模型推理 + 版本管理
+- **策略评估**：IC / Rank IC / 分层回测
+- **交易策略**：`LGBMTop20`、`OptimizedTopK`（接 quantide 策略框架）
+- **历史回测**：委托 quantide 引擎（真实撮合 / 手续费 / T+1 / 记账），取真数据或本地 fixture
+- **纸交易**：仿真交易，同一份策略代码跑回测和纸交易
+- **组合优化**：cvxpy Max Sharpe（long-only / 满仓 / 行业中性 / 个股上限）
+- **数据同步**：从 tuShare 拉 A 股日线到本地 DailyBarsStore
+- **调度重训**：定时检测漂移 → 自动重训练 → 部署
 
 ## 安装
 
@@ -39,10 +34,11 @@ CLI 通过 `[project.scripts]` 注册，全局可用：
 ### 因子挖掘
 
 ```bash
-trader-off-mine-factors --config factor_defs.yaml --top-k 30 --corr-threshold 0.9 --output reports/factor_mining_$(date +%Y%m%d)
+trader-off-mine-factors --config factor_defs.yaml \
+    --top-k 30 \
+    --corr-threshold 0.9 \
+    --output reports/factor_mining/
 ```
-
-需 `--config` YAML 文件定义因子参数空间。Python 接口见 `trader_off.factor_mining.expression`。
 
 ### 组合优化
 
