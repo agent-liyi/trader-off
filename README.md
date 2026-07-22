@@ -32,7 +32,7 @@ export TUSHARE_TOKEN=<your_token_from_tushare.pro>
 
 ## 使用
 
-> ⚠️ 当前 pyproject.toml 没有 `console_scripts`，所有 CLI 通过 `python -m` 调用。
+CLI 通过 `[project.scripts]` 注册（v0.4.2+），全局可用：
 
 ### 数据获取（v0.4.1）
 
@@ -59,7 +59,7 @@ candidates = enumerate_factors(templates, DEFAULT_PARAM_SPACE)  # 373 候选
 ### 组合优化
 
 ```bash
-uv run python -m trader_off.portfolio.cli \
+trader-off-optimize \
     --predictions predictions.csv \
     --industry-map industry.csv \
     --returns returns_history.csv \
@@ -70,7 +70,7 @@ uv run python -m trader_off.portfolio.cli \
 ### 回测
 
 ```bash
-uv run python -m trader_off.cli.backtest \
+trader-off-backtest \
     --model v1 --strategy optimized_topk \
     --start 2024-01-02 --end 2024-12-31 \
     --capital 1000000
@@ -81,10 +81,12 @@ uv run python -m trader_off.cli.backtest \
 ### 调度
 
 ```bash
-uv run python -m trader_off.scheduler.cli start --config scheduler.yaml
-uv run python -m trader_off.scheduler.cli status
-uv run python -m trader_off.scheduler.cli retrain trigger --model-version v2
+trader-off-scheduler start --config scheduler.yaml
+trader-off-scheduler status
+trader-off-scheduler retrain trigger --model-version v2
 ```
+
+> 兼容：`uv run python -m trader_off.<path>` 仍可用。
 
 ## 输出示例
 
