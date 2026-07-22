@@ -107,7 +107,7 @@ _SIGS = {
         "returns": "int",
     },
     "src/trader_off/cli/check_factor.py": {
-        "line": 209,
+        "line": 213,
         "name": "main",
         "args": [("argv", "list[str] | None", "None")],
         "returns": "int",

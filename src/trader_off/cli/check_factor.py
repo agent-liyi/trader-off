@@ -20,8 +20,12 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import polars as pl
+
+if TYPE_CHECKING:
+    from trader_off.factor_mining.expression import FactorSpec
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -167,7 +171,7 @@ def _extract_dates(df: pl.DataFrame) -> list:
 # ---------------------------------------------------------------------------
 
 
-def _find_factor_spec(name: str):
+def _find_factor_spec(name: str) -> FactorSpec | None:
     """Find a FactorSpec by name match.
 
     Matches via:
