@@ -16,6 +16,9 @@ import json
 import sys
 from typing import Any
 
+# Exchange suffix → exchange code mapping
+_EXCHANGE_SUFFIX_MAP: dict[str, str] = {"SH": "SSE", "SZ": "SZSE", "BJ": "BSE"}
+
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry for 'trader-off stock-list' command.
@@ -40,11 +43,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # Derive exchange from asset code suffix (.SH → SSE, .SZ → SZSE, .BJ → BSE)
-    exchange_map = {"SH": "SSE", "SZ": "SZSE", "BJ": "BSE"}
     df = df.copy()
-    df["exchange"] = df["asset"].apply(
-        lambda x: exchange_map.get(str(x).split(".")[-1] if "." in str(x) else "", "")
-    )
+    df["exchange"] = df["asset"].apply(_derive_exchange)
     # Derive status from delist_date (NaN → L listed, date present → D delisted)
     if "delist_date" in df.columns:
         df["status"] = df["delist_date"].apply(lambda x: "D" if _is_valid_date(x) else "L")
@@ -79,6 +79,19 @@ def main(argv: list[str] | None = None) -> int:
     }
     sys.stdout.write(json.dumps(output, ensure_ascii=False) + "\n")
     return 0
+
+
+def _derive_exchange(asset: str) -> str:
+    """Derive exchange from asset code suffix.
+
+    Args:
+        asset: Asset code like "000001.SZ" or "600000.SH".
+
+    Returns:
+        Exchange code: "SSE", "SZSE", "BSE", or empty string if unknown.
+    """
+    suffix = str(asset).split(".")[-1] if "." in str(asset) else ""
+    return _EXCHANGE_SUFFIX_MAP.get(suffix, "")
 
 
 def _is_valid_date(value: Any) -> bool:
