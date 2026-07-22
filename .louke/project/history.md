@@ -205,3 +205,22 @@ v0.3.0 patch — 处置两件延期尾巴：(1) ClockRewind fixture 修复使 3 
 ### Backlog for v0.4.x
 - 双向 reconcile（snapshot/restore 模式）
 - `_compute_cash_factor` 区分「空仓回退 1.0」与「broker 损坏 raise」
+
+## v0.3.4 — 2026-07-22
+
+**Branch**: fix/120 → merged to main
+**Tag**: v0.3.4
+
+### Summary
+调仓逻辑完善 + 文档同步。`optimized_topk.py` + `lgbm_top20.py` 三项加固：(1) `_reconcile_position_cache()` 改为**双向**（添加 broker 中缺失、删除 cache 中多余）；(2) `_compute_cash_factor()` 对 NaN/负数/overflow 改**抛 RuntimeError**（fail-closed vs 之前 fail-open 静默 fallback 1.0）；(3) `on_day_open` 加 snapshot/restore 模式，异常时回滚 `_position_cache`。`cli/__init__.py` docstring 移除不存在的 `train/predict/feature-importance` 模块引用。
+
+### 安全提升
+- `cash_factor` 从 **fail-open**（broker 故障时仍全仓买入）改为 **fail-closed**（broker 故障时 raise + 跳过 rebalance）—— 符合交易系统应有的安全姿势
+
+### Stats
+- 1 bug issue (#120) + 7 new unit tests
+- 784 测试通过，0 回归
+- Security PASS（0 critical/high/medium；1 low 关于 RuntimeError 嵌入组合数值 → 留 live-trading scope）
+
+### Backlog
+- RuntimeError message 嵌入 portfolio 数值（live-trading 时考虑脱敏）
