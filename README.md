@@ -13,6 +13,7 @@
 - **组合优化**：cvxpy Max Sharpe（long-only / 满仓 / 行业中性 / 个股上限）
 - **数据同步**：从 tuShare 拉 A 股日线到本地 DailyBarsStore
 - **调度重训**：定时检测漂移 → 自动重训练 → 部署
+- **grid-search**：策略参数网格寻优（quantide GridSearch）
 
 ## 安装
 

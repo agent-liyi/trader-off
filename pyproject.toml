@@ -41,6 +41,7 @@ trader-off-scheduler = "trader_off.scheduler.cli:main"
 trader-off-sync-data = "trader_off.cli.sync_data:main"
 trader-off-init = "trader_off.cli.init_data:main"
 trader-off-stock-list = "trader_off.cli.stock_list:main"
+trader-off-grid-search = "trader_off.cli.grid_search:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
