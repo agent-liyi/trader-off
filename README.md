@@ -34,22 +34,9 @@ export TUSHARE_TOKEN=<your_token_from_tushare.pro>
 
 ## 使用
 
-CLI 通过 `[project.scripts]` 注册（v0.4.2+），全局可用：
+CLI 通过 `[project.scripts]` 注册，全局可用：
 
-### 数据同步（v0.5.1）
-
-从 tuShare 拉取 OHLCV 写入本地 DailyBarsStore（年分区 parquet）。需 `TUSHARE_TOKEN`。
-
-```bash
-trader-off-sync-data \
-    --universe watchlist.csv \
-    --start 2026-01-01 \
-    --end 2026-07-22
-```
-
-支持 `--dry-run`（仅打印计划）。Python 接口见 `trader_off.data.quantide_adapter.QuantideDataLoader`。
-
-### 因子挖掘（v0.2.0 模块级可用）
+### 因子挖掘
 
 ```python
 from trader_off.factor_mining.templates import list_templates
@@ -81,7 +68,7 @@ trader-off-backtest \
 
 输出 `reports/backtest_<ts>/nav_<ts>.parquet`、`positions_<ts>.parquet`、`summary.json`。
 
-### 纸交易（v0.5.0）
+### 纸交易
 
 ```bash
 trader-off-paper-trade \
@@ -92,7 +79,7 @@ trader-off-paper-trade \
 
 输出 `reports/paper_trade_<ts>/`：仿真 NAV、持仓、交易记录。需 `TUSHARE_TOKEN`。
 
-### 数据同步（v0.5.1）
+### 数据同步
 
 ```bash
 trader-off-sync-data \
