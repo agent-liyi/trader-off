@@ -12,6 +12,7 @@
 - **纸交易**：仿真交易，同一份策略代码跑回测和纸交易
 - **组合优化**：cvxpy Max Sharpe（long-only / 满仓 / 行业中性 / 个股上限）
 - **数据同步**：从 tuShare 拉 A 股日线到本地 DailyBarsStore
+- **实时行情**：实时行情订阅（quantide LiveQuote，需 qmt-gateway）
 - **调度重训**：定时检测漂移 → 自动重训练 → 部署
 
 ## 安装
@@ -104,6 +105,19 @@ trader-off-stock-list --exchange SSE --json    # JSON 输出
 ```
 
 从 tuShare 获取 A 股列表，返回 JSON 含 `ts_code` / `name`。需 `TUSHARE_TOKEN`。
+
+### 实时行情
+
+```bash
+trader-off-live                        # 检查实时行情状态（默认）
+trader-off-live --start                # 启动实时行情订阅
+trader-off-live --start --assets 000001.SZ,600000.SH  # 指定标的
+trader-off-live --stop                 # 停止实时行情订阅
+trader-off-live --status               # 显示运行状态
+trader-off-live --status --json        # JSON 输出
+```
+
+通过 quantide LiveQuote 订阅实时行情，需 qmt-gateway 部署。
 
 ### 调度
 
