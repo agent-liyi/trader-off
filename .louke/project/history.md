@@ -205,3 +205,22 @@ v0.3.0 patch — 处置两件延期尾巴：(1) ClockRewind fixture 修复使 3 
 ### Backlog for v0.4.x
 - 双向 reconcile（snapshot/restore 模式）
 - `_compute_cash_factor` 区分「空仓回退 1.0」与「broker 损坏 raise」
+
+## v0.4.2 — 2026-07-22
+
+**Spec**: v0.4.2-001-console-scripts
+**Branch**: releases/v0.4.2 → merged to main
+**Tag**: v0.4.2
+
+### Summary
+DX 改进 patch。pyproject.toml 加 `[project.scripts]` 4 条 entry points，让 CLI 模块以 `trader-off-{backtest,optimize,mine-factors,scheduler}` 直接可用，告别 `python -m trader_off.<path>` 长路径。`python -m` 路径完全保留（NFR-0100）。`src/` 零代码改动。
+
+### Stats
+- 1 FR + 1 NFR + 9 AC
+- 19 单元测试通过
+- Security PASS（0 critical/high；stage-1 0 findings）
+
+### 改动文件
+- `pyproject.toml`: +6 行
+- `README.md`: 警告删除 + 5 处示例更新
+- `tests/unit/test_console_scripts.py`: NEW 229 行
