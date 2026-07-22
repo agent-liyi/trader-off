@@ -38,6 +38,7 @@ trader-off-backtest = "trader_off.cli.backtest:main"
 trader-off-optimize = "trader_off.portfolio.cli:main"
 trader-off-mine-factors = "trader_off.factor_mining.cli:main"
 trader-off-scheduler = "trader_off.scheduler.cli:main"
+trader-off-sync-data = "trader_off.cli.sync_data:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
