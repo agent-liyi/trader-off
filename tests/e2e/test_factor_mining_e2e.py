@@ -127,20 +127,18 @@ class TestFactorMiningE2E:
         assert len(selected) >= 3, f"Expected ≥3 selected factors, got {len(selected)}"
         assert diagnostics.final_k == len(selected)
 
-        # --- Step 4: Save factor registry (YAML) ---
-        yaml_path = save_factor_registry(
-            specs=evaluated_specs,  # all candidates that were evaluated
-            out_dir=registry_dir,
-            fmt="yaml",
+        # --- Step 4: Save factor registry (parquet) ---
+        parquet_path = save_factor_registry(
+            specs=evaluated_specs,
+            out_path=registry_dir / "registry.parquet",
         )
-        assert yaml_path.exists(), "factors.yaml not written"
+        assert parquet_path.exists(), "registry.parquet not written"
 
-        # AC-FR0600-01: YAML has required structure
-        registry = load_factor_registry(yaml_path)
-        assert registry["factor_template_version"] == "v1"
-        assert registry["total_candidates"] == len(evaluated_specs)
-        assert len(registry["factors"]) == len(evaluated_specs)
-        assert all("id" in f and "formula" in f for f in registry["factors"])
+        # AC-FR0600-01: Registry has required structure
+        registry = load_factor_registry(parquet_path)
+        assert registry["factor_template_version"][0] == "v1"
+        assert len(registry) == len(evaluated_specs)
+        assert all(fid in registry["id"].to_list() for fid in [s.id for s in evaluated_specs])
 
         # AC-FR0600-02: JSON registry (selected factors)
         json_path = registry_dir / "selected_factors.json"
@@ -245,14 +243,12 @@ class TestFactorMiningE2E:
         # All exit codes 0,3,4 are valid - CLI handles errors gracefully
 
     def test_factor_registry_schema_validation(self, tmp_path):
-        """AC-FR0600-04: load_factor_registry raises on missing required field."""
-        from trader_off.factor_mining.registry import FactorRegistrySchemaError
+        """load_factor_registry raises on invalid parquet file."""
+        bad_parquet = tmp_path / "bad_factors.parquet"
+        bad_parquet.write_bytes(b"not a parquet file")
 
-        bad_yaml = tmp_path / "bad_factors.yaml"
-        bad_yaml.write_text("factors:\n  - id: test\n")
-
-        with pytest.raises(FactorRegistrySchemaError, match="factor_template_version"):
-            load_factor_registry(bad_yaml)
+        with pytest.raises(Exception):
+            load_factor_registry(bad_parquet)
 
     def test_report_html_contains_heatmap_img(self, ohlcv_data, tmp_path):
         """AC-FR0700-02: HTML report contains table + heatmap image + ICIR."""

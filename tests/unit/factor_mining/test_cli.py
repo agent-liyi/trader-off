@@ -290,7 +290,7 @@ class TestMineFactorsCLISuccess:
                 )
             )
 
-            assert result == 3
+            assert result == 5  # eval failure → exit 5
 
     def test_validate_config_not_found(self, tmp_path):
         """_validate_config returns 4 when config file does not exist."""
@@ -332,7 +332,7 @@ class TestMineFactorsCLISuccess:
                 ]
             )
 
-        assert result == 3  # No factors evaluated
+        assert result == 5  # eval failure → exit 5
 
     def test_run_pipeline_creates_directories(self, tmp_path):
         """_run_pipeline creates output and registry directories."""
@@ -623,5 +623,100 @@ class TestPipelineDataLoading:
                 )()
             )
 
-        # Should return 3 (no factors evaluated)
-        assert result == 3
+        # Should return 5 (no factors evaluated, evaluation failure)
+        assert result == 5
+
+
+# ============================================================================
+# Blocker 1-2: Import path + exit code 5
+# ============================================================================
+
+
+class TestBlockerFixes:
+    """Prism M-DEV blockers: correct import path and exit code 5."""
+
+    def test_import_path_uses_quantide_adapter(self):
+        """Blocker 1: _load_ohlcv_data imports QuantideDataLoader from
+        trader_off.data.quantide_adapter, not quantide.data.fetchers.tushare."""
+        import inspect
+
+        from trader_off.factor_mining.cli import _load_ohlcv_data
+
+        source = inspect.getsource(_load_ohlcv_data)
+        assert "trader_off.data.quantide_adapter" in source, (
+            "Expected import from trader_off.data.quantide_adapter"
+        )
+        assert "quantide.data.fetchers.tushare" not in source, (
+            "Should not import from quantide.data.fetchers.tushare"
+        )
+
+    def test_exit_code_5_on_empty_evaluations(self, tmp_path):
+        """Blocker 2: Empty evaluations → exit code 5 (not 3)."""
+        from datetime import date
+        from unittest.mock import patch
+
+        import polars as pl
+
+        from trader_off.factor_mining.cli import _run_pipeline
+
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("start: '2022-01-03'\nend: '2022-01-10'\n")
+
+        mock_data = pl.DataFrame({"asset": ["A"], "date": [date(2022, 1, 3)], "close": [10.0]})
+        mock_spec = type("Spec", (), {"id": "bad", "compute_fn": lambda df: pl.Series([1.0])})()
+
+        with (
+            patch(
+                "trader_off.factor_mining.cli._load_ohlcv_data",
+                return_value=mock_data,
+            ),
+            patch.object(factor_mining_cli, "list_templates", return_value=[]),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=[mock_spec]),
+            patch.object(
+                factor_mining_cli,
+                "evaluate_factor",
+                side_effect=RuntimeError("eval failed"),
+            ),
+            patch.object(
+                factor_mining_cli, "select_factors", return_value=([], type("D", (), {})())
+            ),
+            patch.object(
+                factor_mining_cli,
+                "save_factor_registry",
+                return_value=tmp_path / "registry.parquet",
+            ),
+        ):
+            result = _run_pipeline(
+                type(
+                    "Args",
+                    (),
+                    {
+                        "config": config_path,
+                        "top_k": 10,
+                        "corr_threshold": 0.9,
+                        "output": tmp_path / "out",
+                        "registry_dir": tmp_path / "registry",
+                        "start": None,
+                        "end": None,
+                        "fixture": None,
+                    },
+                )()
+            )
+
+        assert result == 5, f"Expected exit 5, got {result}"
+
+    def test_docstring_lists_exit_code_5(self):
+        """Blocker 2: Module docstring and main() docstring list exit code 5."""
+        from trader_off.factor_mining import cli as cli_mod
+
+        # Module-level docstring
+        mod_doc = cli_mod.__doc__ or ""
+        assert "5" in mod_doc, f"Module docstring missing exit code 5: {mod_doc!r}"
+
+        # _run_pipeline docstring
+        pipeline_doc = cli_mod._run_pipeline.__doc__ or ""
+        assert "5" in pipeline_doc, f"_run_pipeline docstring missing exit code 5: {pipeline_doc!r}"
+
+        # main docstring
+        main_doc = cli_mod.main.__doc__ or ""
+        assert "5" in main_doc, f"main docstring missing exit code 5: {main_doc!r}"

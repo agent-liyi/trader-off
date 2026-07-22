@@ -83,6 +83,10 @@ class TestCLIFullPipeline:
     def test_cli_full_pipeline_exit_code_0(self, tmp_path, capsys):
         """AC-FR0800-01: Full mine-factors pipeline → exit 0, stdout
         contains '枚举了 N 个候选因子' and '精选 K 个因子'."""
+        from datetime import date
+
+        import polars as pl
+
         config_path = tmp_path / "factor_mining.yaml"
         config_path.write_text("start: '2022-01-01'\nend: '2022-12-31'\n")
 
@@ -102,8 +106,14 @@ class TestCLIFullPipeline:
             _make_mock_evaluation(c.id, 0.5 - i * 0.01) for i, c in enumerate(candidates)
         ]
 
+        mock_data = pl.DataFrame({"asset": ["A"], "date": [date(2022, 1, 3)], "close": [10.0]})
+
         # Patch evaluate_factor in CLI module to return pre-built evaluations
-        with patch.object(factor_mining_cli, "evaluate_factor", side_effect=evaluations):
+        with (
+            patch.object(factor_mining_cli, "_load_ohlcv_data", return_value=mock_data),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=candidates),
+            patch.object(factor_mining_cli, "evaluate_factor", side_effect=evaluations),
+        ):
             result = factor_mining_cli.main(
                 argv=[
                     "--config",
@@ -136,6 +146,10 @@ class TestCLIFullPipeline:
     def test_cli_pipeline_writes_registry(self, tmp_path, capsys):
         """AC-FR0600-01/AC-FR0800-01: Verify factor_registry/registry.parquet
         is written and non-empty after successful pipeline run."""
+        from datetime import date
+
+        import polars as pl
+
         config_path = tmp_path / "config.yaml"
         config_path.write_text("start: '2022-01-01'\nend: '2022-12-31'\n")
         registry_dir = tmp_path / "factor_registry"
@@ -151,7 +165,13 @@ class TestCLIFullPipeline:
             _make_mock_evaluation(c.id, 0.7 - i * 0.02) for i, c in enumerate(candidates)
         ]
 
-        with patch.object(factor_mining_cli, "evaluate_factor", side_effect=evaluations):
+        mock_data = pl.DataFrame({"asset": ["A"], "date": [date(2022, 1, 3)], "close": [10.0]})
+
+        with (
+            patch.object(factor_mining_cli, "_load_ohlcv_data", return_value=mock_data),
+            patch.object(factor_mining_cli, "enumerate_factors", return_value=candidates),
+            patch.object(factor_mining_cli, "evaluate_factor", side_effect=evaluations),
+        ):
             result = factor_mining_cli.main(
                 argv=[
                     "--config",
@@ -229,6 +249,10 @@ class TestCLIConfigErrors:
     def test_cli_exit_4_on_empty_config(self, tmp_path):
         """AC-FR0800-03: Empty YAML config → YAML returns None.
         The pipeline handles None config gracefully (currently proceeds)."""
+        from datetime import date
+
+        import polars as pl
+
         config_path = tmp_path / "empty.yaml"
         config_path.write_text("")
 
@@ -242,7 +266,10 @@ class TestCLIConfigErrors:
             _make_mock_evaluation(s.id, 0.5 - i * 0.01) for i, s in enumerate(candidates)
         ]
 
+        mock_data = pl.DataFrame({"asset": ["A"], "date": [date(2022, 1, 3)], "close": [10.0]})
+
         with (
+            patch.object(factor_mining_cli, "_load_ohlcv_data", return_value=mock_data),
             patch.object(factor_mining_cli, "list_templates", return_value=list_templates()),
             patch.object(factor_mining_cli, "enumerate_factors", return_value=candidates),
             patch.object(factor_mining_cli, "evaluate_factor", side_effect=evaluations),
@@ -362,7 +389,7 @@ class TestCLIFewSelected:
                 ]
             )
 
-        assert result == 3, f"Expected exit 3 when no evaluations, got {result}"
+        assert result == 5, f"Expected exit 5 when no evaluations, got {result}"
 
     def test_cli_minimum_samples_validation(self, tmp_path, capsys):
         """AC-FR0800-04: Very small data — verify pipeline handles edge case

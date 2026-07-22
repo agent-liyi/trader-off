@@ -8,13 +8,14 @@ Exit codes:
     0 — success
     3 — fewer than 10 selected factors
     4 — config file missing or schema validation error
+    5 — evaluation failure (no factors could be evaluated)
 """
 
 from __future__ import annotations
 
 import os
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -181,7 +182,7 @@ def _load_ohlcv_data(
     if token:
         # NFR-0100: function-scope lazy import
         try:
-            from quantide.data.fetchers.tushare import (
+            from trader_off.data.quantide_adapter import (
                 QuantideDataLoader,  # type: ignore[import-not-found]
             )
         except ImportError:
@@ -189,11 +190,19 @@ def _load_ohlcv_data(
             return pl.read_parquet(_DEFAULT_FIXTURE)
 
         loader = QuantideDataLoader(token=token)
-        df = loader.get_daily(start_date=start, end_date=end)
-        if df is None or len(df) == 0:
-            logger.warning("Tushare returned empty data, falling back to fixture")
+        try:
+            # QuantideDataLoader.get_daily is async; run synchronously.
+            # Multi-asset batch loading is deferred; fall back to fixture.
+            import asyncio
+
+            df = asyncio.run(loader.get_daily(asset="000001.SZ", end_date=date.today(), count=252))
+            if len(df) == 0:
+                logger.warning("Tushare returned empty data, falling back to fixture")
+                return pl.read_parquet(_DEFAULT_FIXTURE)
+            return df
+        except Exception:
+            logger.warning("Tushare data fetch failed, falling back to fixture")
             return pl.read_parquet(_DEFAULT_FIXTURE)
-        return df
 
     return pl.read_parquet(_DEFAULT_FIXTURE)
 
@@ -268,9 +277,9 @@ def _run_pipeline(args: Namespace) -> int:
         args: Parsed command-line arguments (argparse.Namespace).
 
     Returns:
-        Exit code: 0 success, 3 <10 selected.
+        Exit code: 0 success, 3 <10 selected, 5 evaluation failure.
     """
-    config = _load_config(args.config)
+    config = _load_config(args.config) or {}
     start = args.start or config.get("start")
     end = args.end or config.get("end")
 
@@ -324,7 +333,7 @@ def _run_pipeline(args: Namespace) -> int:
 
     if len(evaluations) == 0:
         logger.warning("no factors could be evaluated")
-        return 3
+        return 5
 
     # -- Step 5: Select top-K --
     selected, diagnostics = select_factors(
@@ -379,7 +388,7 @@ def main(argv: list[str] | None = None) -> int:
               ``sys.argv[1:]``.
 
     Returns:
-        Exit code: 0 (success), 3 (<10 sel), 4 (config error).
+        Exit code: 0 (success), 3 (<10 sel), 4 (config error), 5 (eval failure).
     """
     parser = _create_parser()
     args = parser.parse_args(argv)

@@ -146,16 +146,15 @@ class TestTrainWithRegistry:
         registry_dir = tmp_path / "factor_registry"
         registry_dir.mkdir(parents=True, exist_ok=True)
 
-        # Save registry YAML
-        save_factor_registry(selected_specs, registry_dir, fmt="yaml")
-        registry_path = registry_dir / "factors.yaml"
-        assert registry_path.exists(), "Registry YAML not written"
+        # Save registry parquet
+        registry_path = registry_dir / "registry.parquet"
+        save_factor_registry(selected_specs, out_path=registry_path)
+        assert registry_path.exists(), "Registry parquet not written"
 
         # Step 2: Load registry and verify it
         loaded = load_factor_registry(registry_path)
-        assert loaded["factor_template_version"] == FACTOR_TEMPLATE_VERSION
-        assert len(loaded["factors"]) == len(selected_specs)
-        assert loaded["total_candidates"] == len(selected_specs)
+        assert loaded["factor_template_version"][0] == FACTOR_TEMPLATE_VERSION
+        assert len(loaded) == len(selected_specs)
 
         # Step 3: Compute factor scores from specs
         feature_df = _build_feature_matrix(selected_specs, ohlcv_small)
@@ -220,7 +219,9 @@ class TestTrainWithRegistry:
 
         registry_dir = tmp_path / "factor_registry"
         registry_dir.mkdir(parents=True, exist_ok=True)
-        registry_path = save_factor_registry(selected_specs, registry_dir, fmt="yaml")
+        registry_path = save_factor_registry(
+            selected_specs, out_path=registry_dir / "registry.parquet"
+        )
 
         # Compute feature matrix
         feature_df = _build_feature_matrix(selected_specs, ohlcv_small)
@@ -246,8 +247,8 @@ class TestTrainWithRegistry:
 
         # Verify registry metadata
         loaded = load_factor_registry(registry_path)
-        assert loaded["factor_template_version"] == "v1"
-        assert loaded["total_candidates"] == len(selected_specs)
+        assert loaded["factor_template_version"][0] == "v1"
+        assert len(loaded) == len(selected_specs)
 
     def test_train_with_different_templates_produces_features(
         self, tmp_path: Path, ohlcv_small: pl.DataFrame, labels_small: pl.DataFrame
@@ -269,7 +270,7 @@ class TestTrainWithRegistry:
 
         registry_dir = tmp_path / "factor_registry"
         registry_dir.mkdir(parents=True, exist_ok=True)
-        save_factor_registry(selected_specs, registry_dir, fmt="yaml")
+        save_factor_registry(selected_specs, out_path=registry_dir / "registry.parquet")
 
         feature_df = _build_feature_matrix(selected_specs, ohlcv_small)
 

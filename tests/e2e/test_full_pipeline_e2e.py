@@ -137,8 +137,7 @@ class TestFullPipelineE2E:
         # Save registry
         registry_path = save_factor_registry(
             specs=valid_specs,
-            out_dir=registry_dir,
-            fmt="yaml",
+            out_path=registry_dir / "registry.parquet",
         )
         assert registry_path.exists()
 
