@@ -28,6 +28,7 @@ class TestPyprojectScripts:
         "trader-off-sync-data": "trader_off.cli.sync_data:main",
         "trader-off-init": "trader_off.cli.init_data:main",
         "trader-off-stock-list": "trader_off.cli.stock_list:main",
+        "trader-off-generate-strategy": "trader_off.cli.generate_strategy:main",
     }
 
     @pytest.fixture
@@ -41,11 +42,11 @@ class TestPyprojectScripts:
         project = pyproject_data.get("project", {})
         assert "scripts" in project, "[project.scripts] table is missing"
 
-    def test_project_scripts_has_exactly_7_entries(self, pyproject_data: dict):
-        """AC-FR0100-04: [project.scripts] must have exactly 7 entries."""
+    def test_project_scripts_has_exactly_8_entries(self, pyproject_data: dict):
+        """AC-FR0100-04: [project.scripts] must have exactly 8 entries."""
         scripts = pyproject_data.get("project", {}).get("scripts", {})
-        assert len(scripts) == 7, (
-            f"Expected 7 entries in [project.scripts], got {len(scripts)}: {scripts}"
+        assert len(scripts) == 8, (
+            f"Expected 8 entries in [project.scripts], got {len(scripts)}: {scripts}"
         )
 
     def test_project_scripts_values_are_correct(self, pyproject_data: dict):
@@ -105,6 +106,12 @@ _SIGS = {
         "args": [("argv", "list[str] | None", "None")],
         "returns": "int",
     },
+    "src/trader_off/cli/generate_strategy.py": {
+        "line": 20,
+        "name": "main",
+        "args": [("argv", "list[str] | None", "None")],
+        "returns": "int",
+    },
 }
 
 _CLI_PATHS = list(_SIGS.keys())
@@ -116,6 +123,7 @@ _CLI_IDS = [
     "sync_data",
     "init_data",
     "stock_list",
+    "generate_strategy",
 ]
 
 
@@ -248,7 +256,7 @@ class TestReadmeUpdates:
         )
 
     def test_entry_point_names_in_readme(self, readme_text: str):
-        """AC-NFR0100-04: README references all 7 entry point names."""
+        """AC-NFR0100-04: README references all 8 entry point names."""
         for name in [
             "trader-off-backtest",
             "trader-off-optimize",
@@ -257,5 +265,6 @@ class TestReadmeUpdates:
             "trader-off-sync-data",
             "trader-off-init",
             "trader-off-stock-list",
+            "trader-off-generate-strategy",
         ]:
             assert name in readme_text, f"README should mention '{name}'"

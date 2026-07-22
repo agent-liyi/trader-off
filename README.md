@@ -105,6 +105,16 @@ trader-off-stock-list --exchange SSE --json    # JSON 输出
 
 从 tuShare 获取 A 股列表，返回 JSON 含 `ts_code` / `name`。需 `TUSHARE_TOKEN`。
 
+### 生成策略
+
+```bash
+trader-off-generate-strategy --name MomentumReversion --author Alice --description "动量反转策略"
+trader-off-generate-strategy --name MyStrategy --dry-run          # 预览生成代码
+trader-off-generate-strategy --name MyStrategy --dry-run --json   # JSON 输出
+```
+
+基于模板生成策略类代码到 `src/trader_off/strategies/`，含完整生命周期方法桩（`__init__`、`on_day_open`、`on_bar`、`on_day_close`、`on_stop`）。
+
 ### 调度
 
 ```bash
