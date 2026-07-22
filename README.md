@@ -1,6 +1,6 @@
 # trader-off
 
-> A 股量化研究 + 回测平台，基于 [millionaire/quantide](https://github.com/zillionare/millionaire)。
+> millionaire/quantide 命令行封装。涵盖回测、纸交易、网格寻优、数据同步、实时行情。
 
 ## 功能
 
@@ -83,6 +83,27 @@ trader-off-sync-data \
 ```
 
 从 tuShare 拉取 OHLCV 数据写入本地 DailyBarsStore（年分区 parquet）。需 `TUSHARE_TOKEN`。支持 `--dry-run`（不拉数据，仅打印计划）。
+
+### 初始化
+
+```bash
+trader-off-init                    # 初始化数据目录 .quantide/
+trader-off-init --home /path/to/data  # 指定数据根目录
+trader-off-init --force            # 强制重新初始化
+```
+
+初始化日历、行情、数据库子目录。
+
+### 股票列表
+
+```bash
+trader-off-stock-list                          # 获取全部股票列表
+trader-off-stock-list --exchange SSE           # 按交易所过滤 (SSE/SZSE/BSE)
+trader-off-stock-list --status L               # 按状态过滤 (L=上市/D=退市/P=暂停)
+trader-off-stock-list --exchange SSE --json    # JSON 输出
+```
+
+从 tuShare 获取 A 股列表，返回 JSON 含 `ts_code` / `name`。需 `TUSHARE_TOKEN`。
 
 ### 调度
 
