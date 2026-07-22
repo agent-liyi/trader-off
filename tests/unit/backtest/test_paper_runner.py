@@ -764,3 +764,151 @@ class TestNFR0100RunnerImports:
                             f"(not inside a function): {line.strip()}"
                         )
                         pytest.fail(msg)
+
+
+PAPER_TRADE_PATH = Path("src/trader_off/cli/paper_trade.py")
+PAPER_TRADE_TEXT = PAPER_TRADE_PATH.read_text() if PAPER_TRADE_PATH.exists() else ""
+
+
+class TestNFR0100PaperTradeImports:
+    """NFR-0100: no top-level quantide imports in paper_trade.py."""
+
+    # AC-NFR0100-01: paper_trade.py top-level zero quantide imports
+    def test_no_top_level_quantide_import(self):
+        """paper_trade.py has zero top-level 'import quantide' or 'from quantide'."""
+        lines = PAPER_TRADE_TEXT.splitlines()
+        top_level_imports = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("import quantide") or stripped.startswith("from quantide"):
+                if not line.startswith((" ", "\t")):
+                    top_level_imports.append(stripped)
+        assert len(top_level_imports) == 0, (
+            f"Top-level quantide imports found in paper_trade.py: {top_level_imports}"
+        )
+
+    # AC-NFR0100-04: paper_trade.py has no banned quantide imports
+    def test_no_banned_quantide_imports(self):
+        """paper_trade.py has no quantide.portfolio or quantide.service.metrics imports."""
+        import re
+
+        banned = re.findall(r"quantide\.(portfolio|service\.metrics)", PAPER_TRADE_TEXT)
+        assert len(banned) == 0, f"Banned quantide imports found in paper_trade.py: {banned}"
+
+    # AC-NFR0100-03: all quantide imports in paper_trade.py are in functions
+    def test_quantide_imports_in_function_bodies_only(self):
+        """All quantide imports in paper_trade.py are inside function bodies."""
+        tree = ast.parse(PAPER_TRADE_TEXT)
+
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                module_name = getattr(node, "module", None) or ""
+                if module_name == "quantide" or module_name.startswith("quantide."):
+                    lineno = node.lineno - 1
+                    line = (
+                        PAPER_TRADE_TEXT.splitlines()[lineno]
+                        if lineno < len(PAPER_TRADE_TEXT.splitlines())
+                        else ""
+                    )
+                    if not line.startswith((" ", "\t")):
+                        msg = (
+                            f"quantide import at line {node.lineno} in paper_trade.py "
+                            f"is not indented: {line.strip()}"
+                        )
+                        pytest.fail(msg)
+
+
+# ── NFR-0100 cross-module isolation tests ────────────────────────────────────
+
+
+class TestNFR0100CrossModuleIsolation:
+    """NFR-0100 AC-06: other module isolation commitments remain intact."""
+
+    # AC-NFR0100-06: data/quantide_adapter.py isolation preserved
+    def test_quantide_adapter_no_top_level_quantide_import(self):
+        """data/quantide_adapter.py maintains top-level quantide import isolation."""
+        adapter_path = Path("src/trader_off/data/quantide_adapter.py")
+        if not adapter_path.exists():
+            pytest.skip("quantide_adapter.py not found")
+        text = adapter_path.read_text()
+        lines = text.splitlines()
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("import quantide") or stripped.startswith("from quantide"):
+                if not line.startswith((" ", "\t")):
+                    # Allow TYPE_CHECKING blocks
+                    pytest.fail(f"Top-level quantide import in adapter: {stripped}")
+
+    # Verify runner.py contains msg_hub and Topics function-level imports (AC-NFR0100-05)
+    def test_msg_hub_in_function_body(self):
+        """runner.py has from quantide.core.message import msg_hub in function body."""
+        import re
+
+        pattern = r"from quantide\.core\.message import msg_hub"
+        matches = re.findall(pattern, RUNNER_TEXT)
+        assert len(matches) >= 1, "Missing msg_hub function-level import"
+        # Verify it's indented (inside a function)
+        for i, line in enumerate(RUNNER_TEXT.splitlines()):
+            if "from quantide.core.message import msg_hub" in line:
+                assert line.startswith((" ", "\t")), (
+                    f"msg_hub import at line {i + 1} must be inside a function"
+                )
+
+    def test_topics_in_function_body(self):
+        """runner.py has from quantide.core.enums import Topics in function body."""
+        import re
+
+        pattern = r"from quantide\.core\.enums import Topics"
+        matches = re.findall(pattern, RUNNER_TEXT)
+        assert len(matches) >= 1, "Missing Topics function-level import"
+        # Verify it's indented (inside a function)
+        for i, line in enumerate(RUNNER_TEXT.splitlines()):
+            if "from quantide.core.enums import Topics" in line:
+                assert line.startswith((" ", "\t")), (
+                    f"Topics import at line {i + 1} must be inside a function"
+                )
+
+    # Verify grep validation from acceptance criteria
+    def test_grep_top_level_runner_empty(self):
+        r"""grep '^import quantide\|^from quantide' runner.py → no matches."""
+        import subprocess
+        import sys
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys; "
+                    "lines = open('src/trader_off/backtest/runner.py').readlines(); "
+                    "found = [l.strip() for l in lines if "
+                    "(l.startswith('import quantide') or l.startswith('from quantide')) "
+                    "and not l.startswith((' ', '\t'))]; "
+                    "sys.exit(1 if found else 0)"
+                ),
+            ],
+            capture_output=True,
+        )
+        assert result.returncode == 0, "Top-level quantide imports found in runner.py via grep"
+
+    def test_grep_top_level_paper_trade_empty(self):
+        r"""grep '^import quantide\|^from quantide' paper_trade.py → no matches."""
+        import subprocess
+        import sys
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys; "
+                    "lines = open('src/trader_off/cli/paper_trade.py').readlines(); "
+                    "found = [l.strip() for l in lines if "
+                    "(l.startswith('import quantide') or l.startswith('from quantide')) "
+                    "and not l.startswith((' ', '\t'))]; "
+                    "sys.exit(1 if found else 0)"
+                ),
+            ],
+            capture_output=True,
+        )
+        assert result.returncode == 0, "Top-level quantide imports found in paper_trade.py via grep"
