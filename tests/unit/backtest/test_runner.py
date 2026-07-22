@@ -133,6 +133,212 @@ class TestInlineCalendar:
             _generate_inline_calendar([date(2023, 1, 3)], Path("/root/nope/cal.parquet"))
 
 
+class TestFR0100DefaultsAndFallback:
+    """FR-0100: run_backtest defaults prefer .quantide/ over fixtures."""
+
+    # AC-FR0100-01: DEFAULT_STORE_PATH = ".quantide/bars/"
+    def test_default_store_path_is_quantide(self):
+        """DEFAULT_STORE_PATH should be '.quantide/bars/'."""
+        from trader_off.backtest.runner import DEFAULT_STORE_PATH
+
+        assert DEFAULT_STORE_PATH == ".quantide/bars/", (
+            f"Expected '.quantide/bars/', got '{DEFAULT_STORE_PATH}'"
+        )
+
+    # AC-FR0100-02: DEFAULT_CALENDAR_SOURCE = ".quantide/calendar/calendar.parquet"
+    def test_default_calendar_source_is_quantide(self):
+        """DEFAULT_CALENDAR_SOURCE should be '.quantide/calendar/calendar.parquet'."""
+        from trader_off.backtest.runner import DEFAULT_CALENDAR_SOURCE
+
+        assert DEFAULT_CALENDAR_SOURCE == ".quantide/calendar/calendar.parquet", (
+            f"Expected '.quantide/calendar/calendar.parquet', got '{DEFAULT_CALENDAR_SOURCE}'"
+        )
+
+    # AC-FR0100-03: FIXTURE_STORE_PATH constant exists
+    def test_fixture_store_path_constant_exists(self):
+        """FIXTURE_STORE_PATH constant should exist with fixture path."""
+        import trader_off.backtest.runner as rmod
+
+        assert hasattr(rmod, "FIXTURE_STORE_PATH"), "FIXTURE_STORE_PATH constant missing"
+        assert rmod.FIXTURE_STORE_PATH == "tests/fixtures/v0.3.0/daily_bars_store"
+
+    # AC-FR0100-04: FIXTURE_CALENDAR_SOURCE constant exists
+    def test_fixture_calendar_source_constant_exists(self):
+        """FIXTURE_CALENDAR_SOURCE constant should exist with fixture path."""
+        import trader_off.backtest.runner as rmod
+
+        assert hasattr(rmod, "FIXTURE_CALENDAR_SOURCE"), "FIXTURE_CALENDAR_SOURCE constant missing"
+        assert rmod.FIXTURE_CALENDAR_SOURCE == "tests/fixtures/v0.2.0/ohlcv_50x252.parquet"
+
+    # AC-FR0100-05: .quantide/ paths appear in source
+    def test_runner_text_has_quantide_defaults(self):
+        """runner.py source contains .quantide/ default paths."""
+        assert ".quantide/bars/" in RUNNER_TEXT, "DEFAULT_STORE_PATH should contain .quantide/bars/"
+        assert ".quantide/calendar/calendar.parquet" in RUNNER_TEXT, (
+            "DEFAULT_CALENDAR_SOURCE should contain .quantide/calendar/calendar.parquet"
+        )
+
+    # AC-FR0100-06: fixture paths still in source for fallback
+    def test_runner_text_still_has_fixture_paths(self):
+        """runner.py source still contains fixture paths for fallback."""
+        assert "tests/fixtures/v0.3.0/daily_bars_store" in RUNNER_TEXT, (
+            "Fixture store path should still be in source for fallback"
+        )
+        assert "tests/fixtures/v0.2.0/ohlcv_50x252.parquet" in RUNNER_TEXT, (
+            "Fixture calendar source should still be in source for fallback"
+        )
+
+    # AC-FR0100-07: fallback to fixture when .quantide/ missing (no config)
+    def test_store_fallback_when_quantide_missing(self, tmp_path):
+        """When .quantide/bars/ absent, fallback to fixture store path."""
+        from quantide.data.models.daily_bars import daily_bars as real_daily_bars
+        from quantide.data.sqlite import db as real_db
+
+        with patch.object(real_daily_bars, "connect") as mock_connect:
+            with patch.object(real_db, "init"):
+                with patch.object(
+                    real_db,
+                    "assets_all",
+                    return_value=pl.DataFrame({"dt": ["2023-01-03"], "total": [1000000.0]}),
+                ):
+                    with patch.object(real_db, "positions_all", return_value=pl.DataFrame()):
+                        with patch.object(real_db, "trades_all", return_value=pl.DataFrame()):
+                            with patch("quantide.service.runner.BacktestRunner") as mock_runner_cls:
+                                mock_runner = MagicMock()
+                                mock_runner.run.return_value = {
+                                    "portfolio_id": "test-fallback",
+                                    "metrics": {},
+                                }
+                                mock_runner_cls.return_value = mock_runner
+
+                                run_backtest(
+                                    model_version="v1",
+                                    strategy_name="lgbm_top20",
+                                    start=date(2023, 1, 1),
+                                    end=date(2023, 12, 31),
+                                    capital=1_000_000,
+                                )
+
+                            assert mock_connect.called
+                            store_arg = str(mock_connect.call_args[0][0])
+                            assert (
+                                "fixtures/v0.3.0" in store_arg or "daily_bars_store" in store_arg
+                            ), f"Expected fixture path as fallback, got {store_arg}"
+
+    # AC-FR0100-08: config-provided store_path bypasses .quantide/ detection
+    def test_config_bypasses_quantide_detection(self, tmp_path):
+        """When config provides store_path, it is used directly (no fallback)."""
+        from quantide.data.models.daily_bars import daily_bars as real_daily_bars
+        from quantide.data.sqlite import db as real_db
+
+        custom_store = str(tmp_path / "my_store")
+        with patch.object(real_daily_bars, "connect") as mock_connect:
+            with patch.object(real_db, "init"):
+                with patch.object(
+                    real_db,
+                    "assets_all",
+                    return_value=pl.DataFrame({"dt": ["2023-01-03"], "total": [1000000.0]}),
+                ):
+                    with patch.object(real_db, "positions_all", return_value=pl.DataFrame()):
+                        with patch.object(real_db, "trades_all", return_value=pl.DataFrame()):
+                            with patch("quantide.service.runner.BacktestRunner") as mock_runner_cls:
+                                mock_runner = MagicMock()
+                                mock_runner.run.return_value = {
+                                    "portfolio_id": "test-config",
+                                    "metrics": {},
+                                }
+                                mock_runner_cls.return_value = mock_runner
+
+                                run_backtest(
+                                    model_version="v1",
+                                    strategy_name="lgbm_top20",
+                                    start=date(2023, 1, 1),
+                                    end=date(2023, 12, 31),
+                                    capital=1_000_000,
+                                    config={"store_path": custom_store},
+                                )
+
+                            assert mock_connect.called
+                            store_arg = str(mock_connect.call_args[0][0])
+                            assert "my_store" in store_arg, (
+                                f"Expected custom store path, got {store_arg}"
+                            )
+
+    # AC-FR0100-09: INFO log outputs store_path with source marker (log format)
+    def test_info_log_store_path_format_in_source(self):
+        """runner.py source contains the store_path INFO log format string."""
+        assert "store_path={" in RUNNER_TEXT, "runner.py should log store_path with source marker"
+        assert "real-data store" in RUNNER_TEXT, (
+            "runner.py should reference 'real-data store' marker"
+        )
+        assert "fixture store" in RUNNER_TEXT, "runner.py should reference 'fixture store' marker"
+
+    # AC-FR0100-10: INFO log outputs calendar_source with source marker (log format)
+    def test_info_log_calendar_source_format_in_source(self):
+        """runner.py source contains the calendar_source INFO log format string."""
+        assert "calendar_source={" in RUNNER_TEXT, (
+            "runner.py should log calendar_source with source marker"
+        )
+        assert "real-data calendar" in RUNNER_TEXT, (
+            "runner.py should reference 'real-data calendar' marker"
+        )
+        assert "fixture calendar" in RUNNER_TEXT, (
+            "runner.py should reference 'fixture calendar' marker"
+        )
+
+    # AC-FR0100-11: logger.info is called with source marker (via mock)
+    def test_logger_called_with_source_markers(self, tmp_path):
+        """run_backtest calls logger.info with correct source markers."""
+        from quantide.data.models.daily_bars import daily_bars as real_daily_bars
+        from quantide.data.sqlite import db as real_db
+
+        with patch("trader_off.backtest.runner.logger") as mock_logger:
+            with patch.object(real_daily_bars, "connect"):
+                with patch.object(real_db, "init"):
+                    with patch.object(
+                        real_db,
+                        "assets_all",
+                        return_value=pl.DataFrame({"dt": ["2023-01-03"], "total": [1000000.0]}),
+                    ):
+                        with patch.object(real_db, "positions_all", return_value=pl.DataFrame()):
+                            with patch.object(real_db, "trades_all", return_value=pl.DataFrame()):
+                                with patch(
+                                    "quantide.service.runner.BacktestRunner"
+                                ) as mock_runner_cls:
+                                    mock_runner = MagicMock()
+                                    mock_runner.run.return_value = {
+                                        "portfolio_id": "test-log-mock",
+                                        "metrics": {},
+                                    }
+                                    mock_runner_cls.return_value = mock_runner
+
+                                    run_backtest(
+                                        model_version="v1",
+                                        strategy_name="lgbm_top20",
+                                        start=date(2023, 1, 1),
+                                        end=date(2023, 12, 31),
+                                        capital=1_000_000,
+                                        config={"store_path": str(tmp_path / "fixtures/my_store")},
+                                    )
+
+        # Collect all logger.info calls
+        info_calls = [
+            call_args[0][0] for call_args in mock_logger.info.call_args_list if call_args[0]
+        ]
+        # Verify store_path log with fixture marker
+        store_logs = [msg for msg in info_calls if "store_path=" in str(msg)]
+        assert len(store_logs) >= 1, f"Expected store_path log, got: {info_calls}"
+        assert "fixture store" in str(store_logs[0]), (
+            f"Expected 'fixture store' marker, got: {store_logs[0]}"
+        )
+        # Verify calendar_source log (fallback since .quantide/ missing in test env)
+        cal_logs = [msg for msg in info_calls if "calendar_source=" in str(msg)]
+        assert len(cal_logs) >= 1, f"Expected calendar_source log, got: {info_calls}"
+        assert "fixture calendar" in str(cal_logs[0]), (
+            f"Expected 'fixture calendar' marker, got: {cal_logs[0]}"
+        )
+
+
 class TestRunBacktestWithMock:
     """FR-0500: integration with quantide APIs (mocked)."""
 

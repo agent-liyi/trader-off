@@ -14,8 +14,10 @@ from pathlib import Path
 import polars as pl
 from loguru import logger
 
-DEFAULT_STORE_PATH = "tests/fixtures/v0.3.0/daily_bars_store"
-DEFAULT_CALENDAR_SOURCE = "tests/fixtures/v0.2.0/ohlcv_50x252.parquet"
+DEFAULT_STORE_PATH = ".quantide/bars/"
+DEFAULT_CALENDAR_SOURCE = ".quantide/calendar/calendar.parquet"
+FIXTURE_STORE_PATH = "tests/fixtures/v0.3.0/daily_bars_store"
+FIXTURE_CALENDAR_SOURCE = "tests/fixtures/v0.2.0/ohlcv_50x252.parquet"
 
 
 @dataclass
@@ -151,8 +153,34 @@ def run_backtest(
     config = config or {}
     # Pass model_version through config for strategy use
     config.setdefault("model_version", model_version)
-    store_path = config.get("store_path", DEFAULT_STORE_PATH)
-    calendar_source = config.get("calendar_source", DEFAULT_CALENDAR_SOURCE)
+
+    # FR-0100: store_path resolution — prefer .quantide/ real data, fallback to fixture
+    if "store_path" in config:
+        store_path = config["store_path"]
+        source_marker_store = "fixture store" if "fixtures/" in store_path else "real-data store"
+    elif Path(DEFAULT_STORE_PATH).exists():
+        store_path = DEFAULT_STORE_PATH
+        source_marker_store = "real-data store"
+    else:
+        store_path = FIXTURE_STORE_PATH
+        source_marker_store = "fixture store"
+
+    # FR-0100: calendar_source resolution — same pattern
+    if "calendar_source" in config:
+        calendar_source = config["calendar_source"]
+        source_marker_calendar = (
+            "fixture calendar" if "fixtures/" in calendar_source else "real-data calendar"
+        )
+    elif Path(DEFAULT_CALENDAR_SOURCE).exists():
+        calendar_source = DEFAULT_CALENDAR_SOURCE
+        source_marker_calendar = "real-data calendar"
+    else:
+        calendar_source = FIXTURE_CALENDAR_SOURCE
+        source_marker_calendar = "fixture calendar"
+
+    # FR-0100: one-time INFO log for data source observability
+    logger.info(f"store_path={store_path} ({source_marker_store})")
+    logger.info(f"calendar_source={calendar_source} ({source_marker_calendar})")
 
     ts = _generate_timestamp()
     report_dir = Path(f"reports/backtest_{ts}")
