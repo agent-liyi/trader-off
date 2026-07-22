@@ -448,11 +448,11 @@ class TestLGBMTop20RebalanceFixes:
                 f"Adjusted weight should be {expected_weight}, got {call['pct']}"
             )
 
-    # --- Fix 3: cash_factor range validation ---
+    # --- Fix 3 / Issue #120: cash_factor raises on broker-broken signals ---
 
     @pytest.mark.asyncio
-    async def test_cash_factor_range_validation_nan(self) -> None:
-        """Fix #3: NaN cash_factor → fallback to 1.0."""
+    async def test_cash_factor_nan_raises(self) -> None:
+        """Issue #120: NaN cash_factor → RuntimeError (broker broken)."""
         broker = ValidationBroker(total=float("nan"), market_value=800_000.0)
         strategy = self._make_strategy(broker, top_k=3)
 
@@ -464,18 +464,12 @@ class TestLGBMTop20RebalanceFixes:
             new_callable=AsyncMock,
             return_value=predictions,
         ):
-            await strategy.on_day_open(tm)
-
-        expected_weight = 1.0 / 3  # cash_factor=1.0
-        buy_calls = [c for c in broker.calls if c["pct"] > 0]
-        for call in buy_calls:
-            assert call["pct"] == pytest.approx(expected_weight, rel=1e-6), (
-                f"NaN: should fallback to 1.0, got {call['pct']}"
-            )
+            with pytest.raises(RuntimeError, match="cash_factor invalid"):
+                await strategy.on_day_open(tm)
 
     @pytest.mark.asyncio
-    async def test_cash_factor_range_validation_negative(self) -> None:
-        """Fix #3: negative cash_factor → fallback to 1.0."""
+    async def test_cash_factor_negative_raises(self) -> None:
+        """Issue #120: negative cash_factor → RuntimeError (broker broken)."""
         broker = ValidationBroker(total=-100_000.0, market_value=800_000.0)
         strategy = self._make_strategy(broker, top_k=3)
 
@@ -487,18 +481,12 @@ class TestLGBMTop20RebalanceFixes:
             new_callable=AsyncMock,
             return_value=predictions,
         ):
-            await strategy.on_day_open(tm)
-
-        expected_weight = 1.0 / 3
-        buy_calls = [c for c in broker.calls if c["pct"] > 0]
-        for call in buy_calls:
-            assert call["pct"] == pytest.approx(expected_weight, rel=1e-6), (
-                "Negative: should fallback to 1.0"
-            )
+            with pytest.raises(RuntimeError, match="cash_factor invalid"):
+                await strategy.on_day_open(tm)
 
     @pytest.mark.asyncio
-    async def test_cash_factor_range_validation_overflow(self) -> None:
-        """Fix #3: cash_factor > 1.0 → fallback to 1.0."""
+    async def test_cash_factor_overflow_raises(self) -> None:
+        """Issue #120: cash_factor > 1.0 → RuntimeError (broker broken)."""
         broker = ValidationBroker(total=500_000.0, market_value=800_000.0)
         strategy = self._make_strategy(broker, top_k=3)
 
@@ -510,11 +498,89 @@ class TestLGBMTop20RebalanceFixes:
             new_callable=AsyncMock,
             return_value=predictions,
         ):
-            await strategy.on_day_open(tm)
+            with pytest.raises(RuntimeError, match="cash_factor invalid"):
+                await strategy.on_day_open(tm)
 
-        expected_weight = 1.0 / 3
-        buy_calls = [c for c in broker.calls if c["pct"] > 0]
-        for call in buy_calls:
-            assert call["pct"] == pytest.approx(expected_weight, rel=1e-6), (
-                "Overflow: should fallback to 1.0"
-            )
+    # --- Issue #120: snapshot/restore + bidirectional reconcile + empty-account ---
+
+    @pytest.mark.asyncio
+    async def test_snapshot_restore_on_exception(self) -> None:
+        """Issue #120: exception during rebalance restores _position_cache to
+        pre-rebalance state."""
+        broker = FailOnBuyBroker(fail_asset="ASSET_B")
+        strategy = self._make_strategy(broker, top_k=3)
+        # Pre-populate cache
+        strategy._position_cache = {"STALE_X": 0.10, "STALE_Y": 0.05}
+        snapshot = dict(strategy._position_cache)
+
+        predictions = self._make_predictions(["ASSET_A", "ASSET_B", "ASSET_C"])
+        tm = datetime(2026, 7, 21, 9, 30)
+
+        with patch(
+            "trader_off.prediction.service.predict",
+            new_callable=AsyncMock,
+            return_value=predictions,
+        ):
+            # Suppress reconciliation to verify snapshot restore in isolation
+            with patch.object(strategy, "_reconcile_position_cache", return_value=None):
+                with pytest.raises(RuntimeError, match="Buy failed"):
+                    await strategy.on_day_open(tm)
+
+        assert strategy._position_cache == snapshot, (
+            "_position_cache should be restored to pre-rebalance snapshot after exception"
+        )
+
+    @pytest.mark.asyncio
+    async def test_bidirectional_reconcile_adds_missing(self) -> None:
+        """Issue #120: _reconcile_position_cache adds broker positions missing from cache."""
+
+        class Broker:
+            @property
+            def positions(self):
+                return {"A": 0.1, "B": 0.2}
+
+        strategy = LGBMTop20Strategy(
+            broker=Broker(),
+            config={"top_k": 20},
+        )
+        strategy._position_cache = {"A": 0.1}
+
+        strategy._reconcile_position_cache()
+
+        assert "B" in strategy._position_cache, "Missing broker position should be added to cache"
+        assert strategy._position_cache["B"] == 0.2, "Added position value should match broker"
+        assert "A" in strategy._position_cache, "Existing cache entry should be preserved"
+
+    @pytest.mark.asyncio
+    async def test_bidirectional_reconcile_removes_stale(self) -> None:
+        """Issue #120: _reconcile_position_cache removes cache entries absent from broker."""
+
+        class Broker:
+            @property
+            def positions(self):
+                return {"A": 0.1}
+
+        strategy = LGBMTop20Strategy(
+            broker=Broker(),
+            config={"top_k": 20},
+        )
+        strategy._position_cache = {"A": 0.1, "STALE_B": 0.3}
+
+        strategy._reconcile_position_cache()
+
+        assert "STALE_B" not in strategy._position_cache, "Stale cache entry should be removed"
+        assert "A" in strategy._position_cache, "Valid cache entry should be preserved"
+        assert strategy._position_cache["A"] == 0.1
+
+    @pytest.mark.asyncio
+    async def test_cash_factor_empty_account_returns_1(self) -> None:
+        """Issue #120: empty account (total=0 or mv=0) returns cash_factor=1.0."""
+        strategy = LGBMTop20Strategy(
+            broker=MagicMock(),
+            config={"top_k": 20},
+        )
+
+        assert strategy._compute_cash_factor(0.0, 0.0) == 1.0, "total=0, mv=0 → 1.0"
+        assert strategy._compute_cash_factor(0.0, 1_000_000.0) == 1.0, "mv=0 with cash → 1.0"
+        assert strategy._compute_cash_factor(800_000.0, 0.0) == 1.0, "total=0 with mv → 1.0"
+        assert strategy._compute_cash_factor(800_000.0, 1_000_000.0) == 0.8, "normal case"

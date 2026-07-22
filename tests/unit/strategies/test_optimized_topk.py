@@ -10,11 +10,16 @@ Issue #115 — Rebalance logic risk fixes:
   - Fix 1: Non-atomic rebalance → reconcile _position_cache with broker.positions
   - Fix 2: cash_factor drift → snapshot total/market_value BEFORE sells
   - Fix 3: cash_factor range validation → NaN/negative/overflow fallback to 1.0
+
+Issue #120 — Rebalance improvements + cleanup:
+  - Bidirectional position cache reconcile (snapshot/restore pattern)
+  - cash_factor raises RuntimeError on broker-broken signals
 """
 
 import time
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -429,10 +434,10 @@ class TestOptimizedTopKStrategyRebalanceFixes:
                 f"got {call['pct']}"
             )
 
-    # --- Fix 3: cash_factor range validation ---
+    # --- Fix 3 / Issue #120: cash_factor raises on broker-broken signals ---
 
-    async def test_cash_factor_range_validation_nan(self, tmp_path) -> None:
-        """Fix #3: NaN cash_factor → fallback to 1.0."""
+    async def test_cash_factor_nan_raises(self, tmp_path) -> None:
+        """Issue #120: NaN cash_factor → RuntimeError (broker broken)."""
         self._make_weights_csv(tmp_path)
         broker = ValidationBroker(total=float("nan"), market_value=800_000.0)
 
@@ -443,17 +448,11 @@ class TestOptimizedTopKStrategyRebalanceFixes:
         await strategy.init()
         tm = datetime(2026, 7, 21, 9, 30)
 
-        await strategy.on_day_open(tm)
+        with pytest.raises(RuntimeError, match="cash_factor invalid"):
+            await strategy.on_day_open(tm)
 
-        # cash_factor should be 1.0, so adjusted_weight = raw weight
-        buy_calls = [c for c in broker.calls if c["pct"] > 0]
-        for call in buy_calls:
-            assert call["pct"] == pytest.approx(0.04, rel=1e-6), (
-                f"With NaN total, cash_factor should fallback to 1.0, got {call['pct']}"
-            )
-
-    async def test_cash_factor_range_validation_negative(self, tmp_path) -> None:
-        """Fix #3: negative cash_factor → fallback to 1.0."""
+    async def test_cash_factor_negative_raises(self, tmp_path) -> None:
+        """Issue #120: negative cash_factor → RuntimeError (broker broken)."""
         self._make_weights_csv(tmp_path)
         broker = ValidationBroker(total=-100_000.0, market_value=800_000.0)
 
@@ -464,17 +463,11 @@ class TestOptimizedTopKStrategyRebalanceFixes:
         await strategy.init()
         tm = datetime(2026, 7, 21, 9, 30)
 
-        await strategy.on_day_open(tm)
+        with pytest.raises(RuntimeError, match="cash_factor invalid"):
+            await strategy.on_day_open(tm)
 
-        # cash_factor should be 1.0 (negative total → fallback)
-        buy_calls = [c for c in broker.calls if c["pct"] > 0]
-        for call in buy_calls:
-            assert call["pct"] == pytest.approx(0.04, rel=1e-6), (
-                "With negative total, cash_factor should fallback to 1.0"
-            )
-
-    async def test_cash_factor_range_validation_overflow(self, tmp_path) -> None:
-        """Fix #3: cash_factor > 1.0 (market_value > total) → fallback to 1.0."""
+    async def test_cash_factor_overflow_raises(self, tmp_path) -> None:
+        """Issue #120: cash_factor > 1.0 → RuntimeError (broker broken)."""
         self._make_weights_csv(tmp_path)
         broker = ValidationBroker(total=500_000.0, market_value=800_000.0)
 
@@ -485,14 +478,86 @@ class TestOptimizedTopKStrategyRebalanceFixes:
         await strategy.init()
         tm = datetime(2026, 7, 21, 9, 30)
 
-        await strategy.on_day_open(tm)
+        with pytest.raises(RuntimeError, match="cash_factor invalid"):
+            await strategy.on_day_open(tm)
 
-        # cash_factor should be 1.0 (>1.0 → fallback)
-        buy_calls = [c for c in broker.calls if c["pct"] > 0]
-        for call in buy_calls:
-            assert call["pct"] == pytest.approx(0.04, rel=1e-6), (
-                "With cash_factor > 1.0, should fallback to 1.0"
-            )
+    # --- Issue #120: snapshot/restore + bidirectional reconcile + empty-account ---
+
+    async def test_snapshot_restore_on_exception(self, tmp_path) -> None:
+        """Issue #120: exception during rebalance restores _position_cache to
+        pre-rebalance state."""
+        self._make_weights_csv(tmp_path)
+        broker = FailOnBuyBroker(fail_asset="stock_010")
+
+        strategy = OptimizedTopKStrategy(
+            broker=broker,
+            config={"weights_dir": str(tmp_path), "top_k": 20},
+        )
+        await strategy.init()
+        # Pre-populate cache with entries that would be modified during rebalance
+        strategy._position_cache = {"STALE_A": 0.10, "STALE_B": 0.05}
+        snapshot = dict(strategy._position_cache)
+
+        # Suppress reconciliation to verify snapshot restore in isolation
+        with patch.object(strategy, "_reconcile_position_cache", return_value=None):
+            with pytest.raises(RuntimeError, match="Buy failed"):
+                await strategy.on_day_open(datetime(2026, 7, 21, 9, 30))
+
+        assert strategy._position_cache == snapshot, (
+            "_position_cache should be restored to pre-rebalance snapshot after exception"
+        )
+
+    async def test_bidirectional_reconcile_adds_missing(self) -> None:
+        """Issue #120: _reconcile_position_cache adds broker positions missing from cache."""
+
+        class Broker:
+            @property
+            def positions(self):
+                return {"A": 0.1, "B": 0.2}
+
+        strategy = OptimizedTopKStrategy(
+            broker=Broker(),
+            config={"top_k": 20},
+        )
+        strategy._position_cache = {"A": 0.1}
+
+        strategy._reconcile_position_cache()
+
+        assert "B" in strategy._position_cache, "Missing broker position should be added to cache"
+        assert strategy._position_cache["B"] == 0.2, "Added position value should match broker"
+        assert "A" in strategy._position_cache, "Existing cache entry should be preserved"
+
+    async def test_bidirectional_reconcile_removes_stale(self) -> None:
+        """Issue #120: _reconcile_position_cache removes cache entries absent from broker."""
+
+        class Broker:
+            @property
+            def positions(self):
+                return {"A": 0.1}
+
+        strategy = OptimizedTopKStrategy(
+            broker=Broker(),
+            config={"top_k": 20},
+        )
+        strategy._position_cache = {"A": 0.1, "STALE_B": 0.3}
+
+        strategy._reconcile_position_cache()
+
+        assert "STALE_B" not in strategy._position_cache, "Stale cache entry should be removed"
+        assert "A" in strategy._position_cache, "Valid cache entry should be preserved"
+        assert strategy._position_cache["A"] == 0.1
+
+    async def test_cash_factor_empty_account_returns_1(self) -> None:
+        """Issue #120: empty account (total=0 or mv=0) returns cash_factor=1.0."""
+        strategy = OptimizedTopKStrategy(
+            broker=MockBroker(),
+            config={"top_k": 20},
+        )
+
+        assert strategy._compute_cash_factor(0.0, 0.0) == 1.0, "total=0, mv=0 → 1.0"
+        assert strategy._compute_cash_factor(0.0, 1_000_000.0) == 1.0, "mv=0 with cash → 1.0"
+        assert strategy._compute_cash_factor(800_000.0, 0.0) == 1.0, "total=0 with mv → 1.0"
+        assert strategy._compute_cash_factor(800_000.0, 1_000_000.0) == 0.8, "normal case"
 
 
 # ---------------------------------------------------------------------------
