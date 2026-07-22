@@ -11,6 +11,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from datetime import date
@@ -271,8 +272,6 @@ def _print_json(
         filepath: Path where the file was written (None in dry-run mode).
         code: Generated code string (for dry-run JSON output).
     """
-    import json
-
     data: dict = {"class": name, "methods": 5}
     if filepath is not None:
         data["file"] = str(filepath)

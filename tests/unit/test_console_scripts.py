@@ -107,7 +107,7 @@ _SIGS = {
         "returns": "int",
     },
     "src/trader_off/cli/generate_strategy.py": {
-        "line": 20,
+        "line": 21,
         "name": "main",
         "args": [("argv", "list[str] | None", "None")],
         "returns": "int",
