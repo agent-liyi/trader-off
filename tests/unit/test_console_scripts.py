@@ -100,7 +100,7 @@ _SIGS = {
         "returns": "int",
     },
     "src/trader_off/cli/stock_list.py": {
-        "line": 20,
+        "line": 23,
         "name": "main",
         "args": [("argv", "list[str] | None", "None")],
         "returns": "int",
