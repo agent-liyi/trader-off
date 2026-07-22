@@ -101,10 +101,12 @@ class LGBMTop20Strategy(BaseStrategy):
         weight = 1.0 / self.top_k if self.top_k > 0 else 0.0
 
         # Snapshot pre-sell values BEFORE any trades.
-        # Fix #2: cash_factor must use pre-sell snapshot to avoid drift.
+        # cash_factor must use pre-sell snapshot to avoid drift.
         initial_total = self.broker.total_asset()
         initial_market_value = self.broker.market_value()
 
+        # Snapshot position cache before rebalance for rollback on error
+        snapshot = dict(self._position_cache)
         try:
             # Step 1: Clear positions not in target list first.
             # Selling first frees cash before rebalancing targets, avoiding
@@ -132,9 +134,12 @@ class LGBMTop20Strategy(BaseStrategy):
                 self._position_cache[row["asset"]] = weight
 
             logger.info(f"on_day_open {tm.date()}: targets={len(targets)}, weight={weight:.4f}")
+        except Exception:
+            self._position_cache = snapshot  # restore on error
+            raise
         finally:
-            # Fix #1: Reconcile _position_cache with broker.positions after
-            # each rebalance cycle. Full atomicity deferred to v0.4.x.
+            # Bidirectional reconcile with broker.positions after each
+            # rebalance cycle to keep cache and broker consistent.
             self._reconcile_position_cache()
 
     def _compute_cash_factor(self, market_value: float, total: float) -> float:
@@ -145,34 +150,43 @@ class LGBMTop20Strategy(BaseStrategy):
             total: Total portfolio value (cash + market_value).
 
         Returns:
-            cash_factor in range [0, 1]; falls back to 1.0 if invalid.
+            cash_factor in range [0, 1].
+
+        Raises:
+            RuntimeError: If cash_factor is NaN, negative, or >1.0
+                (indicating a potentially broken broker).
         """
-        if total > 0 and market_value > 0:
-            raw = market_value / total
-            if math.isfinite(raw) and 0.0 <= raw <= 1.0:
-                return raw
-            logger.warning(
-                f"Invalid cash_factor={raw:.6f} (mv={market_value:.2f}, total={total:.2f}), "
-                "falling back to 1.0"
+        # Legitimate empty account: fall back to 1.0 (full invest)
+        if total == 0 or market_value == 0:
+            return 1.0
+        raw = market_value / total
+        if not math.isfinite(raw) or raw < 0.0 or raw > 1.0:
+            raise RuntimeError(
+                f"cash_factor invalid (broker broken?): raw={raw}, "
+                f"total={total}, market_value={market_value}"
             )
-        return 1.0
+        return raw
 
     def _reconcile_position_cache(self) -> None:
-        """Reconcile _position_cache with broker.positions after rebalance.
+        """Reconcile _position_cache with broker.positions bidirectionally.
 
-        Removes entries from cache that are not present in broker.positions,
-        logging discrepancies as warnings. Full atomicity deferred to v0.4.x.
+        Removes cache entries absent from broker.positions and adds broker
+        entries missing from cache.  Snapshots must be restored before
+        reconciliation to maintain consistency on rebalance errors.
         """
         broker_positions = self.broker.positions
         if not isinstance(broker_positions, dict):
             return
-        for asset in list(self._position_cache.keys()):
-            if asset not in broker_positions:
-                logger.warning(
-                    f"Position cache discrepancy: '{asset}' in cache but not in "
-                    "broker.positions, removing from cache"
-                )
-                del self._position_cache[asset]
+        cache_keys = set(self._position_cache.keys())
+        broker_keys = set(broker_positions.keys())
+        for k in cache_keys - broker_keys:
+            logger.warning(
+                f"Position cache discrepancy: '{k}' in cache but not in "
+                "broker.positions, removing from cache"
+            )
+            del self._position_cache[k]
+        for k in broker_keys - cache_keys:
+            self._position_cache[k] = broker_positions[k]
 
     async def on_bar(self, tm: datetime, quote: dict | None = None, frame_type=None) -> None:
         """No-op for daily strategy."""
