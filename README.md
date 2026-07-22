@@ -125,6 +125,16 @@ trader-off-stock-list --exchange SSE --json    # JSON 输出
 
 从 tuShare 获取 A 股列表，返回 JSON 含 `ts_code` / `name`。需 `TUSHARE_TOKEN`。
 
+### 因子检查
+
+```bash
+trader-off-check-factor --name momentum_5 --start 2024-01-02 --end 2024-12-31
+trader-off-check-factor --name momentum_5 --start 2024-01-02 --end 2024-12-31 --json
+trader-off-check-factor --name vol_20 --start 2024-01-02 --end 2024-12-31 --ic-threshold 0.5
+```
+
+评估单个因子，输出 IC/ICIR/Rank IC/Rank ICIR 及有效性判定。支持 `--json` 输出。
+
 ### 实时行情
 
 ```bash
