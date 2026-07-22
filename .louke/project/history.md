@@ -224,3 +224,17 @@ v0.3.0 patch — 处置两件延期尾巴：(1) ClockRewind fixture 修复使 3 
 
 ### Backlog
 - RuntimeError message 嵌入 portfolio 数值（live-trading 时考虑脱敏）
+
+## v0.5.1 — 2026-07-22
+
+**Spec**: v0.5.1-001-sync-data-cli
+**Branch**: releases/v0.5.1
+**Tag**: v0.5.1
+
+### Summary
+`trader-off sync-data` CLI 命令。封装 `QuantideDataLoader.get_daily()` + `fetch_calendar()`，从 tushare 拉取 OHLCV 数据并写入 `DailyBarsStore`（年分区 parquet）和 `.quantide/calendar/`。支持 `--dry-run`、增量标记、partial failure 退出码 5。
+
+### Stats
+- 1 FR + 1 NFR + 13 AC
+- 26 单元测试通过（24 新增 + 2 NFR）
+- Security PASS（0 findings）
