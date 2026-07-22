@@ -273,13 +273,13 @@ AC-NFR0100-04
 
 AC-NFR0100-05
 
-- **WHEN** 验证推行情所需的 core 基础设施 import（⚠️ 待用户确认，见 spec.md NFR-0100 内联讨论）
+- **WHEN** 验证推行情所需的 core 基础设施 import（Sage 已确认纳入白名单，见 spec.md NFR-0100 内联讨论 RESOLVED）
 - **THEN** 系统 SHALL 允许 `runner.py` 函数体内 `from quantide.core.message import msg_hub` + `from quantide.core.enums import Topics`（core 基础设施，非业务符号），且这两个 import 位于函数体内（非模块顶层）
 - **断言**:
   - 给定：`runner.py` 源文件。
   - 当：`grep -rn "from quantide.core.message import msg_hub\|from quantide.core.enums import Topics" src/trader_off/backtest/runner.py` 执行。
   - 那么：匹配行**不**以 `^` 锚定行首（即位于函数体内，缩进）；AST 校验这两个 import 节点的祖先含 `FunctionDef` / `AsyncFunctionDef`。
-  - **注**：本 AC 依赖 spec.md NFR-0100 ⚠️ 内联讨论的用户确认；若用户拒绝放行 msg_hub/Topics，则 FR-0100 AC-6 的 msg_hub.publish 方案需重新设计。
+  - **注**：msg_hub/Topics 是 FR-0100 AC-6 的 msg_hub.publish 方案（用户问题2 决策）的必然依赖；二者为 core 层基础设施，与 v0.3.1 放行的 `quantide.core.scheduler.SchedulerManager` 同级。
 
 ### AC-6
 

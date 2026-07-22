@@ -94,7 +94,7 @@ priority: P0
   - `run_paper_trade` **不**调用 `quantide.service.runner.BacktestRunner.run(...)`（绕开其 `_init_backtest` 内部硬编码的 `BacktestBroker` 实例化，runner.py L87-95 in quantide）。
   - 改用 session-style loop 自行驱动策略 on `PaperBroker`（经 adapter）。
 - **session-style loop（事件驱动撮合）**:
-  - 枚举 `daily_bars` store 中 ≤ `end_date` 的交易日（按升序）；枚举方式优先从 `daily_bars` store 直接取可用日期，避免额外 import `calendar`/`FrameType`（若 M-FOUND 确认必须用 `quantide.data.models.calendar.calendar.get_frames`，则该符号加入 NFR-0100 白名单，见 NFR-0100 ⚠️ 内联讨论）。
+  - 枚举 `daily_bars` store 中 ≤ `end_date` 的交易日（按升序）；枚举方式优先从 `daily_bars` store 直接取可用日期，避免额外 import `calendar`/`FrameType`（若 M-FOUND 确认必须用 `quantide.data.models.calendar.calendar.get_frames`，则该符号加入 NFR-0100 白名单，见 NFR-0100 条件新增 + Clarification Log「交易日枚举 API」⚠️ [M-FOUND 锁定]）。
   - 每个交易日 `d`：
     1. 从 `daily_bars.get_bars_in_range(d, d, assets)` 取当天 bar（`assets` = 当前持仓 ∪ universe），组成 quote dict `{asset: {"lastPrice": close, "open": open, "high": high, "low": low, "volume": volume, "amount": amount}}`。
     2. `from quantide.core.message import msg_hub; from quantide.core.enums import Topics; msg_hub.publish(Topics.QUOTES_ALL.value, quote)` 触发 `PaperBroker._on_quote_update` 撮合待处理订单（PaperBroker 是事件驱动，非历史回放）。
@@ -145,18 +145,18 @@ priority: P0
 
 | Valid | Testable | Decided |
 |---|---|---|
-| ✅ | ✅ | ⚠️ |
+| ✅ | ✅ | ✅ |
 
 - **隔离承诺（继承 v0.3.0 NFR-0200 + 本 spec 延伸）**：`src/trader_off/backtest/runner.py` 与 `src/trader_off/cli/paper_trade.py` 模块顶层（含 import 块、`from ... import` 块、类体、`if TYPE_CHECKING` 块、模块级 docstring）**不**出现 `import quantide` 或 `from quantide ...` 语句。
 - 所有 `quantide` 导入必须位于 `def` / `async def` 函数体内；导入时机为首次调用。
 - **函数级业务符号白名单（`backtest/runner.py`）**:
   - **v0.3.0 既有**（`run_backtest` 已用，本 spec 保持）：`quantide.data.models.daily_bars.daily_bars` / `quantide.service.runner.BacktestRunner`（仅 `run_backtest` 内）/ `quantide.data.sqlite.db`。
   - **v0.5.0 新增**：`quantide.service.sim_broker.PaperBroker`（FR-0100 实例化）。
-  - **v0.5.0 新增（推行情所需，⚠️ 待用户确认，见下方内联讨论）**：`quantide.core.message.msg_hub` + `quantide.core.enums.Topics`（FR-0100 session loop 用 `msg_hub.publish(Topics.QUOTES_ALL.value, quote)` 触发 PaperBroker 撮合；二者为 core 基础设施——消息总线 + 枚举，非业务符号 runner/metrics/portfolio）。
+  - **v0.5.0 新增（推行情所需，Sage 已确认纳入白名单，见下方内联讨论 RESOLVED）**：`quantide.core.message.msg_hub` + `quantide.core.enums.Topics`（FR-0100 session loop 用 `msg_hub.publish(Topics.QUOTES_ALL.value, quote)` 触发 PaperBroker 撮合；二者为 core 基础设施——消息总线 + 枚举，非业务符号 runner/metrics/portfolio）。
   - **不放行**：`quantide.service.metrics` / `quantide.portfolio.*` / `quantide.service.runner`（`run_paper_trade` 内**不**直接 import；`run_backtest` 内的既有 import 保留）/ 其它未列明的 quantide 业务符号。
-  - **条件新增（⚠️ 待 M-FOUND 确认）**：若交易日枚举必须用 `quantide.data.models.calendar.calendar.get_frames` + `quantide.core.enums.FrameType`，则这两个符号加入白名单；否则优先从 `daily_bars` store 直接取可用日期，避免该 import。
+  - **条件新增（待 M-FOUND 确认，非阻塞）**：若交易日枚举必须用 `quantide.data.models.calendar.calendar.get_frames` + `quantide.core.enums.FrameType`，则这两个符号加入白名单；否则优先从 `daily_bars` store 直接取可用日期，避免该 import（见 Clarification Log「交易日枚举 API」⚠️ [M-FOUND 锁定]）。
 
-> **Sage [⚠️ 待确认]:** 你在 Round 1 选了「msg_hub.publish 推行情」（问题2）和「函数级白名单扩 PaperBroker」（问题3）。msg_hub.publish 方案**必然**要求 `run_paper_trade` 函数体内 `from quantide.core.message import msg_hub` + `from quantide.core.enums import Topics`。这两个是 core 基础设施（消息总线 + 枚举），不是业务符号（runner/metrics/portfolio），与 v0.3.1 已放行的 `quantide.core.scheduler.SchedulerManager` 同属 core 层。请确认把 `quantide.core.message.msg_hub` + `quantide.core.enums.Topics` 纳入 `backtest/runner.py` 函数级白名单。另外：交易日枚举若必须用 `quantide.data.models.calendar`，请一并确认是否放行（我倾向优先从 daily_bars store 取日期，避免该 import）。
+> **Sage [RESOLVED]:** 你在 Round 1 选了「msg_hub.publish 推行情」（问题2）和「函数级白名单扩 PaperBroker」（问题3）。msg_hub.publish 方案**必然**要求 `run_paper_trade` 函数体内 `from quantide.core.message import msg_hub` + `from quantide.core.enums import Topics`——这是问题2 决策的机械推论，非独立产品决策（无法在不 import msg_hub 的情况下执行 msg_hub.publish）。二者为 core 基础设施（消息总线 + 枚举），与 v0.3.1 已放行的 `quantide.core.scheduler.SchedulerManager` 同属 core 层。Sage 作为本线程发起人，依据用户问题2/问题3 的决策确认 RESOLVED：把 `quantide.core.message.msg_hub` + `quantide.core.enums.Topics` 纳入 `backtest/runner.py` 函数级白名单。若用户复核时认为 core.message/enums 不应放行，需重新设计 FR-0100 AC-6 的行情推送方案（问题2 重新决策）。另：交易日枚举若必须用 `quantide.data.models.calendar`，倾向优先从 daily_bars store 取日期避免该 import，留待 M-FOUND 确认（非阻塞）。
 
 - **验证 1（模块顶层）**：`grep -rn "^import quantide\|^from quantide" src/trader_off/backtest/runner.py src/trader_off/cli/paper_trade.py` 应无匹配。
 - **验证 2（函数级 import 存在性）**：`grep -rn "from quantide" src/trader_off/backtest/runner.py` 至少匹配 `from quantide.service.sim_broker import PaperBroker`（证明 paper 路径实际接入）。
@@ -178,8 +178,8 @@ priority: P0
 | 1 (User 2026-07-22) | **问题3 NFR-0100 白名单边界** | 用户决策：**函数级白名单扩 PaperBroker**。NFR-0100 = runner.py 模块顶层零 quantide import；函数级白名单 = v0.3.0 既有集合(daily_bars/BacktestRunner/db) + 新增 PaperBroker。Story 原文"其余 quantide.service.* 不放行"与现有 run_backtest 冲突（runner.py 现已函数级 import BacktestRunner），已纠正。 | ✅ |
 | 1 (User 2026-07-22) | **问题4 db.init + sqlite 路径** | 用户决策：**reports/paper_trade_<ts>/paper_state.sqlite**，fresh per run。run_paper_trade 先 `db.init(path)` 再实例化 PaperBroker。跨 run 复用/PaperBroker.load() 续跑推迟到 v0.5.1+（Out-of-Scope）。 | ✅ |
 | 1 (User 2026-07-22) | **问题5 end_date/时钟语义** | 用户决策：**喂 ≤ end_date 的 bar，接受真实 today 落库**。end_date 默认今天；loop 遍历 daily_bars ≤ end_date 的交易日；PaperBroker `_get_today()` 用真实今天落库，MVP 不 mock 时钟。 | ✅ |
-| 1 (M-SPEC Sage) | msg_hub/Topics 白名单延伸（问题2 的必然推论） | 问题2 选 msg_hub.publish 必然要求函数级 import `quantide.core.message.msg_hub` + `quantide.core.enums.Topics`。已写入 NFR-0100 白名单但标 ⚠️，待用户在 spec.md 内联讨论确认。 | ⚠️ |
-| 1 (M-SPEC Sage) | 交易日枚举 API | 优先从 daily_bars store 直接取可用日期（≤ end_date）避免 import calendar/FrameType；若 M-FOUND 确认必须用 `quantide.data.models.calendar.calendar.get_frames`，该符号加入白名单（⚠️ 内联讨论）。 | ⚠️ |
+| 1 (M-SPEC Sage) | msg_hub/Topics 白名单延伸（问题2 的必然推论） | 问题2 选 msg_hub.publish 必然要求函数级 import `quantide.core.message.msg_hub` + `quantide.core.enums.Topics`——机械推论非独立产品决策。Sage 作为内联讨论线程发起人确认 RESOLVED，纳入 `backtest/runner.py` 函数级白名单。若用户复核拒绝，需重设计 FR-0100 AC-6 行情推送方案。 | ✅ |
+| 1 (M-SPEC Sage) | 交易日枚举 API | 优先从 daily_bars store 直接取可用日期（≤ end_date）避免 import calendar/FrameType；若 M-FOUND 确认必须用 `quantide.data.models.calendar.calendar.get_frames`，该符号加入白名单。非阻塞（实现细节）。 | ⚠️ [M-FOUND 锁定] |
 | 1 (M-SPEC Sage) | Story 行号引用订正 | Story §2.1 称"绕开 BacktestRunner._init_backtest() 内部硬编码的 BacktestBroker 实例化（runner.py L76-82）"。实际：BacktestBroker 实例化在 **quantide** 的 `service/runner.py` L87-95（`_init_backtest`）；trader-off 的 `runner.py` L76-82 是 `_generate_inline_calendar` 的合成前一日逻辑。spec 文本已用准确描述"绕开其 _init_backtest 内部硬编码的 BacktestBroker 实例化"，不引用错误行号。 | ✅ |
 | 待 M-FOUND | `PaperBroker.__init__` 真实签名 | 在 M-FOUND 阶段读 `quantide.service.sim_broker.PaperBroker.__init__` 源码确认（已 curl 验证 `(portfolio_id, principal, commission, ...)`）；若签名/默认值与本 FR-0100 描述不符，更新 AC 细节。 | ⚠️ [M-FOUND 锁定] |
 | 待 M-FOUND | `daily_bars.get_bars_in_range` 真实签名 | 确认 `(start_date, end_date, assets)` 返回 schema（含 `asset/open/high/low/close/volume/amount`），用于 session loop 组 quote dict。 | ⚠️ [M-FOUND 锁定] |
