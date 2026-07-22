@@ -34,19 +34,19 @@ class TestPyprojectScripts:
             return tomllib.load(f)
 
     def test_project_scripts_table_exists(self, pyproject_data: dict):
-        """[project.scripts] table must exist."""
+        """AC-FR0100-04: [project.scripts] table must exist."""
         project = pyproject_data.get("project", {})
         assert "scripts" in project, "[project.scripts] table is missing"
 
     def test_project_scripts_has_exactly_4_entries(self, pyproject_data: dict):
-        """[project.scripts] must have exactly 4 entries."""
+        """AC-FR0100-04: [project.scripts] must have exactly 4 entries."""
         scripts = pyproject_data.get("project", {}).get("scripts", {})
         assert len(scripts) == 4, (
             f"Expected 4 entries in [project.scripts], got {len(scripts)}: {scripts}"
         )
 
     def test_project_scripts_values_are_correct(self, pyproject_data: dict):
-        """Each entry point mapping must match expected value strings."""
+        """AC-FR0100-04: entry point values match spec."""
         scripts = pyproject_data.get("project", {}).get("scripts", {})
         for key, expected_value in self.EXPECTED_SCRIPTS.items():
             assert key in scripts, f"Missing entry: {key}"
@@ -131,7 +131,7 @@ def _params():
 class TestCliSignatures:
     @_params()
     def test_main_function_exists_and_at_correct_line(self, rel_path: str, expected: dict):
-        """main() function must exist and at the expected line number."""
+        """AC-FR0100-02: main() function exists at expected line number."""
         filepath = REPO_ROOT / rel_path
         func_node, _source = _find_main_function(filepath)
         assert func_node is not None, f"main() not found in {rel_path}"
@@ -141,7 +141,7 @@ class TestCliSignatures:
 
     @_params()
     def test_main_function_args_match_expected(self, rel_path: str, expected: dict):
-        """main() function arg names and annotations must match expected."""
+        """AC-FR0100-03: main() function arg annotations match expected."""
         filepath = REPO_ROOT / rel_path
         func_node, _source = _find_main_function(filepath)
         assert func_node is not None, f"main() not found in {rel_path}"
@@ -166,7 +166,7 @@ class TestCliSignatures:
 
     @_params()
     def test_main_function_return_annotation_matches_expected(self, rel_path: str, expected: dict):
-        """main() function return annotation must match expected."""
+        """AC-FR0100-03: main() function return annotation matches expected."""
         filepath = REPO_ROOT / rel_path
         func_node, _source = _find_main_function(filepath)
         assert func_node is not None, f"main() not found in {rel_path}"
@@ -197,7 +197,7 @@ class TestReadmeUpdates:
         return README_MD.read_text(encoding="utf-8")
 
     def test_warning_line_removed(self, readme_text: str):
-        """The warning line about missing console_scripts must be removed."""
+        """AC-NFR0100-02: README warning line about missing console_scripts removed."""
         lines = [
             ln
             for ln in readme_text.splitlines()
@@ -206,20 +206,20 @@ class TestReadmeUpdates:
         assert len(lines) == 0, f"README still contains console_scripts warning: {lines}"
 
     def test_no_python_m_usage_as_primary(self, readme_text: str):
-        """At most 1 'python -m trader_off' ref (the fallback note)."""
+        """AC-NFR0100-03: at most 1 'python -m trader_off' reference in README."""
         pym_lines = [ln for ln in readme_text.splitlines() if "python -m trader_off" in ln]
         assert len(pym_lines) <= 1, (
             f"Expected ≤1 'python -m' refs, got {len(pym_lines)}: {pym_lines}"
         )
 
     def test_python_m_fallback_mention_preserved(self, readme_text: str):
-        """At least 1 'python -m trader_off' ref must remain as fallback."""
+        """AC-FR0100-05: README retains 'python -m trader_off' fallback mention."""
         assert "python -m trader_off" in readme_text, (
             "README must retain at least 1 'python -m trader_off' fallback"
         )
 
     def test_entry_point_names_in_readme(self, readme_text: str):
-        """README should reference the new entry point names."""
+        """AC-NFR0100-04: README references all 4 entry point names."""
         for name in [
             "trader-off-backtest",
             "trader-off-optimize",
