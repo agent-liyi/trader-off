@@ -38,13 +38,11 @@ CLI 通过 `[project.scripts]` 注册，全局可用：
 
 ### 因子挖掘
 
-```python
-from trader_off.factor_mining.templates import list_templates
-from trader_off.factor_mining.expression import enumerate_factors, DEFAULT_PARAM_SPACE
-
-templates = list_templates()  # 13 个
-candidates = enumerate_factors(templates, DEFAULT_PARAM_SPACE)  # 373 候选
+```bash
+trader-off-mine-factors --config factor_defs.yaml --top-k 30 --corr-threshold 0.9 --output reports/factor_mining_$(date +%Y%m%d)
 ```
+
+需 `--config` YAML 文件定义因子参数空间。Python 接口见 `trader_off.factor_mining.expression`。
 
 ### 组合优化
 
