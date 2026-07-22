@@ -200,26 +200,13 @@ async def _sync(
     """
     # NFR-0100: Lazy function-scope quantide imports
     from quantide.data.fetchers.tushare import fetch_calendar
-    from quantide.data.models.calendar import calendar
 
     # --- Calendar: fetch and write ---
     cal_df = fetch_calendar(start - timedelta(days=30))
-    calendar_dir = Path(".quantide/calendar")
-    calendar_dir.mkdir(parents=True, exist_ok=True)
-    calendar._path = calendar_dir / "calendar.parquet"
-    calendar.save(cal_df)
+    _write_calendar(cal_df)
 
     # --- Compute count (trading days in range) ---
-    import pandas as pd
-
-    start_ts = pd.Timestamp(start)
-    end_ts = pd.Timestamp(end)
-    open_mask = cal_df["is_open"] == 1
-    in_range = (cal_df.index >= start_ts) & (cal_df.index <= end_ts)
-    trading_count = int(open_mask[in_range].sum())
-    if trading_count == 0:
-        # Fallback: use calendar days * 1.5 as upper bound
-        trading_count = int((end - start).days * 1.5) or 1
+    trading_count = _compute_trading_count(cal_df, start, end)
 
     # --- OHLCV: per asset ---
     # NFR-0100: Lazy import of project-internal module (not quantide)
@@ -252,6 +239,48 @@ async def _sync(
         return 5
 
     return 0
+
+
+def _write_calendar(cal_df) -> None:
+    """Write trading calendar DataFrame to .quantide/calendar/calendar.parquet.
+
+    Uses the quantide calendar singleton's save method.
+
+    Args:
+        cal_df: pandas DataFrame from fetch_calendar with 'is_open' and 'prev' columns.
+    """
+    from quantide.data.models.calendar import calendar
+
+    calendar_dir = Path(".quantide/calendar")
+    calendar_dir.mkdir(parents=True, exist_ok=True)
+    calendar._path = calendar_dir / "calendar.parquet"
+    calendar.save(cal_df)
+
+
+def _compute_trading_count(cal_df, start: date, end: date) -> int:
+    """Count trading days between start and end (inclusive) from calendar.
+
+    Args:
+        cal_df: pandas DataFrame from fetch_calendar with 'is_open' column
+                and DatetimeIndex.
+        start: Start date.
+        end: End date.
+
+    Returns:
+        Number of open trading days in the range. Falls back to
+        (end - start).days * 1.5 if no trading days found.
+    """
+    import pandas as pd
+
+    start_ts = pd.Timestamp(start)
+    end_ts = pd.Timestamp(end)
+    open_mask = cal_df["is_open"] == 1
+    in_range = (cal_df.index >= start_ts) & (cal_df.index <= end_ts)
+    trading_count = int(open_mask[in_range].sum())
+    if trading_count == 0:
+        # Fallback: use calendar days * 1.5 as upper bound
+        trading_count = int((end - start).days * 1.5) or 1
+    return trading_count
 
 
 if __name__ == "__main__":
