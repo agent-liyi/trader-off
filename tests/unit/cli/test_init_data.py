@@ -1,6 +1,6 @@
 """Tests for init_data CLI — FR-0100.
 
-Covers: argparse exit 2, happy path JSON output, --home, --force,
+Covers: argparse exit 2, happy path JSON output, --home,
 function-scope lazy import.
 """
 
@@ -27,13 +27,6 @@ class TestArgparseExit2:
         with pytest.raises(SystemExit) as exc_info:
             main(["--unknown"])
         assert exc_info.value.code == 2
-
-    def test_invalid_home_type(self):
-        """Invalid --home value type — argparse will still accept str, but we
-        test that the flag is recognized and doesn't error on valid usage."""
-        # argparse doesn't type-check paths, so test that valid usage works
-        exit_code = main(["--home", "/tmp/test_home"])
-        assert exit_code == 0
 
 
 # ---------------------------------------------------------------------------
@@ -64,10 +57,9 @@ class TestHappyPath:
         assert exit_code == 0
         mock_init_data.assert_called_once_with(home=home_path)
 
-    def test_force_flag_passes(self, mock_init_data, tmp_path, monkeypatch):
-        """--force flag — still calls init_data and returns 0."""
-        monkeypatch.chdir(tmp_path)
-        exit_code = main(["--force"])
+    def test_home_flag_accepts_any_string(self, mock_init_data):
+        """--home accepts any string value without argparse type error."""
+        exit_code = main(["--home", "/tmp/test_home"])
         assert exit_code == 0
         mock_init_data.assert_called_once()
 
@@ -146,25 +138,6 @@ class TestEdgeCases:
     def mock_init_data(self):
         with patch("quantide.data.init_data") as mock:
             yield mock
-
-    def test_force_when_not_exists(self, mock_init_data, tmp_path, monkeypatch, capsys):
-        """--force on fresh dir should still succeed."""
-        monkeypatch.chdir(tmp_path)
-        exit_code = main(["--force"])
-        captured = capsys.readouterr()
-        assert exit_code == 0
-        output = json.loads(captured.out.strip())
-        assert output["status"] == "ok"
-
-    def test_multiple_flags(self, mock_init_data, tmp_path, capsys):
-        """Combine --home and --force."""
-        home_path = tmp_path / "combo"
-        exit_code = main(["--home", str(home_path), "--force"])
-        captured = capsys.readouterr()
-        assert exit_code == 0
-        output = json.loads(captured.out.strip())
-        assert output["status"] == "ok"
-        assert output["data"]["home"] == str(home_path.resolve())
 
     def test_main_returns_int(self, mock_init_data, tmp_path, monkeypatch):
         """main() return type is int."""

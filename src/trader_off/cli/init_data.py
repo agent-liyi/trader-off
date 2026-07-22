@@ -1,7 +1,7 @@
 """CLI entry point for init (FR-0100).
 
 Initializes the quantide data directory at .quantide/ (default) with calendar,
-bars, and db subdirectories.
+bars, and db subdirectories via quantide.data.init_data().
 
 Exit codes:
     0: Success
@@ -59,12 +59,6 @@ def _build_argparser() -> argparse.ArgumentParser:
         type=str,
         default=".quantide",
         help="Data root directory (default: .quantide/)",
-    )
-    parser.add_argument(
-        "--force",
-        action="store_true",
-        default=False,
-        help="Re-initialize even if already exists",
     )
     return parser
 
