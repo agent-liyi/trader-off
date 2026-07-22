@@ -136,7 +136,7 @@ class TestStatusModels:
         assert parsed["data"]["models"] == []
 
     def test_models_with_files(self, tmp_path, monkeypatch):
-        """When factor_registry/ has parquet files → count them."""
+        """When factor_registry/ has parquet files → list them."""
         monkeypatch.chdir(tmp_path)
         registry_dir = Path("factor_registry")
         registry_dir.mkdir(parents=True)
@@ -153,7 +153,7 @@ class TestStatusModels:
         assert exit_code == 0
         parsed = json.loads(output)
         assert parsed["status"] == "ok"
-        assert parsed["data"]["models"] == 2
+        assert len(parsed["data"]["models"]) == 2
 
 
 # ==========================================================================

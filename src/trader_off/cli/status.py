@@ -77,38 +77,29 @@ def _status_data() -> dict:
         return {"status": "ok", "data": {"data_source": "none"}}
 
 
+def _check_models() -> list:
+    """Return model list for global status.
+
+    Returns empty list (dedicated per-model inspection is in ``status models``).
+    """
+    return []
+
+
 def _status_models() -> dict:
     """Check factor_registry/ directory for parquet files.
 
     Returns:
-        Dict with models count.
+        Dict with models list (parquet filenames).
     """
     registry_dir = Path("factor_registry")
     if not registry_dir.exists():
         return {"status": "ok", "data": {"models": []}}
 
     try:
-        parquet_files = list(registry_dir.glob("*.parquet"))
-        return {"status": "ok", "data": {"models": len(parquet_files)}}
+        parquet_files = sorted(p.name for p in registry_dir.glob("*.parquet"))
+        return {"status": "ok", "data": {"models": parquet_files}}
     except Exception:
         return {"status": "ok", "data": {"models": []}}
-
-
-def _check_models() -> list:
-    """Check factor_registry/ for parquet files.
-
-    Returns:
-        List of model info dicts (currently returns model count as empty list or
-        list with count for backward compatibility).
-    """
-    registry_dir = Path("factor_registry")
-    if not registry_dir.exists():
-        return []
-    try:
-        count = len(list(registry_dir.glob("*.parquet")))
-        return [{"count": count}] if count > 0 else []
-    except Exception:
-        return []
 
 
 def _status_scheduler() -> dict:
