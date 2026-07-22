@@ -12,6 +12,8 @@
 - **评估**：IC / Rank IC / 分层回测
 - **策略**：`LGBMTop20` / `OptimizedTopK`（接 quantide `BaseStrategy`）
 - **回测**：委托 `quantide.BacktestRunner` + `BacktestBroker`（真实撮合 / 手续费 / T+1 / 记账）
+- **纸交易**：委托 `quantide.PaperBroker`（仿真交易，策略零改动，同一份代码跑回测和纸交易）
+- **数据同步**：`trader-off-sync-data` 从 tuShare 拉 OHLCV 到本地每日条存储
 - **指标**：委托 `quantide.service.metrics`（Sharpe / Sortino / 回撤持续期 / 基准对比）
 - **组合优化**：cvxpy Max Sharpe（long-only / 满仓 / 行业中性 / 个股 ≤10%）
 - **调度**：croniter + `quantide.SchedulerManager`（漂移检测 → 重训练 → 部署）
@@ -77,6 +79,28 @@ trader-off-backtest \
 ```
 
 输出 `reports/backtest_<ts>/nav_<ts>.parquet`、`positions_<ts>.parquet`、`summary.json`。
+
+### 纸交易（v0.5.0）
+
+```bash
+trader-off-paper-trade \
+    --strategy optimized_topk \
+    --universe watchlist.csv \
+    --capital 1000000
+```
+
+输出 `reports/paper_trade_<ts>/`：仿真 NAV、持仓、交易记录。需 `TUSHARE_TOKEN`。
+
+### 数据同步（v0.5.1）
+
+```bash
+trader-off-sync-data \
+    --universe watchlist.csv \
+    --start 2026-01-01 \
+    --end 2026-07-22
+```
+
+从 tuShare 拉取 OHLCV 数据写入本地 DailyBarsStore（年分区 parquet）。需 `TUSHARE_TOKEN`。支持 `--dry-run`（不拉数据，仅打印计划）。
 
 ### 调度
 
