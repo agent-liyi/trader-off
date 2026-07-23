@@ -69,7 +69,7 @@ AC-FR0200-02
 ### AC-3
 AC-FR0200-03
 - **WHEN** `trader-off server --json` is run
-- **THEN** startup info is emitted as JSON line(s) parseable by an agent (shape per confirmed FR-0200 quote).
+- **THEN** a single startup JSON line is emitted: `{"status":"ok","data":{"host":"<host>","port":<port>}}`, parseable by an agent.
 
 ### AC-4
 AC-FR0200-04

@@ -42,7 +42,7 @@ priority: P0
 
 | Valid | Testable | Decided |
 |---|---|---|
-| ✅ | ✅ | ⚠️ |
+| ✅ | ✅ | ✅ |
 
 Create `src/trader_off/api/server.py` — a FastAPI application that wraps the existing CLI internal functions as HTTP endpoints. The 14 internal functions are exposed as **13 endpoints (12 function endpoints + 1 health)** per the confirmed inventory:
 
@@ -74,9 +74,12 @@ Create `src/trader_off/api/server.py` — a FastAPI application that wraps the e
 | 2 | 422 | input validation / file error |
 | 4 | 400 | config error |
 | 5 | 500 | evaluation failure |
-| 1 / 3 / other | (see open quote) | generic / business-rule / unspecified |
+| 1 | 500 | generic / not-found |
+| 3 | 422 | business-rule failure |
+| other | 500 | unspecified / fallback |
 
-> **Sage:** AC-02 only pins exit-code→HTTP for codes 4→400, 5→500, 2→422. The existing CLIs also emit exit 0 (success), 1 (generic / not-found, e.g. `check-factor` returns 1 for "factor not found"), and 3 (business-rule, e.g. portfolio "too few assets", mine-factors "fewer than 10 factors"). Propose completing the table as: 0→200, 1→500, 3→422, any other→500. Confirm or adjust?
+> **Sage [RESOLVED]:** AC-02 only pins exit-code→HTTP for codes 4→400, 5→500, 2→422. The existing CLIs also emit exit 0 (success), 1 (generic / not-found, e.g. `check-factor` returns 1 for "factor not found"), and 3 (business-rule, e.g. portfolio "too few assets", mine-factors "fewer than 10 factors"). Proposed completing the table as: 0→200, 1→500, 3→422, any other→500.
+>> **User:** Accepted the proposed mapping.
 
 **Execution model** (confirmed): blocking internal functions are dispatched via `asyncio.get_running_loop().run_in_executor(...)` so the uvicorn event loop is not blocked (story Risk #1 mitigation). The HTTP response remains synchronous — one request, one response, same call semantics as the subprocess path; NO job-id / polling surface.
 
@@ -90,7 +93,7 @@ Create `src/trader_off/api/server.py` — a FastAPI application that wraps the e
 
 | Valid | Testable | Decided |
 |---|---|---|
-| ✅ | ✅ | ⚠️ |
+| ✅ | ✅ | ✅ |
 
 Create `src/trader_off/cli/server.py` — the `trader-off server` CLI entry point.
 
@@ -98,11 +101,12 @@ Create `src/trader_off/cli/server.py` — the `trader-off server` CLI entry poin
 
 - `--port` (default **8000**) — overridden from the story's 5800 due to the qmt-gateway port conflict (story §6 advisory; qmt-gateway v0.6.0 defaults to `http://localhost:5800`). Human ruling: use 8000.
 - `--host` (default `"127.0.0.1"`)
-- `--json` — when passed, emit startup info as JSON line(s) for agent parsing (AC-05).
+- `--json` — when passed, emit a single startup JSON line for agent parsing: `{"status":"ok","data":{"host":"<host>","port":<port>}}` (AC-05).
 
 **Behavior**: launches uvicorn programmatically (`uvicorn.run` / `uvicorn.Server`, NOT a subprocess) serving the FastAPI app from FR-0100 on `host:port`. `fastapi` / `uvicorn` are imported at function scope (see NFR-0100).
 
-> **Sage:** AC-05 requires `--json` to emit startup info as "JSON line(s)" for agent parsing, but the exact shape is unspecified. Propose a single startup line consistent with the `--json` envelope: `{"status":"ok","data":{"host":"127.0.0.1","port":8000}}`. Confirm or adjust?
+> **Sage [RESOLVED]:** AC-05 requires `--json` to emit startup info as "JSON line(s)" for agent parsing; the exact shape was unspecified. Proposed a single startup line consistent with the `--json` envelope: `{"status":"ok","data":{"host":"127.0.0.1","port":8000}}`.
+>> **User:** Accepted the proposed shape.
 
 ---
 
@@ -133,4 +137,4 @@ Create `src/trader_off/cli/server.py` — the `trader-off server` CLI entry poin
 - 2026-07-23 Sage: port default ruled **8000** by Human (story §6 advisory; qmt-gateway v0.6.0 occupies `:5800`).
 - 2026-07-23 Sage: `scheduler/api.py` (aiohttp, `:8765`) NOT migrated; coexists with new FastAPI server (story §6 secondary point).
 - 2026-07-23 Sage: "14 CLI internal functions" reconciled to the user-provided inventory of **12 function endpoints + `/api/health` = 13 endpoints**. Import-existence verification of the 14 internal functions is deferred to M-DEV (story Risk #1, owner Devon).
-- 2026-07-23 Sage: 2 open inline-discussion quotes remain (FR-0100 exit-code mapping completeness; FR-0200 `--json` startup shape) → FR-0100 / FR-0200 marked ⚠️ pending user confirmation.
+- 2026-07-23 Sage (Step-3 resolution): both open quotes resolved with user — (1) exit-code→HTTP mapping completed: 0→200, 1→500, 3→422, other→500 (in addition to 2→422, 4→400, 5→500); (2) `--json` startup shape = `{"status":"ok","data":{"host":"<host>","port":<port>}}`. FR-0100 / FR-0200 flipped ⚠️→✅. All threads resolved.
