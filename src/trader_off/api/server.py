@@ -259,9 +259,9 @@ def create_app():
     # POST endpoints — action commands
     # ==================================================================
 
-    # --- POST /api/backtest ---
+    # --- POST /backtest ---
 
-    @app.post("/api/backtest")
+    @app.post("/backtest")
     async def api_backtest(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -285,9 +285,9 @@ def create_app():
             },
         )
 
-    # --- POST /api/sync-data ---
+    # --- POST /sync-data ---
 
-    @app.post("/api/sync-data")
+    @app.post("/sync-data")
     async def api_sync_data(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -298,9 +298,9 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "sync-data")
 
-    # --- POST /api/init ---
+    # --- POST /init ---
 
-    @app.post("/api/init")
+    @app.post("/init")
     async def api_init(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -311,9 +311,9 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "init")
 
-    # --- POST /api/mine-factors ---
+    # --- POST /mine-factors ---
 
-    @app.post("/api/mine-factors")
+    @app.post("/mine-factors")
     async def api_mine_factors(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -324,9 +324,9 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "mine-factors")
 
-    # --- POST /api/optimize ---
+    # --- POST /optimize ---
 
-    @app.post("/api/optimize")
+    @app.post("/optimize")
     async def api_optimize(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -337,9 +337,9 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "optimize")
 
-    # --- POST /api/check-factor ---
+    # --- POST /check-factor ---
 
-    @app.post("/api/check-factor")
+    @app.post("/check-factor")
     async def api_check_factor(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -350,9 +350,9 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "check-factor")
 
-    # --- POST /api/live-trade ---
+    # --- POST /live-trade ---
 
-    @app.post("/api/live-trade")
+    @app.post("/live-trade")
     async def api_live_trade(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -363,9 +363,9 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "live-trade")
 
-    # --- POST /api/scheduler ---
+    # --- POST /scheduler ---
 
-    @app.post("/api/scheduler")
+    @app.post("/scheduler")
     async def api_scheduler(request: Request) -> JSONResponse:
         body = await _safe_json(request)
         if isinstance(body, JSONResponse):
@@ -376,33 +376,38 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "scheduler")
 
-    # --- POST /api/paper-trade (NYI) ---
-    @app.post("/api/paper-trade")
+    # --- POST /paper-trade (NYI) ---
+    @app.post("/paper-trade")
     async def api_paper_trade() -> JSONResponse:
         return _not_implemented("paper-trade")
 
-    # --- POST /api/grid-search (NYI) ---
-    @app.post("/api/grid-search")
+    # --- POST /grid-search (NYI) ---
+    @app.post("/grid-search")
     async def api_grid_search() -> JSONResponse:
         return _not_implemented("grid-search")
 
-    # --- POST /api/generate-strategy (NYI) ---
-    @app.post("/api/generate-strategy")
+    # --- POST /generate-strategy (NYI) ---
+    @app.post("/generate-strategy")
     async def api_generate_strategy() -> JSONResponse:
         return _not_implemented("generate-strategy")
 
-    # --- POST /api/live (NYI) ---
-    @app.post("/api/live")
-    async def api_live() -> JSONResponse:
+    # --- POST /live/start (NYI) ---
+    @app.post("/live/start")
+    async def api_live_start() -> JSONResponse:
+        return _not_implemented("live")
+
+    # --- POST /live/stop (NYI) ---
+    @app.post("/live/stop")
+    async def api_live_stop() -> JSONResponse:
         return _not_implemented("live")
 
     # ==================================================================
     # GET endpoints — read-only status queries
     # ==================================================================
 
-    # --- GET /api/stock-list ---
+    # --- GET /stock-list ---
 
-    @app.get("/api/stock-list")
+    @app.get("/stock-list")
     async def api_stock_list(request: Request) -> JSONResponse:
         try:
             code = await _run_cli_in_executor("trader_off.cli.stock_list", {})
@@ -410,45 +415,45 @@ def create_app():
             code = 1
         return _cli_result_to_response(code, "stock-list")
 
-    # --- GET /api/status ---
+    # --- GET /status ---
 
-    @app.get("/api/status")
+    @app.get("/status")
     async def api_status() -> dict[str, Any]:
         return {
             "status": "ok",
             "data": {"server": "running", "version": "v0.7.0"},
         }
 
-    # --- GET /api/status/data ---
+    # --- GET /status/data ---
 
-    @app.get("/api/status/data")
+    @app.get("/status/data")
     async def api_status_data() -> dict[str, Any]:
         return {
             "status": "ok",
             "data": {"data_status": "unknown", "last_sync": None},
         }
 
-    # --- GET /api/status/models ---
+    # --- GET /status/models ---
 
-    @app.get("/api/status/models")
+    @app.get("/status/models")
     async def api_status_models() -> dict[str, Any]:
         return {
             "status": "ok",
             "data": {"models": [], "active_model": None},
         }
 
-    # --- GET /api/live ---
+    # --- GET /live ---
 
-    @app.get("/api/live")
+    @app.get("/live")
     async def api_live_status() -> dict[str, Any]:
         return {
             "status": "ok",
             "data": {"live": "not running", "connected": False},
         }
 
-    # --- GET /api/scheduler/status ---
+    # --- GET /scheduler/status ---
 
-    @app.get("/api/scheduler/status")
+    @app.get("/scheduler/status")
     async def api_scheduler_status() -> dict[str, Any]:
         return {
             "status": "ok",
