@@ -42,6 +42,7 @@ trader-off-sync-data = "trader_off.cli.sync_data:main"
 trader-off-init = "trader_off.cli.init_data:main"
 trader-off-stock-list = "trader_off.cli.stock_list:main"
 trader-off-check-factor = "trader_off.cli.check_factor:main"
+trader-off-live-trade = "trader_off.cli.live_trade:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
