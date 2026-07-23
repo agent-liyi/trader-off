@@ -401,6 +401,20 @@ def create_app():
     async def api_live_stop() -> JSONResponse:
         return _not_implemented("live")
 
+    # --- POST /live ---
+
+    @app.post("/live")
+    async def api_live_dispatch(request: Request) -> JSONResponse:
+        body = await _safe_json(request)
+        if isinstance(body, JSONResponse):
+            return body
+        action = body.get("action", "")
+        if action == "start":
+            return _not_implemented("live")
+        elif action == "stop":
+            return _not_implemented("live")
+        return _not_implemented("live")
+
     # ==================================================================
     # GET endpoints — read-only status queries
     # ==================================================================

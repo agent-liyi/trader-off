@@ -90,6 +90,7 @@ POST_ENDPOINTS = [
     "/check-factor",
     "/generate-strategy",
     "/live-trade",
+    "/live",
     "/live/start",
     "/live/stop",
     "/scheduler",
@@ -210,6 +211,14 @@ class TestPostEndpoints:
         data = resp.json()
         assert data["status"] == "ok"
         assert "data" in data
+
+    def test_live_action_dispatch(self, client):
+        """POST /live with action=start dispatches to live module."""
+        resp = client.post("/live", json={"action": "start"})
+        # NYI → 501
+        assert resp.status_code == 501
+        data = resp.json()
+        assert data["status"] == "error"
 
 
 # ---------------------------------------------------------------------------
@@ -434,7 +443,7 @@ class TestRouteEnumeration:
     """AC-FR0100-07: All endpoints are registered at spec-defined paths."""
 
     ALL_PATHS = {
-        # POST endpoints (13)
+        # POST endpoints (14)
         ("POST", "/backtest"),
         ("POST", "/paper-trade"),
         ("POST", "/sync-data"),
@@ -445,6 +454,7 @@ class TestRouteEnumeration:
         ("POST", "/check-factor"),
         ("POST", "/generate-strategy"),
         ("POST", "/live-trade"),
+        ("POST", "/live"),
         ("POST", "/live/start"),
         ("POST", "/live/stop"),
         ("POST", "/scheduler"),
@@ -477,7 +487,7 @@ class TestRouteEnumeration:
             )
 
     def test_total_endpoint_count(self):
-        """The total number of registered endpoints is at least 20."""
+        """The total number of registered endpoints is at least 21."""
         from fastapi import FastAPI
 
         from trader_off.api.server import create_app
@@ -490,6 +500,6 @@ class TestRouteEnumeration:
                     if method not in ("OPTIONS", "HEAD"):
                         route_pairs.add((method, route.path))
 
-        assert len(route_pairs) >= 20, (
-            f"Expected at least 20 endpoints, got {len(route_pairs)}: {sorted(route_pairs)}"
+        assert len(route_pairs) >= 21, (
+            f"Expected at least 21 endpoints, got {len(route_pairs)}: {sorted(route_pairs)}"
         )
