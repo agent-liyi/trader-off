@@ -1,15 +1,15 @@
 [project]
-version = "v0.7.1"
+version = "v0.7.2"
 repo = "github.com/agent-liyi/trader-off"
-project = "trader-off-v0.7.1"
-project_id = "https://github.com/users/agent-liyi/projects/23"
-spec_id = "v0.7.1-001-qmt-p0-wrappers"
-release_branch = "releases/v0.7.1"
+project = "trader-off-v0.7.2"
+project_id = "https://github.com/users/agent-liyi/projects/24"
+spec_id = "v0.7.2-001-qmt-p1-wrappers"
+release_branch = "releases/v0.7.2"
 
 [meta]
 pre_commit = "installed (python + base)"
 created = "2026-07-22"
-current_stage = "M-MILESTONE"
+current_stage = "M-FOUND"
 security_audit = "enabled"
 smoke_test_issue = "#168 (closed)"
 smoke_test_pr = "#167 (closed)"
