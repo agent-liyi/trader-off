@@ -116,11 +116,12 @@ trader-off-sync-data \
 ### 初始化
 
 ```bash
-trader-off-init                    # 初始化数据目录 .quantide/
+trader-off-init                    # 在当前目录下初始化（./data/...）
+trader-off-init --home .quantide   # 初始化到 .quantide/
 trader-off-init --home /path/to/data  # 指定数据根目录
 ```
 
-初始化日历、行情、数据库子目录。
+在当前目录创建日历、行情、数据库子目录（`data/calendar.parquet`、`data/bars/daily/` 等）。需要 `TUSHARE_TOKEN`。
 
 ### 股票列表
 

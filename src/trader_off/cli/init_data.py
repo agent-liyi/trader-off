@@ -1,7 +1,8 @@
 """CLI entry point for init (FR-0100).
 
-Initializes the quantide data directory at .quantide/ (default) with calendar,
-bars, and db subdirectories via quantide.data.init_data().
+Initializes the quantide data directory at the current working directory (default)
+or at the path specified by --home. Creates calendar, bars, and db subdirectories
+via quantide.data.init_data().
 
 Exit codes:
     0: Success
@@ -12,6 +13,7 @@ NFR-0100: All quantide imports are function-scope (lazy), not module-top-level.
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -28,7 +30,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_argparser()
     args = parser.parse_args(argv)
 
-    home = Path(args.home).expanduser().resolve()
+    # Default to current working directory if --home not specified
+    home = Path.cwd() if args.home is None else Path(args.home).expanduser().resolve()
 
     # NFR-0100: Lazy function-scope quantide import
     from quantide.data import init_data
@@ -57,8 +60,8 @@ def _build_argparser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--home",
         type=str,
-        default=".quantide",
-        help="Data root directory (default: .quantide/)",
+        default=None,
+        help="Data root directory (default: current working directory)",
     )
     return parser
 
