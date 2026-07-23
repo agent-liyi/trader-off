@@ -620,9 +620,7 @@ class TestSystemEndpoints:
     # --- POST /api/system/firewall (form data) ---
 
     def test_update_firewall(self, mock_client):
-        """POST /api/system/firewall sends form data with JSON-encoded rules."""
-        import json
-
+        """POST /api/system/firewall sends form data with port rules."""
         rules = [{"ip": "10.0.0.0/8", "action": "allow"}]
         expected = {"status": "ok", "rules": rules}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
@@ -634,7 +632,7 @@ class TestSystemEndpoints:
             "POST",
             "/api/system/firewall",
             params=None,
-            data={"rules": json.dumps(rules)},
+            data={"port": rules},
         )
         assert result == expected
 

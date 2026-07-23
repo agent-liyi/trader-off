@@ -442,9 +442,7 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: If the HTTP request fails.
         """
-        import json as _json
-
-        return self._post("/api/system/firewall", form_data={"rules": _json.dumps(rules)})
+        return self._post("/api/system/firewall", form_data={"port": rules})
 
     # ------------------------------------------------------------------
     # API key management (FR-0100 P2)
