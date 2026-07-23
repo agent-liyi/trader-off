@@ -121,7 +121,7 @@ _SIGS = {
         "returns": "int",
     },
     "src/trader_off/cli/server.py": {
-        "line": 82,
+        "line": 81,
         "name": "main",
         "args": [("argv", "list[str] | None", "None")],
         "returns": "int",
