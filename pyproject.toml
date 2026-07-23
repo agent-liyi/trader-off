@@ -18,6 +18,8 @@ dependencies = [
     "croniter>=2.0,<3.0",
     "aiohttp>=3.9,<4.0",
     "cvxpy>=1.9.2",
+    "fastapi>=0.115,<1.0",
+    "uvicorn[standard]>=0.34,<1.0",
     "quantide @ git+https://github.com/agent-liyi/millionaire.git",
 ]
 
@@ -43,6 +45,7 @@ trader-off-init = "trader_off.cli.init_data:main"
 trader-off-stock-list = "trader_off.cli.stock_list:main"
 trader-off-check-factor = "trader_off.cli.check_factor:main"
 trader-off-live-trade = "trader_off.cli.live_trade:main"
+trader-off-server = "trader_off.cli.server:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
