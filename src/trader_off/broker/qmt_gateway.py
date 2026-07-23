@@ -334,7 +334,7 @@ class QmtGatewayBroker:
         return self._get("/api/system/version")
 
     def check_version(self) -> dict:
-        """Check for available updates via POST /api/system/check-version.
+        """Check for available updates via POST /api/system/version/check.
 
         Returns:
             Parsed JSON dict with up-to-date status and latest version.
@@ -342,10 +342,10 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: If the HTTP request fails.
         """
-        return self._post("/api/system/check-version")
+        return self._post("/api/system/version/check")
 
     def start_update(self) -> dict:
-        """Trigger gateway update via POST /api/system/start-update.
+        """Trigger gateway update via POST /api/system/update.
 
         Returns:
             Parsed JSON dict with update initiation status.
@@ -353,10 +353,10 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: If the HTTP request fails.
         """
-        return self._post("/api/system/start-update")
+        return self._post("/api/system/update")
 
     def get_update_status(self, task_id: str) -> dict:
-        """Query update job progress via GET /api/system/update-status/{task_id}.
+        """Query update job progress via GET /api/system/update/status/{task_id}.
 
         Args:
             task_id: The update task ID returned by start_update.
@@ -367,10 +367,10 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: If the HTTP request fails.
         """
-        return self._get(f"/api/system/update-status/{task_id}")
+        return self._get(f"/api/system/update/status/{task_id}")
 
     def do_rollback(self) -> dict:
-        """Roll back to previous version via POST /api/system/do-rollback.
+        """Roll back to previous version via POST /api/system/rollback.
 
         Returns:
             Parsed JSON dict with rollback status.
@@ -378,7 +378,7 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: If the HTTP request fails.
         """
-        return self._post("/api/system/do-rollback")
+        return self._post("/api/system/rollback")
 
     def get_autostart(self) -> dict:
         """Get autostart configuration via GET /api/system/autostart.
@@ -392,7 +392,7 @@ class QmtGatewayBroker:
         return self._get("/api/system/autostart")
 
     def set_autostart(self, enabled: bool) -> dict:
-        """Set autostart configuration via POST /api/system/set-autostart.
+        """Set autostart configuration via POST /api/system/autostart.
 
         Args:
             enabled: True to enable autostart, False to disable.
@@ -404,8 +404,8 @@ class QmtGatewayBroker:
             RuntimeError: If the HTTP request fails.
         """
         return self._post(
-            "/api/system/set-autostart",
-            params={"enabled": "true" if enabled else "false"},
+            "/api/system/autostart",
+            form_data={"enabled": "true" if enabled else "false"},
         )
 
     def get_port(self) -> dict:
@@ -431,7 +431,7 @@ class QmtGatewayBroker:
         return self._get("/api/system/firewall")
 
     def update_firewall(self, rules: list[dict]) -> dict:
-        """Update firewall rules via POST /api/system/update-firewall.
+        """Update firewall rules via POST /api/system/firewall.
 
         Args:
             rules: List of firewall rule dicts.
@@ -442,7 +442,9 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: If the HTTP request fails.
         """
-        return self._post("/api/system/update-firewall", json_body={"rules": rules})
+        import json as _json
+
+        return self._post("/api/system/firewall", form_data={"rules": _json.dumps(rules)})
 
     # ------------------------------------------------------------------
     # API key management (FR-0100 P2)
@@ -460,7 +462,7 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: If the HTTP request fails.
         """
-        return self._post("/api/api-keys", params={"name": name})
+        return self._post("/api/api-keys", form_data={"name": name})
 
     def list_api_keys(self) -> list[dict]:
         """List all API keys via GET /api/api-keys.
@@ -506,13 +508,20 @@ class QmtGatewayBroker:
         """
         return self._request("GET", path, params=params)
 
-    def _post(self, path: str, params: dict | None = None, json_body: dict | None = None):
+    def _post(
+        self,
+        path: str,
+        params: dict | None = None,
+        json_body: dict | None = None,
+        form_data: dict | None = None,
+    ):
         """Perform a POST request and return parsed JSON.
 
         Args:
             path: URL path (e.g., "/buy_stock").
             params: Optional query parameters.
             json_body: Optional JSON body payload.
+            form_data: Optional form-encoded body payload.
 
         Returns:
             Parsed JSON response (dict or list[dict]).
@@ -520,10 +529,15 @@ class QmtGatewayBroker:
         Raises:
             RuntimeError: On non-200 status or network failure.
         """
-        return self._request("POST", path, params=params, json_body=json_body)
+        return self._request("POST", path, params=params, json_body=json_body, form_data=form_data)
 
     def _request(
-        self, method: str, path: str, params: dict | None = None, json_body: dict | None = None
+        self,
+        method: str,
+        path: str,
+        params: dict | None = None,
+        json_body: dict | None = None,
+        form_data: dict | None = None,
     ):
         """Execute an HTTP request and return parsed JSON.
 
@@ -532,6 +546,7 @@ class QmtGatewayBroker:
             path: URL path.
             params: Optional query parameters.
             json_body: Optional JSON body payload.
+            form_data: Optional form-encoded body payload.
 
         Returns:
             Parsed JSON response.
@@ -546,6 +561,8 @@ class QmtGatewayBroker:
                 kwargs = {"params": params}
                 if json_body is not None:
                     kwargs["json"] = json_body
+                if form_data is not None:
+                    kwargs["data"] = form_data
                 response = client.request(method, path, **kwargs)
                 if response.status_code != 200:
                     raise RuntimeError(f"HTTP {response.status_code}: {response.text.strip()}")

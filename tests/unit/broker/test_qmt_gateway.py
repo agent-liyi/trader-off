@@ -488,10 +488,10 @@ class TestSystemEndpoints:
         mock_client.request.assert_called_once_with("GET", "/api/system/version", params=None)
         assert result == expected
 
-    # --- POST /api/system/check-version ---
+    # --- POST /api/system/version/check ---
 
     def test_check_version(self, mock_client):
-        """POST /api/system/check-version returns version check result."""
+        """POST /api/system/version/check returns version check result."""
         expected = {"up_to_date": False, "latest": "1.2.4"}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
 
@@ -499,27 +499,27 @@ class TestSystemEndpoints:
         result = broker.check_version()
 
         mock_client.request.assert_called_once_with(
-            "POST", "/api/system/check-version", params=None
+            "POST", "/api/system/version/check", params=None
         )
         assert result == expected
 
-    # --- POST /api/system/start-update ---
+    # --- POST /api/system/update ---
 
     def test_start_update(self, mock_client):
-        """POST /api/system/start-update triggers update and returns status."""
+        """POST /api/system/update triggers update and returns status."""
         expected = {"status": "updating", "message": "Update started"}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
 
         broker = QmtGatewayBroker()
         result = broker.start_update()
 
-        mock_client.request.assert_called_once_with("POST", "/api/system/start-update", params=None)
+        mock_client.request.assert_called_once_with("POST", "/api/system/update", params=None)
         assert result == expected
 
-    # --- GET /api/system/update-status/{task_id} ---
+    # --- GET /api/system/update/status/{task_id} ---
 
     def test_get_update_status(self, mock_client):
-        """GET /api/system/update-status/{task_id} returns update progress."""
+        """GET /api/system/update/status/{task_id} returns update progress."""
         expected = {"task_id": "task-001", "progress": 50, "status": "downloading"}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
 
@@ -527,21 +527,21 @@ class TestSystemEndpoints:
         result = broker.get_update_status("task-001")
 
         mock_client.request.assert_called_once_with(
-            "GET", "/api/system/update-status/task-001", params=None
+            "GET", "/api/system/update/status/task-001", params=None
         )
         assert result == expected
 
-    # --- POST /api/system/do-rollback ---
+    # --- POST /api/system/rollback ---
 
     def test_do_rollback(self, mock_client):
-        """POST /api/system/do-rollback triggers rollback and returns status."""
+        """POST /api/system/rollback triggers rollback and returns status."""
         expected = {"status": "rolled_back", "message": "Rollback complete"}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
 
         broker = QmtGatewayBroker()
         result = broker.do_rollback()
 
-        mock_client.request.assert_called_once_with("POST", "/api/system/do-rollback", params=None)
+        mock_client.request.assert_called_once_with("POST", "/api/system/rollback", params=None)
         assert result == expected
 
     # --- GET /api/system/autostart ---
@@ -557,10 +557,10 @@ class TestSystemEndpoints:
         mock_client.request.assert_called_once_with("GET", "/api/system/autostart", params=None)
         assert result == expected
 
-    # --- POST /api/system/set-autostart?enabled=... ---
+    # --- POST /api/system/autostart (form data) ---
 
     def test_set_autostart_enabled(self, mock_client):
-        """POST /api/system/set-autostart?enabled=true enables autostart."""
+        """POST /api/system/autostart with data enabled=true enables autostart."""
         expected = {"status": "ok", "enabled": True}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
 
@@ -569,13 +569,14 @@ class TestSystemEndpoints:
 
         mock_client.request.assert_called_once_with(
             "POST",
-            "/api/system/set-autostart",
-            params={"enabled": "true"},
+            "/api/system/autostart",
+            params=None,
+            data={"enabled": "true"},
         )
         assert result == expected
 
     def test_set_autostart_disabled(self, mock_client):
-        """POST /api/system/set-autostart?enabled=false disables autostart."""
+        """POST /api/system/autostart with data enabled=false disables autostart."""
         expected = {"status": "ok", "enabled": False}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
 
@@ -584,8 +585,9 @@ class TestSystemEndpoints:
 
         mock_client.request.assert_called_once_with(
             "POST",
-            "/api/system/set-autostart",
-            params={"enabled": "false"},
+            "/api/system/autostart",
+            params=None,
+            data={"enabled": "false"},
         )
         assert result == expected
 
@@ -615,10 +617,12 @@ class TestSystemEndpoints:
         mock_client.request.assert_called_once_with("GET", "/api/system/firewall", params=None)
         assert result == expected
 
-    # --- POST /api/system/update-firewall (JSON body) ---
+    # --- POST /api/system/firewall (form data) ---
 
     def test_update_firewall(self, mock_client):
-        """POST /api/system/update-firewall sends JSON body with rules."""
+        """POST /api/system/firewall sends form data with JSON-encoded rules."""
+        import json
+
         rules = [{"ip": "10.0.0.0/8", "action": "allow"}]
         expected = {"status": "ok", "rules": rules}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
@@ -628,9 +632,9 @@ class TestSystemEndpoints:
 
         mock_client.request.assert_called_once_with(
             "POST",
-            "/api/system/update-firewall",
+            "/api/system/firewall",
             params=None,
-            json={"rules": rules},
+            data={"rules": json.dumps(rules)},
         )
         assert result == expected
 
@@ -648,10 +652,10 @@ class TestApiKeyEndpoints:
             mock_cls.return_value = client
             yield client
 
-    # --- POST /api/api-keys?name=... ---
+    # --- POST /api/api-keys (form data) ---
 
     def test_create_api_key(self, mock_client):
-        """POST /api/api-keys?name=... creates a new API key."""
+        """POST /api/api-keys with form data creates a new API key."""
         expected = {"id": "key-001", "name": "my-app", "key": "sk-xxxx"}
         _setup_mock_client(mock_client, _mock_response(json_data=expected))
 
@@ -661,7 +665,8 @@ class TestApiKeyEndpoints:
         mock_client.request.assert_called_once_with(
             "POST",
             "/api/api-keys",
-            params={"name": "my-app"},
+            params=None,
+            data={"name": "my-app"},
         )
         assert result == expected
 
