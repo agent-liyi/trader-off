@@ -10,9 +10,7 @@ status: reviewing
 - **Created**: 2026-07-23
 - **Status**: Reviewing
 
-> **Responsibility split**: This document only describes the requirements themselves (FR/NFR descriptions + metadata).
-> Acceptance criteria (observable, assertable pass conditions) live in `acceptance.md` so they can grow without bloating spec.
-> The test plan (`test-plan.md`) references both spec.md and acceptance.md as inputs.
+*Responsibility split*: This document only describes the requirements themselves (FR/NFR descriptions + metadata). Acceptance criteria (observable, assertable pass conditions) live in `acceptance.md` so they can grow without bloating spec. The test plan (`test-plan.md`) references both spec.md and acceptance.md as inputs.
 
 ## User Stories
 
@@ -36,7 +34,7 @@ Programmatic flow (non-UI), single-process, mid-frequency on-demand, over LAN to
 
 ## Functional Requirements
 
-> **Format/numbering**: FR codes are 4-digit, zero-padded, starting at 100 in the initial draft (per `.louke/templates/spec.md`). AC reference: `AC-FRXXXX-YY` (see `acceptance.md`). The FR code is the permanent id of the requirement; never reused.
+*Format/numbering*: FR codes are 4-digit, zero-padded, starting at 100 in the initial draft (per `.louke/templates/spec.md`). AC reference: `AC-FRXXXX-YY` (see `acceptance.md`). The FR code is the permanent id of the requirement; never reused.
 
 <a id="fr-0100">
 
