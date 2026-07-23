@@ -1,9 +1,10 @@
 # trader-off
 
-> millionaire/quantide 命令行封装。涵盖回测、纸交易、网格寻优、数据同步、实时行情。
+> millionaire/quantide 命令行封装。涵盖回测、纸交易、实盘交易、REST API、网格寻优、数据同步。
 
 ## 功能
 
+- **REST API server**（v0.7.0）：FastAPI 服务，15 端点暴露所有 CLI，agent 通过 HTTP+JSON 调用
 - **因子挖掘**：从 13 个模板展开 373 候选因子，IC 排名精选
 - **参数寻优**：网格搜索策略参数，多进程并行回测，Sharpe 排名选最优
 - **策略回测**：委托 quantide 引擎（真实撮合 / 手续费 / T+1 / 记账）
@@ -12,7 +13,7 @@
 - **数据同步**：从 tuShare 拉 A 股日线到本地 DailyBarsStore
 - **股票列表**：获取 A 股列表，支持按交易所/状态过滤
 - **实时行情**：quantide LiveQuote 订阅，需 qmt-gateway
-- **实盘交易**：通过 qmt-gateway 执行实盘交易（需 qmt-gateway 部署）
+- **实盘交易**：通过 qmt-gateway 执行实盘交易（30 个 QmtGatewayBroker 方法）
 - **调度重训**：定时检测漂移 → 自动重训练 → 部署
 
 ## 安装
@@ -30,7 +31,17 @@ export TUSHARE_TOKEN=<your_token_from_tushare.pro>
 
 ## 使用
 
-CLI 通过 `[project.scripts]` 注册，全局可用：
+所有命令支持 `--json` 输出，agent 友好。CLI 通过 `[project.scripts]` 注册，全局可用。
+
+### REST API server（v0.7.0）
+
+启动 FastAPI 服务，通过 HTTP 暴露所有 CLI 命令：
+
+```bash
+trader-off-server --port 8000    # 默认 localhost:8000
+```
+
+Agent 可通过 HTTP 调用（如 `POST /backtest`），请求体是 JSON，返回也是 JSON。需要 `--port 8000`（默认）避开 qmt-gateway 的 5800。
 
 ### 因子挖掘
 
@@ -168,13 +179,6 @@ trader-off-generate-strategy --name MomentumReversion              # 生成到 s
 trader-off-scheduler start --config scheduler.yaml
 trader-off-scheduler status
 trader-off-scheduler retrain trigger --model-version v2
-```
-
-### REST API 服务器
-
-```bash
-trader-off-server --port 8000 --host 127.0.0.1
-trader-off-server --json  # 启动前输出 JSON 格式的启动信息
 ```
 
 > 兼容：`uv run python -m trader_off.<path>` 仍可用。
