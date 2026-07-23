@@ -462,6 +462,248 @@ class TestErrorHandling:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# P2: System management endpoint tests (FR-0100)
+# ---------------------------------------------------------------------------
+
+
+class TestSystemEndpoints:
+    @pytest.fixture
+    def mock_client(self):
+        with patch("httpx.Client") as mock_cls:
+            client = MagicMock()
+            mock_cls.return_value = client
+            yield client
+
+    # --- GET /api/system/version ---
+
+    def test_get_version(self, mock_client):
+        """GET /api/system/version returns parsed JSON version info."""
+        expected = {"version": "1.2.3", "build": "2024-01-01"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_version()
+
+        mock_client.request.assert_called_once_with("GET", "/api/system/version", params=None)
+        assert result == expected
+
+    # --- POST /api/system/check-version ---
+
+    def test_check_version(self, mock_client):
+        """POST /api/system/check-version returns version check result."""
+        expected = {"up_to_date": False, "latest": "1.2.4"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.check_version()
+
+        mock_client.request.assert_called_once_with(
+            "POST", "/api/system/check-version", params=None
+        )
+        assert result == expected
+
+    # --- POST /api/system/start-update ---
+
+    def test_start_update(self, mock_client):
+        """POST /api/system/start-update triggers update and returns status."""
+        expected = {"status": "updating", "message": "Update started"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.start_update()
+
+        mock_client.request.assert_called_once_with("POST", "/api/system/start-update", params=None)
+        assert result == expected
+
+    # --- GET /api/system/update-status/{task_id} ---
+
+    def test_get_update_status(self, mock_client):
+        """GET /api/system/update-status/{task_id} returns update progress."""
+        expected = {"task_id": "task-001", "progress": 50, "status": "downloading"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_update_status("task-001")
+
+        mock_client.request.assert_called_once_with(
+            "GET", "/api/system/update-status/task-001", params=None
+        )
+        assert result == expected
+
+    # --- POST /api/system/do-rollback ---
+
+    def test_do_rollback(self, mock_client):
+        """POST /api/system/do-rollback triggers rollback and returns status."""
+        expected = {"status": "rolled_back", "message": "Rollback complete"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.do_rollback()
+
+        mock_client.request.assert_called_once_with("POST", "/api/system/do-rollback", params=None)
+        assert result == expected
+
+    # --- GET /api/system/autostart ---
+
+    def test_get_autostart(self, mock_client):
+        """GET /api/system/autostart returns current autostart config."""
+        expected = {"enabled": True}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_autostart()
+
+        mock_client.request.assert_called_once_with("GET", "/api/system/autostart", params=None)
+        assert result == expected
+
+    # --- POST /api/system/set-autostart?enabled=... ---
+
+    def test_set_autostart_enabled(self, mock_client):
+        """POST /api/system/set-autostart?enabled=true enables autostart."""
+        expected = {"status": "ok", "enabled": True}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.set_autostart(True)
+
+        mock_client.request.assert_called_once_with(
+            "POST",
+            "/api/system/set-autostart",
+            params={"enabled": "true"},
+        )
+        assert result == expected
+
+    def test_set_autostart_disabled(self, mock_client):
+        """POST /api/system/set-autostart?enabled=false disables autostart."""
+        expected = {"status": "ok", "enabled": False}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.set_autostart(False)
+
+        mock_client.request.assert_called_once_with(
+            "POST",
+            "/api/system/set-autostart",
+            params={"enabled": "false"},
+        )
+        assert result == expected
+
+    # --- GET /api/system/port ---
+
+    def test_get_port(self, mock_client):
+        """GET /api/system/port returns current gateway port."""
+        expected = {"port": 5800}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_port()
+
+        mock_client.request.assert_called_once_with("GET", "/api/system/port", params=None)
+        assert result == expected
+
+    # --- GET /api/system/firewall ---
+
+    def test_get_firewall(self, mock_client):
+        """GET /api/system/firewall returns current firewall rules."""
+        expected = {"rules": [{"ip": "192.168.1.0/24", "action": "allow"}]}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_firewall()
+
+        mock_client.request.assert_called_once_with("GET", "/api/system/firewall", params=None)
+        assert result == expected
+
+    # --- POST /api/system/update-firewall (JSON body) ---
+
+    def test_update_firewall(self, mock_client):
+        """POST /api/system/update-firewall sends JSON body with rules."""
+        rules = [{"ip": "10.0.0.0/8", "action": "allow"}]
+        expected = {"status": "ok", "rules": rules}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.update_firewall(rules)
+
+        mock_client.request.assert_called_once_with(
+            "POST",
+            "/api/system/update-firewall",
+            params=None,
+            json={"rules": rules},
+        )
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# P2: API key management endpoint tests (FR-0100)
+# ---------------------------------------------------------------------------
+
+
+class TestApiKeyEndpoints:
+    @pytest.fixture
+    def mock_client(self):
+        with patch("httpx.Client") as mock_cls:
+            client = MagicMock()
+            mock_cls.return_value = client
+            yield client
+
+    # --- POST /api/api-keys?name=... ---
+
+    def test_create_api_key(self, mock_client):
+        """POST /api/api-keys?name=... creates a new API key."""
+        expected = {"id": "key-001", "name": "my-app", "key": "sk-xxxx"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.create_api_key("my-app")
+
+        mock_client.request.assert_called_once_with(
+            "POST",
+            "/api/api-keys",
+            params={"name": "my-app"},
+        )
+        assert result == expected
+
+    # --- GET /api/api-keys ---
+
+    def test_list_api_keys(self, mock_client):
+        """GET /api/api-keys returns list of API keys."""
+        expected = [
+            {"id": "key-001", "name": "my-app", "created_at": "2024-01-01"},
+            {"id": "key-002", "name": "other-app", "created_at": "2024-01-02"},
+        ]
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.list_api_keys()
+
+        mock_client.request.assert_called_once_with("GET", "/api/api-keys", params=None)
+        assert result == expected
+
+    # --- DELETE /api/api-keys/{key_id} ---
+
+    def test_revoke_api_key(self, mock_client):
+        """DELETE /api/api-keys/{key_id} revokes an API key."""
+        expected = {"status": "revoked", "id": "key-001"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.revoke_api_key("key-001")
+
+        mock_client.request.assert_called_once_with(
+            "DELETE",
+            "/api/api-keys/key-001",
+            params=None,
+        )
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# NFR-0100 lazy import tests
+# ---------------------------------------------------------------------------
+
+
 class TestLazyImport:
     def test_httpx_not_in_qmt_gateway_module_globals(self):
         """NFR-0100: httpx should NOT appear in qmt_gateway module's global namespace."""
