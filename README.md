@@ -170,6 +170,13 @@ trader-off-scheduler status
 trader-off-scheduler retrain trigger --model-version v2
 ```
 
+### REST API 服务器
+
+```bash
+trader-off-server --port 8000 --host 127.0.0.1
+trader-off-server --json  # 启动前输出 JSON 格式的启动信息
+```
+
 > 兼容：`uv run python -m trader_off.<path>` 仍可用。
 
 ## 输出示例
