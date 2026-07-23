@@ -10,11 +10,8 @@
 - **纸交易**：仿真交易，同一份策略代码跑回测和纸交易
 - **组合优化**：cvxpy Max Sharpe（long-only / 满仓 / 行业中性 / 个股上限）
 - **数据同步**：从 tuShare 拉 A 股日线到本地 DailyBarsStore
-<<<<<<< HEAD
-=======
 - **股票列表**：获取 A 股列表，支持按交易所/状态过滤
 - **实时行情**：quantide LiveQuote 订阅，需 qmt-gateway
->>>>>>> b835574 (docs: README — add grid-search section + sync feature list)
 - **调度重训**：定时检测漂移 → 自动重训练 → 部署
 
 ## 安装
@@ -107,9 +104,8 @@ trader-off-sync-data \
 ### 初始化
 
 ```bash
-trader-off-init                    # 初始化数据目录 .quantide/
-trader-off-init --home /path/to/data  # 指定数据根目录
-trader-off-init --force            # 强制重新初始化
+trader-off init                    # 初始化数据目录 .quantide/
+trader-off init --home /path/to/data  # 指定数据根目录
 ```
 
 初始化日历、行情、数据库子目录。
@@ -125,7 +121,7 @@ trader-off-stock-list --exchange SSE --json    # JSON 输出
 
 从 tuShare 获取 A 股列表，返回 JSON 含 `ts_code` / `name`。需 `TUSHARE_TOKEN`。
 
-### 因子检查
+### 因子有效性检查
 
 ```bash
 trader-off-check-factor --name momentum_5 --start 2024-01-02 --end 2024-12-31
