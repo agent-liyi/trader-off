@@ -261,6 +261,64 @@ class QmtGatewayBroker:
         return self._get("/all_stocks")
 
     # ------------------------------------------------------------------
+    # Minutes download (FR-0100 P1)
+    # ------------------------------------------------------------------
+
+    def get_minutes_job(self, job_id: str) -> dict:
+        """Query minutes download progress via GET /minutes_job/{job_id}.
+
+        Args:
+            job_id: The download job ID returned by download_minutes.
+
+        Returns:
+            Parsed JSON dict with progress info (job_id, progress, status).
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._get(f"/minutes_job/{job_id}")
+
+    def download_minutes(self, dates: list[str]) -> dict:
+        """Start a minutes download job via POST /download_minutes.
+
+        Args:
+            dates: List of date strings (e.g., ["2024-01-02", "2024-01-03"]).
+
+        Returns:
+            Parsed JSON dict containing job_id and initial status.
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._post("/download_minutes", params={"dates": ",".join(dates)})
+
+    # ------------------------------------------------------------------
+    # Quote & auction status (FR-0100 P1)
+    # ------------------------------------------------------------------
+
+    def get_quote_status(self) -> dict:
+        """Check WebSocket quote subscription status via GET /quote_status.
+
+        Returns:
+            Parsed JSON dict with subscription state (e.g., subscribed, symbols).
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._get("/quote_status")
+
+    def get_auction_status(self) -> dict:
+        """Check auction session status via GET /auction_status.
+
+        Returns:
+            Parsed JSON dict with auction phase info (e.g., is_auction_time, phase).
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._get("/auction_status")
+
+    # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 

@@ -212,6 +212,39 @@ class TestGetEndpoints:
         mock_client.request.assert_called_once_with("GET", "/all_stocks", params=None)
         assert result == expected
 
+    def test_get_minutes_job(self, mock_client):
+        """GET /minutes_job/{job_id} returns download progress."""
+        expected = {"job_id": "abc123", "progress": 75, "status": "downloading"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_minutes_job("abc123")
+
+        mock_client.request.assert_called_once_with("GET", "/minutes_job/abc123", params=None)
+        assert result == expected
+
+    def test_get_quote_status(self, mock_client):
+        """GET /quote_status returns WebSocket subscription status."""
+        expected = {"subscribed": True, "symbols": ["000001.SZ"]}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_quote_status()
+
+        mock_client.request.assert_called_once_with("GET", "/quote_status", params=None)
+        assert result == expected
+
+    def test_get_auction_status(self, mock_client):
+        """GET /auction_status returns auction session status."""
+        expected = {"is_auction_time": True, "phase": "closing_call"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_auction_status()
+
+        mock_client.request.assert_called_once_with("GET", "/auction_status", params=None)
+        assert result == expected
+
 
 # ---------------------------------------------------------------------------
 # POST endpoint tests
@@ -343,6 +376,36 @@ class TestPostEndpoints:
             "POST",
             "/restart_qmt",
             params={"password": "my-secret"},
+        )
+        assert result == expected
+
+    def test_download_minutes(self, mock_client):
+        """POST /download_minutes sends comma-joined dates and returns job info."""
+        expected = {"job_id": "job-001", "status": "started"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.download_minutes(["2024-01-02", "2024-01-03"])
+
+        mock_client.request.assert_called_once_with(
+            "POST",
+            "/download_minutes",
+            params={"dates": "2024-01-02,2024-01-03"},
+        )
+        assert result == expected
+
+    def test_download_minutes_single_date(self, mock_client):
+        """POST /download_minutes with single date still sends comma-joined string."""
+        expected = {"job_id": "job-002", "status": "started"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.download_minutes(["2024-01-02"])
+
+        mock_client.request.assert_called_once_with(
+            "POST",
+            "/download_minutes",
+            params={"dates": "2024-01-02"},
         )
         assert result == expected
 
