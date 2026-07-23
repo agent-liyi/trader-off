@@ -25,6 +25,11 @@ class QmtGatewayBroker:
         POST /sell_stock?symbol=&price=&shares=&qtoid=
         POST /cancel_order?qtoid=
         POST /update_principal?principal=
+        GET  /connection_status
+        POST /restart_qmt?password=
+        GET  /search_stocks?q=
+        GET  /stock_info?symbol=
+        GET  /all_stocks
     """
 
     def __init__(self, base_url: str = "http://localhost:5800", api_key: str | None = None):
@@ -182,6 +187,78 @@ class QmtGatewayBroker:
             RuntimeError: If the HTTP request fails.
         """
         return self._post("/update_principal", params={"principal": amount})
+
+    # ------------------------------------------------------------------
+    # Connection management (FR-0100 P0)
+    # ------------------------------------------------------------------
+
+    def get_connection_status(self) -> dict:
+        """Check if QMT gateway is connected via GET /connection_status.
+
+        Returns:
+            Parsed JSON dict with connection state (e.g., connected, qmt_version).
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._get("/connection_status")
+
+    def restart_qmt(self, password: str) -> dict:
+        """Restart QMT application via POST /restart_qmt.
+
+        Args:
+            password: QMT application password.
+
+        Returns:
+            Parsed JSON dict with restart status.
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._post("/restart_qmt", params={"password": password})
+
+    # ------------------------------------------------------------------
+    # Stock search (FR-0100 P0)
+    # ------------------------------------------------------------------
+
+    def search_stocks(self, q: str) -> list[dict]:
+        """Search stocks by keyword via GET /search_stocks.
+
+        Args:
+            q: Search keyword (e.g., stock name or symbol fragment).
+
+        Returns:
+            List of matching stock dicts with symbol/name info.
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._get("/search_stocks", params={"q": q})
+
+    def get_stock_info(self, symbol: str) -> dict:
+        """Get detailed stock info via GET /stock_info.
+
+        Args:
+            symbol: Full stock symbol (e.g., "000001.SZ").
+
+        Returns:
+            Parsed JSON dict with stock details (name, sector, etc.).
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._get("/stock_info", params={"symbol": symbol})
+
+    def get_all_stocks(self) -> list[dict]:
+        """Get all available stocks via GET /all_stocks.
+
+        Returns:
+            List of stock dicts with symbol/name info.
+
+        Raises:
+            RuntimeError: If the HTTP request fails.
+        """
+        return self._get("/all_stocks")
 
     # ------------------------------------------------------------------
     # Internal helpers

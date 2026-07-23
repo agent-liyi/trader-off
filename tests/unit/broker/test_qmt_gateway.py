@@ -159,6 +159,59 @@ class TestGetEndpoints:
         mock_client.request.assert_called_once_with("GET", "/trades", params=None)
         assert result == expected
 
+    def test_get_connection_status(self, mock_client):
+        """GET /connection_status returns connection state dict."""
+        expected = {"connected": True, "qmt_version": "2.0"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_connection_status()
+
+        mock_client.request.assert_called_once_with("GET", "/connection_status", params=None)
+        assert result == expected
+
+    def test_search_stocks(self, mock_client):
+        """GET /search_stocks?q=keyword returns matching stock list."""
+        expected = [{"symbol": "000001.SZ", "name": "平安银行"}]
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.search_stocks("平安")
+
+        mock_client.request.assert_called_once_with("GET", "/search_stocks", params={"q": "平安"})
+        assert result == expected
+
+    def test_get_stock_info(self, mock_client):
+        """GET /stock_info?symbol=000001.SZ returns stock detail dict."""
+        expected = {
+            "symbol": "000001.SZ",
+            "name": "平安银行",
+            "sector": "银行",
+        }
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_stock_info("000001.SZ")
+
+        mock_client.request.assert_called_once_with(
+            "GET", "/stock_info", params={"symbol": "000001.SZ"}
+        )
+        assert result == expected
+
+    def test_get_all_stocks(self, mock_client):
+        """GET /all_stocks returns full stock list."""
+        expected = [
+            {"symbol": "000001.SZ", "name": "平安银行"},
+            {"symbol": "600000.SH", "name": "浦发银行"},
+        ]
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.get_all_stocks()
+
+        mock_client.request.assert_called_once_with("GET", "/all_stocks", params=None)
+        assert result == expected
+
 
 # ---------------------------------------------------------------------------
 # POST endpoint tests
@@ -275,6 +328,21 @@ class TestPostEndpoints:
             "POST",
             "/update_principal",
             params={"principal": 2000000.0},
+        )
+        assert result == expected
+
+    def test_restart_qmt(self, mock_client):
+        """POST /restart_qmt sends password param and returns status dict."""
+        expected = {"status": "restarting", "message": "QMT restart initiated"}
+        _setup_mock_client(mock_client, _mock_response(json_data=expected))
+
+        broker = QmtGatewayBroker()
+        result = broker.restart_qmt("my-secret")
+
+        mock_client.request.assert_called_once_with(
+            "POST",
+            "/restart_qmt",
+            params={"password": "my-secret"},
         )
         assert result == expected
 
