@@ -12,7 +12,7 @@ status: reviewing
 > Central registry of acceptance criteria. spec.md keeps FR/NFR descriptions + metadata; detailed observable, assertable pass conditions live here.
 > AC numbering: `### AC-N` within each unit (pure heading, no suffix); full reference `AC-FRXXXX-YY` on the next line.
 
-<a id="ac-fr-0100">
+<a id="ac-fr-0100"></a>
 
 ## FR-0100 QmtGatewayBroker P1 wrappers (4 methods)
 
@@ -52,7 +52,7 @@ AC-FR0100-06
 - **THEN** the existing 13 methods (8 trading v0.6.0 + 5 P0 v0.7.1) are unchanged in signature and behavior
 - **AND** exactly 4 new public methods are added (`get_minutes_job`, `download_minutes`, `get_quote_status`, `get_auction_status`)
 
-<a id="ac-nfr-0100">
+<a id="ac-nfr-0100"></a>
 
 ## NFR-0100 function-scope lazy imports (inherited)
 

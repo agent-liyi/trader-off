@@ -37,7 +37,13 @@ Programmatic flow (non-UI), single-process, mid-frequency on-demand, over LAN to
 
 *Format/numbering*: FR codes are 4-digit, zero-padded, starting at 100 in the initial draft (per `.louke/templates/spec.md`). AC reference: `AC-FRXXXX-YY` (see `acceptance.md`). The FR code is the permanent id of the requirement; never reused.
 
-<a id="fr-0100">
+<a id="fr-0100"></a>
+
+> **Lex:** L5 FAIL: anchor `<a id="fr-0100"></a>` missing closing tag `</a>`. The verify-issue tool (L5) requires `<a id="fr-0100"></a></a>` format (self-closing pair). Same issue affects v0.7.1 precedent. Please add `</a>` close tags to both FR-0100 (line 40) and NFR-0100 (line 71) anchors.
+
+> **Lex:** L7 FAIL (Issue #173 FR-0100): Acceptance Criteria field is `None`, but acceptance.md has dedicated ACs (AC-FR0100-01 through AC-FR0100-06). Must use URL form: `https://github.com/agent-liyi/trader-off/blob/releases/v0.7.2/.louke/project/specs/v0.7.2-001-qmt-p1-wrappers/acceptance.md#ac-fr-0100`. Also check `<a id="ac-fr-0100">` in acceptance.md line 15 — same closing tag issue as L5.
+
+
 
 ### FR-0100 QmtGatewayBroker P1 wrappers (4 methods)
 
@@ -64,11 +70,14 @@ New methods:
 - Return shapes for `get_quote_status` / `get_auction_status` are gateway-defined; the broker is a thin passthrough and does not validate or transform keys. Schema verification deferred to M-DEV (story §4 risk #1).
 - Out of scope: modifying the existing 13 methods; system management; API-key management (P2 → v0.7.3); caching; retry; polling loops; date validation (story §3 Avoid).
 
+> **Lex:** L5 FAIL: anchor `<a id="nfr-0100"></a>` missing closing tag `</a>`. Same fix as FR-0100: change to `<a id="nfr-0100"></a></a>`. Also L7 FAIL (Issue #174 NFR-0100): Acceptance Criteria must use URL `https://github.com/agent-liyi/trader-off/blob/releases/v0.7.2/.louke/project/specs/v0.7.2-001-qmt-p1-wrappers/acceptance.md#ac-nfr-0100` instead of `None`. Additionally, check `<a id="ac-nfr-0100">` in acceptance.md line 55 for same closing tag issue.
+
+
 ---
 
 ## Non-Functional Requirements
 
-<a id="nfr-0100">
+<a id="nfr-0100"></a>
 
 ### NFR-0100 function-scope lazy imports (inherited)
 
