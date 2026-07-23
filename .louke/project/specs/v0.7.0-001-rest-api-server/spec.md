@@ -14,10 +14,12 @@ status: draft
 
 ## User Stories
 
+<a id="us-0010"></a>
 ### US-0010
 story: As an LLM agent / quant researcher, I want to call trader-off's CLI internal functions over HTTP+JSON, so that I can run backtest / sync / factor workflows without fragile shell subprocess calls (encoding / exit-code / timeout pain).
 priority: P0
 
+<a id="us-0020"></a>
 ### US-0020
 story: As an LLM agent, I want a single `trader-off server` process I can start and then issue many HTTP calls against, so that integration is stable and standard.
 priority: P0
@@ -38,6 +40,7 @@ priority: P0
 
 **Metadata fields**: Valid `✅`=active / `❌`=deprecated; Testable `✅` / `⚠️ {reason}`; Decided `✅`=user approved / `⚠️`=pending / `❌`=rejected.
 
+<a id="fr-0100"></a>
 ### FR-0100 REST API endpoints (FastAPI)
 
 | Valid | Testable | Decided |
@@ -89,6 +92,7 @@ Create `src/trader_off/api/server.py` — a FastAPI application that wraps the e
 
 ---
 
+<a id="fr-0200"></a>
 ### FR-0200 `trader-off server` CLI entry
 
 | Valid | Testable | Decided |
@@ -112,6 +116,7 @@ Create `src/trader_off/cli/server.py` — the `trader-off server` CLI entry poin
 
 ## Non-Functional Requirements
 
+<a id="nfr-0100"></a>
 ### NFR-0100 function-scope lazy imports + new dependencies
 
 | Valid | Testable | Decided |

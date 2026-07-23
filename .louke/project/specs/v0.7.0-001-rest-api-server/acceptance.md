@@ -13,6 +13,7 @@ status: draft
 >
 > Numbering: within each FR/NFR unit, AC-N starts from 1 and increments; full reference **AC-FRXXXX-YY** (4-digit FR + 2-digit AC) shown on the line below the heading.
 
+<a id="ac-fr-0100"></a>
 ## FR-0100 REST API endpoints (FastAPI)
 
 ### AC-1
@@ -54,6 +55,7 @@ AC-FR0100-07
 - **WHEN** the FastAPI app routes are enumerated
 - **THEN** all 13 endpoints exist: 10 POST (`/backtest`, `/paper-trade`, `/sync-data`, `/init`, `/grid-search`, `/check-factor`, `/generate-strategy`, `/live`, `/live-trade`, `/scheduler`) and 3 GET (`/stock-list`, `/status`, `/api/health`).
 
+<a id="ac-fr-0200"></a>
 ## FR-0200 `trader-off server` CLI entry
 
 ### AC-1
@@ -81,6 +83,7 @@ AC-FR0200-05
 - **WHEN** the server CLI module is parsed
 - **THEN** `uvicorn` / `fastapi` are imported at function scope, not at module top level.
 
+<a id="ac-nfr-0100"></a>
 ## NFR-0100 function-scope lazy imports + new dependencies
 
 ### AC-1
