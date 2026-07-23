@@ -1,22 +1,22 @@
 [project]
-version = "v0.5.3"
+version = "v0.7.1"
 repo = "github.com/agent-liyi/trader-off"
-project = "trader-off-v0.5.3"
-project_id = "https://github.com/users/agent-liyi/projects/14"
-spec_id = "v0.5.3-001-backtest-on-real"
-release_branch = "releases/v0.5.3"
+project = "trader-off-v0.7.1"
+project_id = "https://github.com/users/agent-liyi/projects/23"
+spec_id = "v0.7.1-001-qmt-p0-wrappers"
+release_branch = "releases/v0.7.1"
 
 [meta]
 pre_commit = "installed (python + base)"
 created = "2026-07-22"
-current_stage = "M-FOUND"
+current_stage = "M-MILESTONE"
 security_audit = "enabled"
-smoke_test_issue = "#145 (closed)"
-smoke_test_pr = "#146 (closed)"
+smoke_test_issue = "#168 (closed)"
+smoke_test_pr = "#167 (closed)"
 dod = "All e2e tests pass; Unit test coverage >=97%; Mutation testing score >=70% (mutmut); Performance budgets met (train<=300s predict<=5s backtest<=600s mem<=16GB); Documentation sync (architecture/API/ADRs); Security review (M-SECURITY)"
 test_framework = "pytest"
 backlog_project = "https://github.com/users/agent-liyi/projects/4"
-acknowledged_orphan_releases = ["releases/v0.4.0", "releases/v0.5.0"]
+acknowledged_orphan_releases = ["releases/v0.4.0", "releases/v0.4.2", "releases/v0.5.0", "releases/v0.5.1", "releases/v0.5.2", "releases/v0.5.3", "releases/v0.5.4", "releases/v0.5.5", "releases/v0.5.6", "releases/v0.5.7", "releases/v0.5.8"]
 
 [e2e]
 paths = "['tests/e2e', 'tests/perf']"
