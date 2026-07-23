@@ -16,6 +16,7 @@ smoke_test_pr = "#167 (closed)"
 dod = "All e2e tests pass; Unit test coverage >=97%; Mutation testing score >=70% (mutmut); Performance budgets met (train<=300s predict<=5s backtest<=600s mem<=16GB); Documentation sync (architecture/API/ADRs); Security review (M-SECURITY)"
 test_framework = "pytest"
 backlog_project = "https://github.com/users/agent-liyi/projects/4"
+acknowledged_orphan_releases = ["releases/v0.7.2"]
 
 [e2e]
 paths = "['tests/e2e', 'tests/perf']"
