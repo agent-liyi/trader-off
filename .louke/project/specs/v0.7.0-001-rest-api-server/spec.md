@@ -10,9 +10,7 @@ status: draft
 - **Created**: 2026-07-23
 - **Status**: Draft
 
-> **Responsibility split**: This document only describes the requirements themselves (FR/NFR descriptions + metadata).
-> Acceptance criteria (observable, assertable pass conditions) live in `acceptance.md` so they can grow without bloating spec.
-> The test plan (`test-plan.md`) references both spec.md and acceptance.md as inputs.
+**Responsibility split**: This document only describes the requirements themselves (FR/NFR descriptions + metadata). Acceptance criteria (observable, assertable pass conditions) live in `acceptance.md` so they can grow without bloating spec. The test plan (`test-plan.md`) references both spec.md and acceptance.md as inputs.
 
 ## User Stories
 
@@ -36,9 +34,9 @@ priority: P0
 
 ## Functional Requirements
 
-> **Format convention**: Each FR unit starts with a level-3 heading + FR-XXXX + title, followed by a 3-column metadata table (Valid / Testable / Decided), then the description; separate FRs with `---`.
->
-> **Metadata fields**: Valid `✅`=active / `❌`=deprecated; Testable `✅` / `⚠️ {reason}`; Decided `✅`=user approved / `⚠️`=pending / `❌`=rejected.
+**Format convention**: Each FR unit starts with a level-3 heading + FR-XXXX + title, followed by a 3-column metadata table (Valid / Testable / Decided), then the description; separate FRs with `---`.
+
+**Metadata fields**: Valid `✅`=active / `❌`=deprecated; Testable `✅` / `⚠️ {reason}`; Decided `✅`=user approved / `⚠️`=pending / `❌`=rejected.
 
 ### FR-0100 REST API endpoints (FastAPI)
 
