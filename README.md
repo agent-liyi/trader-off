@@ -12,6 +12,7 @@
 - **数据同步**：从 tuShare 拉 A 股日线到本地 DailyBarsStore
 - **股票列表**：获取 A 股列表，支持按交易所/状态过滤
 - **实时行情**：quantide LiveQuote 订阅，需 qmt-gateway
+- **实盘交易**：通过 qmt-gateway 执行实盘交易（需 qmt-gateway 部署）
 - **调度重训**：定时检测漂移 → 自动重训练 → 部署
 
 ## 安装
@@ -104,8 +105,8 @@ trader-off-sync-data \
 ### 初始化
 
 ```bash
-trader-off init                    # 初始化数据目录 .quantide/
-trader-off init --home /path/to/data  # 指定数据根目录
+trader-off-init                    # 初始化数据目录 .quantide/
+trader-off-init --home /path/to/data  # 指定数据根目录
 ```
 
 初始化日历、行情、数据库子目录。
@@ -140,6 +141,17 @@ trader-off-live --stop                                            # 停止
 ```
 
 通过 quantide LiveQuote 订阅实时行情，需 qmt-gateway。
+
+### 实盘交易
+
+```bash
+trader-off-live-trade \
+    --strategy optimized_topk \
+    --universe watchlist.csv \
+    --capital 1000000
+```
+
+实盘交易（需 qmt-gateway 部署）。通过 qmt-gateway HTTP API 执行买卖、查询持仓/订单/成交。支持 `--json` JSON 输出。
 
 ### 生成策略
 
