@@ -179,7 +179,7 @@ to generate-strategy --name Mom --template momentum           # 动量反转策�
 to generate-strategy --name MF --template multi-factor        # 多因子策略
 ```
 
-生成 quantide BaseStrategy 子类。带 `--template` 时 `on_day_open` 中已填好因子计算 + 调仓逻辑，可直接回测。
+生成 quantide-compatible 策略。带 `--template` 时使用 `on_bar` + `get_history` + `buy_amount/sell`，可直接在 quantide backtest runner 中运行。
 
 ### 调度
 
