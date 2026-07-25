@@ -37,70 +37,106 @@ _DUAL_IMPORT = (
 
 _TEMPLATES = {
     "double-ma": {
-        "description": "双均线策略 (fast/slow MA 金叉买入，死叉卖出)",
-        "params": ["fast", "slow"],
+        "description": "双均线金叉死叉策略 — 基于 on_bar + FrameType.DAY",
+        "params": ["fast", "slow", "symbol", "invest"],
         "imports": "import polars as pl\n",
-        "init_body": "self._fast: int = config.get('fast', 5)\nself._slow: int = config.get('slow', 20)",
-        "on_day_open_body": (
-            "df = self.datafeed.get_bars(self.assets, lookback=self._slow + 1)\n"
-            "fast_ma = df.group_by('asset').agg(pl.col('close').tail(self._fast).mean().alias('fast'))\n"
-            "slow_ma = df.group_by('asset').agg(pl.col('close').tail(self._slow).mean().alias('slow'))\n"
-            "for asset in self.assets:\n"
-            "    f_val = fast_ma.filter(pl.col('asset') == asset)['fast'].item()\n"
-            "    s_val = slow_ma.filter(pl.col('asset') == asset)['slow'].item()\n"
-            "    if f_val > s_val:\n"
-            "        await self.broker.trade_target_pct(asset, 1.0 / len(self.assets))\n"
-            "    else:\n"
-            "        await self.broker.trade_target_pct(asset, 0.0)"
+        "init_body": (
+            "self.fast_window: int = int(self.config.get('fast', 5))\n"
+            "self.slow_window = int(self.config.get('slow', 10))\n"
+            "self.symbol = self.config.get('symbol', '000001.SZ')\n"
+            "self.invest_amount = float(self.config.get('invest', 100000))\n"
+        ),
+        "on_bar_body": (
+            "if frame_type != FrameType.DAY:\n"
+            "    return\n"
+            "count = self.slow_window + 5\n"
+            "hist = self.get_history(self.symbol, count, tm, '1d')\n"
+            "if len(hist) < self.slow_window + 2:\n"
+            "    return\n"
+            "closes = hist['close'].to_numpy()\n"
+            "curr_fast = closes[-self.fast_window:].mean()\n"
+            "curr_slow = closes[-self.slow_window:].mean()\n"
+            "prev_fast = closes[-(self.fast_window + 1):-1].mean()\n"
+            "prev_slow = closes[-(self.slow_window + 1):-1].mean()\n"
+            "pos = self.broker.positions.get(self.symbol)\n"
+            "shares = pos.shares if pos else 0\n"
+            "if prev_fast <= prev_slow and curr_fast > curr_slow:\n"
+            "    if shares == 0:\n"
+            "        self.log(f'{self.symbol} Golden Cross at {tm}')\n"
+            "        await self.broker.buy_amount(self.symbol, self.invest_amount, price=0, order_time=tm)\n"
+            "elif prev_fast >= prev_slow and curr_fast < curr_slow:\n"
+            "    if shares > 0:\n"
+            "        self.log(f'{self.symbol} Death Cross at {tm}')\n"
+            "        await self.broker.sell(self.symbol, shares, price=0, order_time=tm)\n"
         ),
     },
     "momentum": {
-        "description": "动量反转策略 (过去 N 日收益率排名，买入 Top K)",
-        "params": ["lookback", "top_k"],
-        "imports": "import polars as pl\n",
-        "init_body": "self._lookback: int = config.get('lookback', 20)\nself._top_k: int = config.get('top_k', 10)",
-        "on_day_open_body": (
-            "df = self.datafeed.get_bars(self.assets, lookback=self._lookback)\n"
-            "returns = df.group_by('asset').agg(\n"
-            "    (pl.col('close').last() / pl.col('close').first() - 1).alias('ret')\n"
-            ").sort('ret', descending=True)\n"
-            "top_assets = returns.head(self._top_k)['asset'].to_list()\n"
-            "for asset in self.assets:\n"
-            "    if asset in top_assets:\n"
-            "        await self.broker.trade_target_pct(asset, 1.0 / self._top_k)\n"
-            "    else:\n"
-            "        await self.broker.trade_target_pct(asset, 0.0)"
+        "description": "动量反转策略 — N 日收益率排序买入 top_k 只",
+        "params": ["lookback", "top_k", "invest"],
+        "imports": "import numpy as np\nimport polars as pl\n",
+        "init_body": (
+            "self.lookback: int = int(self.config.get('lookback', 20))\n"
+            "self.top_k = int(self.config.get('top_k', 5))\n"
+            "self.invest_amount = float(self.config.get('invest', 100000))\n"
+        ),
+        "on_bar_body": (
+            "if frame_type != FrameType.DAY:\n"
+            "    return\n"
+            "universe = self.config.get('universe', [])\n"
+            "if not universe:\n"
+            "    return\n"
+            "returns = {}\n"
+            "for sym in universe:\n"
+            "    hist = self.get_history(sym, self.lookback + 1, tm, '1d')\n"
+            "    if len(hist) >= self.lookback + 1:\n"
+            "        c = hist['close'].to_numpy()\n"
+            "        returns[sym] = c[-1] / c[0] - 1\n"
+            "ranked = sorted(returns.items(), key=lambda kv: -kv[1])[:self.top_k]\n"
+            "top_set = {sym for sym, _ in ranked}\n"
+            "for sym in universe:\n"
+            "    pos = self.broker.positions.get(sym)\n"
+            "    shares = pos.shares if pos else 0\n"
+            "    if sym in top_set and shares == 0:\n"
+            "        await self.broker.buy_amount(sym, self.invest_amount, price=0, order_time=tm)\n"
+            "    elif sym not in top_set and shares > 0:\n"
+            "        await self.broker.sell(sym, shares, price=0, order_time=tm)\n"
         ),
     },
     "multi-factor": {
-        "description": "多因子策略 (momentum + volatility z-score 综合排名)",
-        "params": ["lookback", "top_k", "mom_weight", "vol_weight"],
-        "imports": "import polars as pl\n",
+        "description": "多因子策略 — momentum + volatility z-score 综合排名",
+        "params": ["lookback", "top_k", "invest", "mom_weight", "vol_weight"],
+        "imports": "import numpy as np\nimport polars as pl\n",
         "init_body": (
-            "self._lookback: int = config.get('lookback', 20)\n"
-            "self._top_k: int = config.get('top_k', 10)\n"
-            "self._w_mom: float = config.get('mom_weight', 0.5)\n"
-            "self._w_vol: float = config.get('vol_weight', -0.3)"
+            "self.lookback: int = int(self.config.get('lookback', 20))\n"
+            "self.top_k = int(self.config.get('top_k', 5))\n"
+            "self.invest_amount = float(self.config.get('invest', 100000))\n"
+            "self.w_mom = float(self.config.get('mom_weight', 0.5))\n"
+            "self.w_vol = float(self.config.get('vol_weight', -0.3))\n"
         ),
-        "on_day_open_body": (
-            "df = self.datafeed.get_bars(self.assets, lookback=self._lookback)\n"
-            "mom = df.group_by('asset').agg(\n"
-            "    (pl.col('close').last() / pl.col('close').first() - 1).alias('raw')\n"
-            ")\n"
-            "vol = df.group_by('asset').agg(\n"
-            "    pl.col('close').std().alias('raw')\n"
-            ")\n"
-            "for s in (mom, vol):\n"
-            "    s = s.with_columns(((pl.col('raw') - pl.col('raw').mean()) / pl.col('raw').std()).alias('z'))\n"
-            "scores = mom.with_columns(pl.col('z') * self._w_mom)\n"
-            "scores = scores.join(vol.select('asset', pl.col('z') * self._w_vol).rename({'z': 'score'}), on='asset', how='left', suffix='_v')\n"
-            "scores = scores.with_columns((pl.col('z') + pl.col('score')).alias('total'))\n"
-            "top_assets = scores.sort('total', descending=True).head(self._top_k)['asset'].to_list()\n"
-            "for asset in self.assets:\n"
-            "    if asset in top_assets:\n"
-            "        await self.broker.trade_target_pct(asset, 1.0 / self._top_k)\n"
-            "    else:\n"
-            "        await self.broker.trade_target_pct(asset, 0.0)"
+        "on_bar_body": (
+            "if frame_type != FrameType.DAY:\n"
+            "    return\n"
+            "universe = self.config.get('universe', [])\n"
+            "if not universe:\n"
+            "    return\n"
+            "scores = {}\n"
+            "for sym in universe:\n"
+            "    hist = self.get_history(sym, self.lookback + 1, tm, '1d')\n"
+            "    if len(hist) < self.lookback + 1:\n"
+            "        continue\n"
+            "    c = hist['close'].to_numpy()\n"
+            "    mom = c[-1] / c[0] - 1\n"
+            "    vol = c.std()\n"
+            "    scores[sym] = round(self.w_mom * mom + self.w_vol * vol, 4)\n"
+            "ranked = sorted(scores.items(), key=lambda kv: -kv[1])[:self.top_k]\n"
+            "top_set = {sym for sym, _ in ranked}\n"
+            "for sym in universe:\n"
+            "    pos = self.broker.positions.get(sym)\n"
+            "    shares = pos.shares if pos else 0\n"
+            "    if sym in top_set and shares == 0:\n"
+            "        await self.broker.buy_amount(sym, self.invest_amount, price=0, order_time=tm)\n"
+            "    elif sym not in top_set and shares > 0:\n"
+            "        await self.broker.sell(sym, shares, price=0, order_time=tm)\n"
         ),
     },
 }
@@ -201,15 +237,15 @@ def _generate_code(
         init_lines = t["init_body"].strip().split("\n")
         init_body = "\n        ".join(init_lines)
 
-        on_day_lines = ['pass  # strategy logic above']
-        on_day_lines.extend(t["on_day_open_body"].strip().split("\n"))
-        on_day_body = "\n        ".join(on_day_lines)
+        on_bar_lines = t["on_bar_body"].strip().split("\n")
+        on_bar_body = "\n        ".join(on_bar_lines)
 
         imports = (
-            "from datetime import datetime\n"
+            "import datetime\n"
+            "from typing import Any, Dict\n\n"
             + t["imports"]
-            + "\nfrom loguru import logger\n\n"
-            + _DUAL_IMPORT
+            + "\nfrom quantide.core.enums import FrameType\n"
+            "from quantide.core.strategy import BaseStrategy\n"
         )
     else:
         init_body = f'logger.debug("{class_name}.__init__ called")'
@@ -228,13 +264,29 @@ Description: {description}
 
 {imports}
 
+
 class {class_name}(BaseStrategy):
     """{description}."""
 
     def __init__(self, broker, config: dict | None = None):
         super().__init__(broker, config)
         {init_body}
+''' + (f"""
+    async def init(self):
+        self.log(f"{class_name} Initialized")
 
+    async def on_day_open(self, tm: datetime.datetime):
+        pass
+
+    async def on_bar(self, tm: datetime.datetime, quote: Dict[str, Any], frame_type: FrameType):
+        {on_bar_body}
+
+    async def on_day_close(self, tm: datetime.datetime):
+        pass
+
+    async def on_stop(self):
+        self.log(f"{class_name} stopped")
+""" if template else f"""
     async def on_day_open(self, tm: datetime) -> None:
         {on_day_body}
 
@@ -246,7 +298,8 @@ class {class_name}(BaseStrategy):
 
     async def on_stop(self) -> None:
         logger.debug(f"{class_name}.on_stop called")
-'''
+""") + "'''"
+
     return code
 
 

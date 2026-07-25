@@ -462,9 +462,10 @@ class TestTemplates:
         main(["--name", "T", "--template", "double-ma", "--dry-run"])
         sys.stdout = sys.__stdout__
         code = out.getvalue()
-        assert "self._fast: int = config.get('fast', 5)" in code
-        assert "self._slow: int = config.get('slow', 20)" in code
-        assert "trade_target_pct" in code
+        assert "self.fast_window" in code
+        assert "self.slow_window" in code
+        assert "buy_amount" in code
+        assert "sell" in code
 
     def test_momentum_generates_ranking_code(self):
         """momentum template generates returns ranking code."""
@@ -474,9 +475,9 @@ class TestTemplates:
         main(["--name", "T", "--template", "momentum", "--dry-run"])
         sys.stdout = sys.__stdout__
         code = out.getvalue()
-        assert "self._lookback" in code
-        assert "self._top_k" in code
-        assert ".sort('ret', descending=True)" in code
+        assert "self.lookback" in code
+        assert "self.top_k" in code
+        assert "buy_amount" in code
 
     def test_multi_factor_generates_zscore_code(self):
         """multi-factor template generates z-score code."""
@@ -486,9 +487,9 @@ class TestTemplates:
         main(["--name", "T", "--template", "multi-factor", "--dry-run"])
         sys.stdout = sys.__stdout__
         code = out.getvalue()
-        assert "self._w_mom" in code
-        assert "self._w_vol" in code
-        assert "pl.col('raw').std()" in code
+        assert "self.w_mom" in code
+        assert "self.w_vol" in code
+        assert "scores[" in code
 
     def test_unknown_template_exits_2(self):
         """Unknown template exits 2 (argparse SystemExit)."""
