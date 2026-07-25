@@ -14,14 +14,17 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import date
 from pathlib import Path
+
+from trader_off import __version__
 
 
 def _global_status(data: dict) -> dict:
     """Return the global status payload."""
     data.update(
         {
-            "version": "v0.5.4",
+            "version": f"v{__version__}",
             "models": _check_models(),
             "scheduler": _check_scheduler(),
         }
