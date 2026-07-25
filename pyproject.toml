@@ -51,6 +51,7 @@ trader-off-live-trade = "trader_off.cli.live_trade:main"
 trader-off-generate-strategy = "trader_off.cli.generate_strategy:main"
 trader-off-status = "trader_off.cli.status:main"
 trader-off-server = "trader_off.cli.server:main"
+trader-off-update = "trader_off.cli.update:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
