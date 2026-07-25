@@ -20,6 +20,7 @@ from pathlib import Path
 from loguru import logger
 
 from trader_off.cli._json_output import _json_wrap
+from trader_off.cli._version import add_version_argument
 
 _ERROR_MESSAGES: dict[int, str] = {
     2: "CLI argument error",
@@ -33,6 +34,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="trader-off-paper-trade",
         description="Run paper trade simulation.",
     )
+    add_version_argument(parser, "paper-trade")
     parser.add_argument(
         "--strategy",
         required=True,

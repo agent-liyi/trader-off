@@ -15,6 +15,8 @@ import argparse
 import json
 import sys
 
+from trader_off.cli._version import add_version_argument
+
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry for 'trader-off-live' command.
@@ -173,6 +175,7 @@ def _build_argparser() -> argparse.ArgumentParser:
         prog="trader-off-live",
         description="Real-time market quote subscription via quantide LiveQuote",
     )
+    add_version_argument(parser, "live")
     parser.add_argument(
         "--start",
         action="store_true",

@@ -68,6 +68,7 @@ def _build_argparser() -> argparse.ArgumentParser:
         prog="trader-off-generate-strategy",
         description="Generate a trader-off strategy class from a template",
     )
+    add_version_argument(parser, "generate-strategy")
     parser.add_argument(
         "--name",
         required=True,
@@ -201,6 +202,8 @@ from datetime import datetime
 from loguru import logger
 
 from trader_off.strategies.compat import BaseStrategy
+from trader_off.cli._version import add_version_argument
+
 
 
 class {class_name}(BaseStrategy):

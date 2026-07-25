@@ -22,6 +22,8 @@ from pathlib import Path
 import polars as pl
 from loguru import logger
 
+from trader_off.cli._version import add_version_argument
+
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry for 'trader-off sync-data' command.
@@ -93,6 +95,7 @@ def _build_argparser() -> argparse.ArgumentParser:
         prog="trader-off-sync-data",
         description="Sync A-share OHLCV data from Tushare to DailyBarsStore",
     )
+    add_version_argument(parser, "sync-data")
     parser.add_argument(
         "--universe",
         required=True,

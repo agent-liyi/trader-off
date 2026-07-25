@@ -15,6 +15,7 @@ import yaml  # type: ignore[import-untyped]
 from loguru import logger
 
 from trader_off.backtest.runner import run_backtest
+from trader_off.cli._version import add_version_argument
 
 
 def main():
@@ -22,6 +23,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Run backtest")
+    add_version_argument(parser, "backtest")
     parser.add_argument("--model", required=True, help="Model version")
     parser.add_argument("--strategy", required=True, help="Strategy name")
     parser.add_argument("--start", required=True, help="Start date (YYYY-MM-DD)")

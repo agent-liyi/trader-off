@@ -11,6 +11,8 @@ import json
 import sys
 from typing import TextIO
 
+from trader_off.cli._version import add_version_argument
+
 # ---------------------------------------------------------------------------
 # Argument parser
 # ---------------------------------------------------------------------------
@@ -28,6 +30,7 @@ def _build_argparser():
         prog="trader-off-server",
         description="Start the trader-off REST API server.",
     )
+    add_version_argument(parser, "server")
     parser.add_argument(
         "--port",
         type=int,

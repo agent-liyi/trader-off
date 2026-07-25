@@ -18,6 +18,8 @@ from pathlib import Path
 
 from loguru import logger
 
+from trader_off.cli._version import add_version_argument
+
 
 def _echo(text: str = "") -> None:
     """Write text to stdout followed by newline (CLI output helper)."""
@@ -37,6 +39,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Run live trading via qmt-gateway",
         exit_on_error=False,
     )
+    add_version_argument(parser, "live-trade")
     parser.add_argument("--strategy", required=True, help="Strategy name")
     parser.add_argument("--universe", required=True, type=Path, help="CSV file with asset column")
     parser.add_argument(

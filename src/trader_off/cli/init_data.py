@@ -16,6 +16,8 @@ import json
 import sys
 from pathlib import Path
 
+from trader_off.cli._version import add_version_argument
+
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry for 'trader-off init' command.
@@ -56,6 +58,7 @@ def _build_argparser() -> argparse.ArgumentParser:
         prog="trader-off-init",
         description="Initialize quantide data directory",
     )
+    add_version_argument(parser, "init")
     parser.add_argument(
         "--home",
         type=str,

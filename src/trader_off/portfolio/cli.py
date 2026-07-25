@@ -19,6 +19,7 @@ import numpy as np
 import polars as pl
 from loguru import logger
 
+from trader_off.cli._version import add_version_argument
 from trader_off.portfolio.baseline import compare_to_baseline
 from trader_off.portfolio.constraints import OptimizerConstraints
 from trader_off.portfolio.covariance import estimate_covariance
@@ -48,6 +49,7 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="trader-off optimize",
         description="Run maximum-Sharpe portfolio optimization.",
     )
+    add_version_argument(parser, "optimize")
     parser.add_argument(
         "--predictions",
         type=Path,

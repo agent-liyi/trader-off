@@ -23,6 +23,8 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 from loguru import logger
 
+from trader_off.cli._version import add_version_argument
+
 
 def main(argv: list[str] | None = None) -> int:
     """CLI entry for 'trader-off grid-search' command.
@@ -159,6 +161,7 @@ def _build_argparser() -> argparse.ArgumentParser:
         prog="trader-off-grid-search",
         description="Grid search for strategy parameter optimization",
     )
+    add_version_argument(parser, "grid-search")
     parser.add_argument(
         "--config",
         type=str,

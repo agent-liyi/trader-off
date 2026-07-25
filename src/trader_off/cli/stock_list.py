@@ -16,6 +16,8 @@ import json
 import sys
 from typing import Any
 
+from trader_off.cli._version import add_version_argument
+
 # Exchange suffix → exchange code mapping
 _EXCHANGE_SUFFIX_MAP: dict[str, str] = {"SH": "SSE", "SZ": "SZSE", "BJ": "BSE"}
 
@@ -115,6 +117,7 @@ def _build_argparser() -> argparse.ArgumentParser:
         prog="trader-off-stock-list",
         description="Fetch A-share stock list from tushare",
     )
+    add_version_argument(parser, "stock-list")
     parser.add_argument(
         "--exchange",
         type=str,

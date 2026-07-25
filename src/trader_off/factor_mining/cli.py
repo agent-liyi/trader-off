@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 import polars as pl
 import yaml  # type: ignore[import-untyped]
 
+from trader_off.cli._version import add_version_argument
 from trader_off.factor_mining.evaluation import evaluate_factor
 from trader_off.factor_mining.expression import DEFAULT_PARAM_SPACE, enumerate_factors
 from trader_off.factor_mining.registry import save_factor_registry
@@ -59,6 +60,7 @@ def _create_parser() -> ArgumentParser:
         prog="trader-off mine-factors",
         description="Mine alpha factors from OHLCV data.",
     )
+    add_version_argument(parser, "mine-factors")
     parser.add_argument(
         "--config",
         type=Path,

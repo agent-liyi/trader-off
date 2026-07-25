@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING
 
 import polars as pl
 
+from trader_off.cli._version import add_version_argument
+
 if TYPE_CHECKING:
     from trader_off.factor_mining.expression import FactorSpec
 
@@ -52,6 +54,7 @@ def _create_parser() -> argparse.ArgumentParser:
         prog="trader-off-check-factor",
         description="Evaluate a single factor against OHLCV data.",
     )
+    add_version_argument(parser, "check-factor")
     parser.add_argument(
         "--name",
         type=str,

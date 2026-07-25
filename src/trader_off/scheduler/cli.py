@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, Literal, TextIO
 
 import yaml  # type: ignore[import-untyped]
 
+from trader_off.cli._version import add_version_argument
 from trader_off.utils.exceptions import ConfigValidationError
 
 if TYPE_CHECKING:
@@ -169,6 +170,7 @@ def build_scheduler_parser() -> argparse.ArgumentParser:
         prog="trader-off scheduler",
         description="Manage the retraining scheduler lifecycle.",
     )
+    add_version_argument(parser, "scheduler")
     subparsers = parser.add_subparsers(dest="subcommand", required=True)
 
     # start subcommand
