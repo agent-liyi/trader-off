@@ -22,7 +22,12 @@
 git clone https://github.com/agent-liyi/trader-off
 cd trader-off
 uv sync   # Python 3.13+
+
+# 可选——把二进制 link 到系统 PATH（全局可用）
+bash scripts/install.sh
 ```
+
+`scripts/install.sh` 把 15 个 `trader-off-*` 命令 symlink 到 `/usr/local/bin`。之后任何路径都可以直接 `trader-off-backtest --help`。
 
 可选——真实 A 股数据：
 ```bash
