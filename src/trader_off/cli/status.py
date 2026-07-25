@@ -166,10 +166,10 @@ def main(args: list[str] | None = None) -> int:
             "code": 2,
             "message": f"Unknown subcommand: {subcommand}",
         }
-        sys.stdout.write(json.dumps(result))
+        sys.stdout.write(json.dumps(result) + "\n")
         return 2
 
-    sys.stdout.write(json.dumps(result))
+    sys.stdout.write(json.dumps(result) + "\n")
     return 0
 
 
