@@ -1,10 +1,10 @@
 [project]
-version = "v0.7.3"
+version = "v0.7.4"
 repo = "github.com/agent-liyi/trader-off"
-project = "trader-off-v0.7.3"
-project_id = "https://github.com/users/agent-liyi/projects/25"
-spec_id = "v0.7.3-001-qmt-p2-wrappers"
-release_branch = "releases/v0.7.3"
+project = "trader-off-v0.7.4"
+project_id = "https://github.com/users/agent-liyi/projects/26"
+spec_id = "v0.7.4-001-version-flag"
+release_branch = "releases/v0.7.4"
 
 [meta]
 pre_commit = "installed (python + base)"
