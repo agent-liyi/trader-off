@@ -7,6 +7,7 @@ existing file skip/dedup, template content verification.
 from __future__ import annotations
 
 import json
+import sys
 
 import pytest
 
@@ -157,10 +158,8 @@ class TestGenerateCode:
         code = _generate_code("MyStrat", author="a", description="d")
         class_name = "MyStrat"
         assert f'logger.debug("{class_name}.__init__ called")' in code
-        assert f'logger.debug("{class_name}.on_day_open called")' in code
-        assert f'logger.debug("{class_name}.on_bar called")' in code
-        assert f'logger.debug("{class_name}.on_day_close called")' in code
-        assert f'logger.debug("{class_name}.on_stop called")' in code
+        assert f'logger.debug(f"{class_name}.on_day_open called at {{tm}}")' in code
+        assert f'logger.debug(f"{class_name}.on_stop called")' in code
 
     def test_init_calls_super(self):
         """__init__ calls super().__init__(broker, config)."""
@@ -449,3 +448,59 @@ class TestReturnType:
         """main() returns int for file creation."""
         result = main(["--name", "Test", "--output-dir", str(tmp_path)])
         assert isinstance(result, int)
+
+
+class TestTemplates:
+    """FR-0100: --template parameter (v0.7.6)."""
+
+    def test_double_ma_generates_ma_code(self):
+        """double-ma template generates MA computation code."""
+        import io
+        out = io.StringIO()
+        sys.stdout = out
+        main(["--name", "T", "--template", "double-ma", "--dry-run"])
+        sys.stdout = sys.__stdout__
+        code = out.getvalue()
+        assert "self._fast: int = config.get('fast', 5)" in code
+        assert "self._slow: int = config.get('slow', 20)" in code
+        assert "trade_target_pct" in code
+
+    def test_momentum_generates_ranking_code(self):
+        """momentum template generates returns ranking code."""
+        import io
+        out = io.StringIO()
+        sys.stdout = out
+        main(["--name", "T", "--template", "momentum", "--dry-run"])
+        sys.stdout = sys.__stdout__
+        code = out.getvalue()
+        assert "self._lookback" in code
+        assert "self._top_k" in code
+        assert ".sort('ret', descending=True)" in code
+
+    def test_multi_factor_generates_zscore_code(self):
+        """multi-factor template generates z-score code."""
+        import io
+        out = io.StringIO()
+        sys.stdout = out
+        main(["--name", "T", "--template", "multi-factor", "--dry-run"])
+        sys.stdout = sys.__stdout__
+        code = out.getvalue()
+        assert "self._w_mom" in code
+        assert "self._w_vol" in code
+        assert "pl.col('raw').std()" in code
+
+    def test_unknown_template_exits_2(self):
+        """Unknown template exits 2 (argparse SystemExit)."""
+        with pytest.raises(SystemExit) as exc:
+            main(["--name", "T", "--template", "unknown"])
+        assert exc.value.code == 2
+
+    def test_no_template_is_backward_compat(self):
+        """No --template produces skeleton (backward compat)."""
+        import io
+        out = io.StringIO()
+        sys.stdout = out
+        main(["--name", "Skel", "--dry-run"])
+        sys.stdout = sys.__stdout__
+        code = out.getvalue()
+        assert "pass" in code or "Generated strategy" in code

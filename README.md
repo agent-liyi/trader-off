@@ -173,11 +173,13 @@ to live-trade \
 ### 生成策略
 
 ```bash
-to generate-strategy --name MyStrategy --dry-run           # 预览
-to generate-strategy --name MomentumReversion              # 生成到 src/trader_off/strategies/
+to generate-strategy --name MyStrategy --dry-run              # 预览骨架
+to generate-strategy --name MyMA --template double-ma         # 双均线策略
+to generate-strategy --name Mom --template momentum           # 动量反转策略
+to generate-strategy --name MF --template multi-factor        # 多因子策略
 ```
 
-生成 quantide BaseStrategy 子类（init/on_day_open/on_bar/on_day_close/on_stop）。
+生成 quantide BaseStrategy 子类。带 `--template` 时 `on_day_open` 中已填好因子计算 + 调仓逻辑，可直接回测。
 
 ### 调度
 

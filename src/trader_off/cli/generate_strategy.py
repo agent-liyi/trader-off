@@ -192,8 +192,8 @@ def _generate_code(
             + "\nfrom loguru import logger\n\nfrom trader_off.strategies.compat import BaseStrategy\n"
         )
     else:
-        init_body = "super().__init__(broker, config)\n        logger.debug(f\"{class_name}.__init__ called\")"
-        on_day_body = f"logger.debug(f\"{class_name}.on_day_open called at {{tm}}\")"
+        init_body = f'logger.debug("{class_name}.__init__ called")'
+        on_day_body = f'logger.debug(f"{class_name}.on_day_open called at {{tm}}")'
         imports = (
             "from datetime import datetime\n\n"
             "from loguru import logger\n\n"
