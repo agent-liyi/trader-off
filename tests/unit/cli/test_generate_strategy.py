@@ -140,7 +140,8 @@ class TestGenerateCode:
         method_defs = [
             line
             for line in code.splitlines()
-            if line.strip().startswith("def ") or line.strip().startswith("async def ")
+            if line.startswith("    ") and line.strip().startswith(("def ", "async "))
+            and not line.startswith("            ")  # exclude stub methods
         ]
         assert len(method_defs) == 5, f"Expected 5 methods, got {len(method_defs)}"
 

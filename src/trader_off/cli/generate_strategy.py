@@ -16,6 +16,25 @@ from pathlib import Path
 
 from trader_off.cli._version import add_version_argument
 
+_DUAL_IMPORT = (
+    "try:\n"
+    "    from quantide.core.strategy import BaseStrategy\n"
+    "except ImportError:\n"
+    "    try:\n"
+    "        from trader_off.strategies.compat import BaseStrategy\n"
+    "    except ImportError:\n"
+    "        from abc import ABC\n"
+    "        class BaseStrategy(ABC):\n"
+    '            """Minimal stub — quantide/trader-off not installed."""\n'
+    "            def __init__(self, broker, config=None):\n"
+    "                self.broker = broker\n"
+    "                self.config = config or {}\n"
+    "            async def on_day_open(self, tm): pass\n"
+    "            async def on_bar(self, tm, quote=None, frame_type=None): pass\n"
+    "            async def on_day_close(self, tm): pass\n"
+    "            async def on_stop(self): pass\n"
+)
+
 _TEMPLATES = {
     "double-ma": {
         "description": "双均线策略 (fast/slow MA 金叉买入，死叉卖出)",
@@ -189,7 +208,8 @@ def _generate_code(
         imports = (
             "from datetime import datetime\n"
             + t["imports"]
-            + "\nfrom loguru import logger\n\nfrom trader_off.strategies.compat import BaseStrategy\n"
+            + "\nfrom loguru import logger\n\n"
+            + _DUAL_IMPORT
         )
     else:
         init_body = f'logger.debug("{class_name}.__init__ called")'
@@ -197,7 +217,7 @@ def _generate_code(
         imports = (
             "from datetime import datetime\n\n"
             "from loguru import logger\n\n"
-            "from trader_off.strategies.compat import BaseStrategy\n"
+            + _DUAL_IMPORT
         )
 
     code = f'''"""{class_name} strategy.
