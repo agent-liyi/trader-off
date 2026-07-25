@@ -298,7 +298,7 @@ class {class_name}(BaseStrategy):
 
     async def on_stop(self) -> None:
         logger.debug(f"{class_name}.on_stop called")
-""") + "'''"
+""")
 
     return code
 
