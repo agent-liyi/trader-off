@@ -29,9 +29,9 @@ _ERROR_MESSAGES: dict[int, str] = {
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """Build the argument parser for trader-off-paper-trade."""
+    """Build the argument parser for to paper-trade."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-paper-trade",
+        prog="to paper-trade",
         description="Run paper trade simulation.",
     )
     add_version_argument(parser, "paper-trade")

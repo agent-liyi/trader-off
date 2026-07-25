@@ -44,9 +44,9 @@ class OptimizeArgs(NamedTuple):
 
 
 def _build_parser() -> argparse.ArgumentParser:
-    """Build the argument parser for ``trader-off optimize``."""
+    """Build the argument parser for ``to optimize``."""
     parser = argparse.ArgumentParser(
-        prog="trader-off optimize",
+        prog="to optimize",
         description="Run maximum-Sharpe portfolio optimization.",
     )
     add_version_argument(parser, "optimize")

@@ -55,7 +55,7 @@ def _update(repo_dir: Path) -> dict:
         "status": "ok",
         "data": {
             "old_version": old_version,
-            "new_version": "see `trader-off-xxx --version`",
+            "new_version": "see `to <command> --version`",
             "pull_output": pull.stdout[-200:] if pull.stdout else "",
         },
     }
@@ -64,7 +64,7 @@ def _update(repo_dir: Path) -> dict:
 def main(argv: list[str] | None = None) -> int:
     """CLI entry for 'trader-off update'."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-update",
+        prog="to update",
         description="Update trader-off from git (pull + uv sync + relink)",
     )
     add_version_argument(parser, "update")

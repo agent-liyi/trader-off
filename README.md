@@ -27,7 +27,7 @@ uv sync   # Python 3.13+
 bash scripts/install.sh
 ```
 
-`scripts/install.sh` 把 15 个 `trader-off-*` 命令 symlink 到 `/usr/local/bin`。之后任何路径都可以直接 `trader-off-backtest --help`。
+`scripts/install.sh` 把统一入口 `to` symlink 到 `/usr/local/bin`。之后任何路径都可以直接 `to backtest --help`。
 
 可选——真实 A 股数据：
 ```bash
@@ -36,14 +36,14 @@ export TUSHARE_TOKEN=<your_token_from_tushare.pro>
 
 ## 使用
 
-所有命令支持 `--json` 输出，agent 友好。CLI 通过 `[project.scripts]` 注册，全局可用。
+所有命令支持 `--json` 输出，agent 友好。统一入口 `to` 通过 `[project.scripts]` 注册，全局可用。
 
 ### REST API server（v0.7.0）
 
 启动 FastAPI 服务，通过 HTTP 暴露所有 CLI 命令：
 
 ```bash
-trader-off-server --port 8000    # 默认 localhost:8000
+to server --port 8000    # 默认 localhost:8000
 ```
 
 Agent 可通过 HTTP 调用（如 `POST /backtest`），请求体是 JSON，返回也是 JSON。需要 `--port 8000`（默认）避开 qmt-gateway 的 5800。
@@ -51,7 +51,7 @@ Agent 可通过 HTTP 调用（如 `POST /backtest`），请求体是 JSON，返�
 ### 因子挖掘
 
 ```bash
-trader-off-mine-factors --config factor_defs.yaml \
+to mine-factors --config factor_defs.yaml \
     --top-k 30 \
     --corr-threshold 0.9 \
     --output reports/factor_mining/
@@ -60,7 +60,7 @@ trader-off-mine-factors --config factor_defs.yaml \
 ### 组合优化
 
 ```bash
-trader-off-optimize \
+to optimize \
     --predictions predictions.csv \
     --industry-map industry.csv \
     --returns returns_history.csv \
@@ -71,7 +71,7 @@ trader-off-optimize \
 ### 回测
 
 ```bash
-trader-off-backtest \
+to backtest \
     --model v1 --strategy optimized_topk \
     --start 2024-01-02 --end 2024-12-31 \
     --capital 1000000
@@ -82,7 +82,7 @@ trader-off-backtest \
 ### 纸交易
 
 ```bash
-trader-off-paper-trade \
+to paper-trade \
     --strategy optimized_topk \
     --universe watchlist.csv \
     --capital 1000000
@@ -93,7 +93,7 @@ trader-off-paper-trade \
 ### 参数寻优
 
 ```bash
-trader-off-grid-search --config params.yaml \
+to grid-search --config params.yaml \
     --strategy optimized_topk \
     --start 2024-01-01 --end 2024-12-31 \
     --capital 1000000
@@ -110,7 +110,7 @@ param_space:
 ### 数据同步
 
 ```bash
-trader-off-sync-data \
+to sync-data \
     --universe watchlist.csv \
     --start 2026-01-01 \
     --end 2026-07-22
@@ -121,9 +121,9 @@ trader-off-sync-data \
 ### 初始化
 
 ```bash
-trader-off-init                    # 在当前目录下初始化（./data/...）
-trader-off-init --home .quantide   # 初始化到 .quantide/
-trader-off-init --home /path/to/data  # 指定数据根目录
+to init                    # 在当前目录下初始化（./data/...）
+to init --home .quantide   # 初始化到 .quantide/
+to init --home /path/to/data  # 指定数据根目录
 ```
 
 在当前目录创建日历、行情、数据库子目录（`data/calendar.parquet`、`data/bars/daily/` 等）。需要 `TUSHARE_TOKEN`。
@@ -131,10 +131,10 @@ trader-off-init --home /path/to/data  # 指定数据根目录
 ### 股票列表
 
 ```bash
-trader-off-stock-list                          # 获取全部股票列表
-trader-off-stock-list --exchange SSE           # 按交易所过滤 (SSE/SZSE/BSE)
-trader-off-stock-list --status L               # 按状态过滤 (L=上市/D=退市/P=暂停)
-trader-off-stock-list --exchange SSE --json    # JSON 输出
+to stock-list                          # 获取全部股票列表
+to stock-list --exchange SSE           # 按交易所过滤 (SSE/SZSE/BSE)
+to stock-list --status L               # 按状态过滤 (L=上市/D=退市/P=暂停)
+to stock-list --exchange SSE --json    # JSON 输出
 ```
 
 从 tuShare 获取 A 股列表，返回 JSON 含 `ts_code` / `name`。需 `TUSHARE_TOKEN`。
@@ -142,9 +142,9 @@ trader-off-stock-list --exchange SSE --json    # JSON 输出
 ### 因子有效性检查
 
 ```bash
-trader-off-check-factor --name momentum_5 --start 2024-01-02 --end 2024-12-31
-trader-off-check-factor --name momentum_5 --start 2024-01-02 --end 2024-12-31 --json
-trader-off-check-factor --name vol_20 --start 2024-01-02 --end 2024-12-31 --ic-threshold 0.5
+to check-factor --name momentum_5 --start 2024-01-02 --end 2024-12-31
+to check-factor --name momentum_5 --start 2024-01-02 --end 2024-12-31 --json
+to check-factor --name vol_20 --start 2024-01-02 --end 2024-12-31 --ic-threshold 0.5
 ```
 
 评估单个因子，输出 IC/ICIR/Rank IC/Rank ICIR 及有效性判定。支持 `--json` 输出。
@@ -152,9 +152,9 @@ trader-off-check-factor --name vol_20 --start 2024-01-02 --end 2024-12-31 --ic-t
 ### 实时行情
 
 ```bash
-trader-off-live --status                                           # 查看状态
-trader-off-live --start --assets 000001.SZ,600000.SH              # 订阅
-trader-off-live --stop                                            # 停止
+to live --status                                           # 查看状态
+to live --start --assets 000001.SZ,600000.SH              # 订阅
+to live --stop                                            # 停止
 ```
 
 通过 quantide LiveQuote 订阅实时行情，需 qmt-gateway。
@@ -162,7 +162,7 @@ trader-off-live --stop                                            # 停止
 ### 实盘交易
 
 ```bash
-trader-off-live-trade \
+to live-trade \
     --strategy optimized_topk \
     --universe watchlist.csv \
     --capital 1000000
@@ -173,8 +173,8 @@ trader-off-live-trade \
 ### 生成策略
 
 ```bash
-trader-off-generate-strategy --name MyStrategy --dry-run           # 预览
-trader-off-generate-strategy --name MomentumReversion              # 生成到 src/trader_off/strategies/
+to generate-strategy --name MyStrategy --dry-run           # 预览
+to generate-strategy --name MomentumReversion              # 生成到 src/trader_off/strategies/
 ```
 
 生成 quantide BaseStrategy 子类（init/on_day_open/on_bar/on_day_close/on_stop）。
@@ -182,9 +182,24 @@ trader-off-generate-strategy --name MomentumReversion              # 生成到 s
 ### 调度
 
 ```bash
-trader-off-scheduler start --config scheduler.yaml
-trader-off-scheduler status
-trader-off-scheduler retrain trigger --model-version v2
+to scheduler start --config scheduler.yaml
+to scheduler status
+to scheduler retrain trigger --model-version v2
+```
+
+### 状态
+
+```bash
+to status              # 全局状态（JSON：version/data_source/models/scheduler）
+to status data         # 检查本地行情数据
+to status models       # 检查因子/模型产物
+to status scheduler    # 检查调度进程
+```
+
+### 自更新
+
+```bash
+to update              # git pull + uv sync + 重新 link `to`
 ```
 
 > 兼容：`uv run python -m trader_off.<path>` 仍可用。

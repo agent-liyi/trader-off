@@ -27,7 +27,7 @@ def _echo(text: str = "") -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry for 'trader-off-live-trade' command.
+    """CLI entry for 'to live-trade' command.
 
     Args:
         argv: Optional argument list (for testing). Defaults to sys.argv[1:].
@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
         Exit code: 0 on success.
     """
     parser = argparse.ArgumentParser(
+        prog="to live-trade",
         description="Run live trading via qmt-gateway",
         exit_on_error=False,
     )

@@ -27,7 +27,7 @@ def _build_argparser():
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="trader-off-server",
+        prog="to server",
         description="Start the trader-off REST API server.",
     )
     add_version_argument(parser, "server")

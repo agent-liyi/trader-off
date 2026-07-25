@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
 def _build_argparser() -> argparse.ArgumentParser:
     """Build the argument parser for init CLI."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-init",
+        prog="to init",
         description="Initialize quantide data directory",
     )
     add_version_argument(parser, "init")

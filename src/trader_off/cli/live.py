@@ -19,7 +19,7 @@ from trader_off.cli._version import add_version_argument
 
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry for 'trader-off-live' command.
+    """CLI entry for 'to live' command.
 
     Args:
         argv: Command-line arguments. If None, reads from sys.argv[1:].
@@ -172,7 +172,7 @@ def _parse_assets(assets_str: str | None) -> list[str]:
 def _build_argparser() -> argparse.ArgumentParser:
     """Build the argument parser for live CLI."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-live",
+        prog="to live",
         description="Real-time market quote subscription via quantide LiveQuote",
     )
     add_version_argument(parser, "live")

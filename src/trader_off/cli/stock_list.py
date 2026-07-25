@@ -114,7 +114,7 @@ def _is_valid_date(value: Any) -> bool:
 def _build_argparser() -> argparse.ArgumentParser:
     """Build the argument parser for stock-list CLI."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-stock-list",
+        prog="to stock-list",
         description="Fetch A-share stock list from tushare",
     )
     add_version_argument(parser, "stock-list")

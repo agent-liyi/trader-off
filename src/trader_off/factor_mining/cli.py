@@ -49,7 +49,7 @@ except ImportError:
 
 
 def _create_parser() -> ArgumentParser:
-    """Build the argument parser for ``trader-off mine-factors``.
+    """Build the argument parser for ``to mine-factors``.
 
     Returns:
         An argparse.ArgumentParser with all FR-0800 parameters configured.
@@ -57,7 +57,7 @@ def _create_parser() -> ArgumentParser:
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="trader-off mine-factors",
+        prog="to mine-factors",
         description="Mine alpha factors from OHLCV data.",
     )
     add_version_argument(parser, "mine-factors")

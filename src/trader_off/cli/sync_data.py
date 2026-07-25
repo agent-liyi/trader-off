@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
 def _build_argparser() -> argparse.ArgumentParser:
     """Build the argument parser for sync-data CLI."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-sync-data",
+        prog="to sync-data",
         description="Sync A-share OHLCV data from Tushare to DailyBarsStore",
     )
     add_version_argument(parser, "sync-data")

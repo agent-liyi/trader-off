@@ -17,9 +17,11 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from trader_off.cli._version import add_version_argument
+
 
 def main(argv: list[str] | None = None) -> int:
-    """CLI entry for 'trader-off-generate-strategy' command.
+    """CLI entry for 'to generate-strategy' command.
 
     Args:
         argv: Command-line arguments. If None, reads from sys.argv[1:].
@@ -65,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
 def _build_argparser() -> argparse.ArgumentParser:
     """Build the argument parser for generate-strategy CLI."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-generate-strategy",
+        prog="to generate-strategy",
         description="Generate a trader-off strategy class from a template",
     )
     add_version_argument(parser, "generate-strategy")

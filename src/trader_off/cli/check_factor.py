@@ -51,7 +51,7 @@ def _create_parser() -> argparse.ArgumentParser:
         An argparse.ArgumentParser with FR-0100 parameters configured.
     """
     parser = argparse.ArgumentParser(
-        prog="trader-off-check-factor",
+        prog="to check-factor",
         description="Evaluate a single factor against OHLCV data.",
     )
     add_version_argument(parser, "check-factor")

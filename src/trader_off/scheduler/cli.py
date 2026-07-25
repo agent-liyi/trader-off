@@ -167,7 +167,7 @@ def build_scheduler_parser() -> argparse.ArgumentParser:
         An ArgumentParser with 'start', 'stop', and 'status' subcommands.
     """
     parser = argparse.ArgumentParser(
-        prog="trader-off scheduler",
+        prog="to scheduler",
         description="Manage the retraining scheduler lifecycle.",
     )
     add_version_argument(parser, "scheduler")
@@ -338,7 +338,7 @@ def build_retrain_parser() -> argparse.ArgumentParser:
         An ArgumentParser with 'trigger' and 'status' subcommands.
     """
     parser = argparse.ArgumentParser(
-        prog="trader-off retrain",
+        prog="to scheduler",
         description="Manually trigger retraining or view task status.",
     )
     subparsers = parser.add_subparsers(dest="subcommand", required=True)

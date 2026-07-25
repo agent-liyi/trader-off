@@ -158,7 +158,7 @@ def _resolve_strategy_class(strategy_name: str) -> type:
 def _build_argparser() -> argparse.ArgumentParser:
     """Build the argument parser for grid-search CLI."""
     parser = argparse.ArgumentParser(
-        prog="trader-off-grid-search",
+        prog="to grid-search",
         description="Grid search for strategy parameter optimization",
     )
     add_version_argument(parser, "grid-search")

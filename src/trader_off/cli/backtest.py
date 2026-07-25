@@ -18,11 +18,11 @@ from trader_off.backtest.runner import run_backtest
 from trader_off.cli._version import add_version_argument
 
 
-def main():
-    """CLI entry for 'trader-off backtest' command."""
+def main(argv: list[str] | None = None) -> int:
+    """CLI entry for 'to backtest' command."""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Run backtest")
+    parser = argparse.ArgumentParser(prog="to backtest", description="Run backtest")
     add_version_argument(parser, "backtest")
     parser.add_argument("--model", required=True, help="Model version")
     parser.add_argument("--strategy", required=True, help="Strategy name")
@@ -31,7 +31,7 @@ def main():
     parser.add_argument("--capital", type=float, required=True, help="Initial capital")
     parser.add_argument("--config", type=Path, default=None, help="Config YAML path")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # Exit code 4: Config file validation
     config_dict = None
