@@ -40,3 +40,5 @@ tests/smoke/output/
 .DS_Store
 Thumbs.db
 tests/e2e/fixtures/dates.pq
+data/
+.quantide/
