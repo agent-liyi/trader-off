@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.6.0-001-qmt-gateway-live-trading",
+  "stage": "M-DEV",
+  "kind": "review-result",
+  "role": "Prism",
+  "verdict": "fail",
+  "reviewed_targets": [
+    "src/trader_off/broker/qmt_gateway.py",
+    "src/trader_off/cli/live_trade.py",
+    "tests/unit/broker/test_qmt_gateway.py",
+    "tests/unit/cli/test_live_trade.py",
+    "tests/unit/nfr/test_nfr_0100_lazy_imports.py",
+    "tests/unit/test_console_scripts.py"
+  ],
+  "blocking_findings": [
+    "ac-missing - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:9 - test function has no AC-FRXXXX-YY reference (mandatory tracing)",
+    "ac-missing - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:17 - test function has no AC-FRXXXX-YY reference (mandatory tracing)",
+    "ac-missing - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:25 - test function has no AC-FRXXXX-YY reference (mandatory tracing)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:3 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:9 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:10 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:11 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:14 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:17 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:25 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:26 - mocking framework core (should refactor AC or interfaces)",
+    "mock-overuse - /Users/liyi/Workspace/trader-off/tests/unit/nfr/test_nfr_0100_lazy_imports.py:29 - mocking framework core (should refactor AC or interfaces)"
+  ],
+  "accepted_risks": [],
+  "created_at": "2026-07-23T02:08:45Z",
+  "contract_bundle_hash": "c6705324de7a45a63705ead01fe70bb7f42a2cf3ccab29f7b1628313d66c32c3",
+  "metadata": {
+    "commit_range": "HEAD~3..HEAD",
+    "source_command": "review",
+    "diff": "HEAD~3..HEAD"
+  },
+  "output_hash": "1dd064efe83af618b25e5bc0ac2c728ae692956be9732b492afe65cfb330d4c2"
+}

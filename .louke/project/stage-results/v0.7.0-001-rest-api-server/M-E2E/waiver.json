@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.7.0-001-rest-api-server",
+  "stage": "M-E2E",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "Fast track"
+  ],
+  "accepted_risks": [
+    "Fast track"
+  ],
+  "created_at": "2026-07-23T05:44:06Z",
+  "contract_bundle_hash": "dac8efb2ed38a3f7aa22bdf1887f39520dbe6b0afe5f707db99e0821e7c231b2",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "c0c93d15f1de1b6e43584f6e21eebf4caa06b4509155654db5c286f99be7e995"
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.7.4-001-version-flag",
+  "stage": "M-DEV",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "Fast track — code already implemented"
+  ],
+  "accepted_risks": [
+    "Fast track — code already implemented"
+  ],
+  "created_at": "2026-07-25T07:35:11Z",
+  "contract_bundle_hash": "d1ca35977ed3abbb9c2ecc0ab9dc849424d2c5e4a3980ec0f338d55c5f2a3a14",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "84dc2ad589587688e28693825edb9e2459166c6f4db1b516e3d97728682a6e43"
+}

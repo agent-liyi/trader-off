@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.7.1-001-qmt-p0-wrappers",
+  "stage": "M-LOCK",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "Lex verify-issue tool false positive (known louke 0.10.0 bug: anchor regex didn't match <a id='fr-0100'> but spec/acceptance anchors verified manually). User explicitly confirmed M-LOCK."
+  ],
+  "accepted_risks": [
+    "Lex verify-issue tool false positive (known louke 0.10.0 bug: anchor regex didn't match <a id='fr-0100'> but spec/acceptance anchors verified manually). User explicitly confirmed M-LOCK."
+  ],
+  "created_at": "2026-07-23T06:42:40Z",
+  "contract_bundle_hash": "0e54547f7c324c45b267990b0162b1a4dfe604b5ef717acdb3c9765858bedf1e",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "df118fec16561e4a664473a5709feda8b39f4bd3693a9d3b19ec7d69434f9438"
+}

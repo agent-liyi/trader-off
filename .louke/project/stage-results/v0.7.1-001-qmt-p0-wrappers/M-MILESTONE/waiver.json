@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.7.1-001-qmt-p0-wrappers",
+  "stage": "M-MILESTONE",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "Fast track"
+  ],
+  "accepted_risks": [
+    "Fast track"
+  ],
+  "created_at": "2026-07-23T06:46:54Z",
+  "contract_bundle_hash": "0e54547f7c324c45b267990b0162b1a4dfe604b5ef717acdb3c9765858bedf1e",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "e1be9b0a100567938843fe6187cfe2ac860e25849461d0fd94977f22381dbfa4"
+}

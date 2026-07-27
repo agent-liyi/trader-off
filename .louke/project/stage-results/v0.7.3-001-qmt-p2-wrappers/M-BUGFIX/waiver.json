@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.7.3-001-qmt-p2-wrappers",
+  "stage": "M-BUGFIX",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "Fast track"
+  ],
+  "accepted_risks": [
+    "Fast track"
+  ],
+  "created_at": "2026-07-23T08:53:25Z",
+  "contract_bundle_hash": "0e2d230bd69a6b24536aed74d73fef2ba816ae831de25d72672b0cffb0a5b658",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "e445deead8ded94c473ce90b6b3a758423baa7c808f26e6762919a5cbf9375c6"
+}

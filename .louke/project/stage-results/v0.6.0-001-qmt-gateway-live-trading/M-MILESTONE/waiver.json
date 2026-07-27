@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "spec_id": "v0.6.0-001-qmt-gateway-live-trading",
+  "stage": "M-MILESTONE",
+  "kind": "waiver",
+  "role": "human",
+  "verdict": "waived",
+  "reviewed_targets": [],
+  "blocking_findings": [
+    "Fast track"
+  ],
+  "accepted_risks": [
+    "Fast track"
+  ],
+  "created_at": "2026-07-23T02:10:07Z",
+  "contract_bundle_hash": "c6705324de7a45a63705ead01fe70bb7f42a2cf3ccab29f7b1628313d66c32c3",
+  "metadata": {
+    "approved_by": "liyi"
+  },
+  "output_hash": "9e39f6ccac607833867a9df13b00f20865aecf115fa0a3d5e511fb6347493ec2"
+}
