@@ -39,7 +39,7 @@ _TEMPLATES = {
     "double-ma": {
         "description": "双均线金叉死叉策略 — 基于 on_bar + FrameType.DAY",
         "params": ["fast", "slow", "symbol", "invest"],
-        "imports": "import polars as pl\n",
+        "imports": "",
         "init_body": (
             "self.fast_window: int = int(self.config.get('fast', 5))\n"
             "self.slow_window = int(self.config.get('slow', 10))\n"
@@ -73,7 +73,7 @@ _TEMPLATES = {
     "momentum": {
         "description": "动量反转策略 — N 日收益率排序买入 top_k 只",
         "params": ["lookback", "top_k", "invest"],
-        "imports": "import numpy as np\nimport polars as pl\n",
+        "imports": "",
         "init_body": (
             "self.lookback: int = int(self.config.get('lookback', 20))\n"
             "self.top_k = int(self.config.get('top_k', 5))\n"
@@ -87,12 +87,13 @@ _TEMPLATES = {
             "    return\n"
             "returns = {}\n"
             "for sym in universe:\n"
-            "    hist = self.get_history(sym, self.lookback + 1, tm, '1d')\n"
-            "    if len(hist) >= self.lookback + 1:\n"
-            "        c = hist['close'].to_numpy()\n"
-            "        returns[sym] = c[-1] / c[0] - 1\n"
+            "    hist = self.get_history(sym, self.lookback, tm, '1d')\n"
+            "    if len(hist) < 2:\n"
+            "        continue\n"
+            "    c = hist['close'].to_numpy()\n"
+            "    returns[sym] = c[-1] / c[0] - 1\n"
             "ranked = sorted(returns.items(), key=lambda kv: -kv[1])[:self.top_k]\n"
-            "top_set = {sym for sym, _ in ranked}\n"
+            "top_set = {{sym for sym, _ in ranked}}\n"
             "for sym in universe:\n"
             "    pos = self.broker.positions.get(sym)\n"
             "    shares = pos.shares if pos else 0\n"
@@ -105,7 +106,7 @@ _TEMPLATES = {
     "multi-factor": {
         "description": "多因子策略 — momentum + volatility z-score 综合排名",
         "params": ["lookback", "top_k", "invest", "mom_weight", "vol_weight"],
-        "imports": "import numpy as np\nimport polars as pl\n",
+        "imports": "",
         "init_body": (
             "self.lookback: int = int(self.config.get('lookback', 20))\n"
             "self.top_k = int(self.config.get('top_k', 5))\n"
@@ -121,15 +122,15 @@ _TEMPLATES = {
             "    return\n"
             "scores = {}\n"
             "for sym in universe:\n"
-            "    hist = self.get_history(sym, self.lookback + 1, tm, '1d')\n"
-            "    if len(hist) < self.lookback + 1:\n"
+            "    hist = self.get_history(sym, self.lookback, tm, '1d')\n"
+            "    if len(hist) < 2:\n"
             "        continue\n"
             "    c = hist['close'].to_numpy()\n"
             "    mom = c[-1] / c[0] - 1\n"
             "    vol = c.std()\n"
             "    scores[sym] = round(self.w_mom * mom + self.w_vol * vol, 4)\n"
             "ranked = sorted(scores.items(), key=lambda kv: -kv[1])[:self.top_k]\n"
-            "top_set = {sym for sym, _ in ranked}\n"
+            "top_set = {{sym for sym, _ in ranked}}\n"
             "for sym in universe:\n"
             "    pos = self.broker.positions.get(sym)\n"
             "    shares = pos.shares if pos else 0\n"
